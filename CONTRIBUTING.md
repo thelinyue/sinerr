@@ -130,7 +130,7 @@ Please be respectful to maintainers and disclose AI assistance.
 2. Add the remote `upstream`:
 
    ```bash
-   git remote add upstream https://github.com/Linyue-GitHub/sinerr.git
+   git remote add upstream https://github.com/thelinyue/sinerr.git
    ```
 
 3. Create a new branch:

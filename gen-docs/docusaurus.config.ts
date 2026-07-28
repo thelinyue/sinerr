@@ -18,7 +18,7 @@ const config: Config = {
     },
   },
 
-  organizationName: 'Linyue-GitHub',
+  organizationName: 'thelinyue',
   projectName: 'seerr',
   deploymentBranch: 'gh-pages',
 
@@ -43,7 +43,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           path: '../docs',
-          editUrl: 'https://github.com/Linyue-GitHub/sinerr/edit/develop/docs/',
+          editUrl: 'https://github.com/thelinyue/sinerr/edit/develop/docs/',
           docItemComponent: '@theme/ApiItem',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
@@ -81,7 +81,7 @@ const config: Config = {
               groupPathsBy: 'tag',
             },
             downloadUrl:
-              'https://raw.githubusercontent.com/Linyue-GitHub/sinerr/refs/heads/develop/sinerr-api.yml',
+              'https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/sinerr-api.yml',
             hideSendButton: true,
           } satisfies OpenApiPlugin.Options,
         },
@@ -132,7 +132,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/Linyue-GitHub/sinerr',
+          href: 'https://github.com/thelinyue/sinerr',
           label: 'GitHub',
           position: 'right',
         },
@@ -163,7 +163,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/Linyue-GitHub/sinerr',
+              href: 'https://github.com/thelinyue/sinerr',
             },
           ],
         },
@@ -176,7 +176,7 @@ const config: Config = {
             },
             {
               label: 'Github Discussions',
-              href: 'https://github.com/Linyue-GitHub/sinerr/discussions',
+              href: 'https://github.com/thelinyue/sinerr/discussions',
             },
           ],
         },

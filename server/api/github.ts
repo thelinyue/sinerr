@@ -83,7 +83,7 @@ class GithubAPI extends ExternalAPI {
   } = {}): Promise<GitHubRelease[]> {
     try {
       const data = await this.get<GitHubRelease[]>(
-        '/repos/Linyue-GitHub/sinerr/releases',
+        '/repos/thelinyue/sinerr/releases',
         {
           params: {
             per_page: take,
@@ -110,7 +110,7 @@ class GithubAPI extends ExternalAPI {
   } = {}): Promise<GithubCommit[]> {
     try {
       const data = await this.get<GithubCommit[]>(
-        '/repos/Linyue-GitHub/sinerr/commits',
+        '/repos/thelinyue/sinerr/commits',
         {
           params: {
             per_page: take,

@@ -20,7 +20,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of Sinerr are you running? (You can find this in Settings â†’ About â†’ Version.)
+      description: What version of Sinerr are you running? (You can find this in Settings â†?About â†?Version.)
     validations:
       required: true
   - type: textarea
@@ -104,7 +104,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/Linyue-GitHub/sinerr/blob/develop/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/thelinyue/sinerr/blob/develop/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow Sinerr's Code of Conduct
           required: true

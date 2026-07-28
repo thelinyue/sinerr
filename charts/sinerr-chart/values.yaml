@@ -1,6 +1,6 @@
 image:
   registry: ghcr.io
-  repository: Linyue-GitHub/sinerr
+  repository: thelinyue/sinerr
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
   tag: ''

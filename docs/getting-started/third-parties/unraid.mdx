@@ -28,9 +28,9 @@ In case you still want to do it manually, please follow the instructions below.
 
 Before proceeding, choose which installation method best suits your server:
 
-**Sinerr Default** (`UID 1000:1000`) â€” Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
+**Sinerr Default** (`UID 1000:1000`) â€?Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
 
-**Unraid Default** (`UID 99:100`) â€” Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Sinerr's built-in rootless user and may cause compatibility issues with future Sinerr updates.
+**Unraid Default** (`UID 99:100`) â€?Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Sinerr's built-in rootless user and may cause compatibility issues with future Sinerr updates.
 
 <Tabs groupId="unraid-permissions" queryString>
   <TabItem value="seerr-default" label="Sinerr Default">
@@ -62,8 +62,8 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | **Name** | `seerr` |
-  | **Repository** | `ghcr.io/Linyue-GitHub/sinerr:latest` |
-  | **Icon URL** | `https://raw.githubusercontent.com/Linyue-GitHub/sinerr/develop/public/android-chrome-512x512.png` |
+  | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
+  | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
   | **Extra Parameters** | `--init --restart=unless-stopped` |
   | **Network Type** | `bridge` |
@@ -132,8 +132,8 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | **Name** | `seerr` |
-  | **Repository** | `ghcr.io/Linyue-GitHub/sinerr:latest` |
-  | **Icon URL** | `https://raw.githubusercontent.com/Linyue-GitHub/sinerr/develop/public/android-chrome-512x512.png` |
+  | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
+  | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
   | **Extra Parameters** | `--init --restart=unless-stopped --user 99:100` |
   | **Network Type** | `bridge` |

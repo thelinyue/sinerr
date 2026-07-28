@@ -4,17 +4,17 @@
 
 Sinerr helm chart for Kubernetes
 
-**Homepage:** <https://github.com/Linyue-GitHub/sinerr>
+**Homepage:** <https://github.com/thelinyue/sinerr>
 
 ## Maintainers
 
 | Name | Email | Url |
 | ---- | ------ | --- |
-| Sinerr Team |  | <https://github.com/orgs/Linyue-GitHub/people> |
+| Sinerr Team |  | <https://github.com/orgs/thelinyue/people> |
 
 ## Source Code
 
-* <https://github.com/Linyue-GitHub/sinerr/tree/main/charts/seerr-chart>
+* <https://github.com/thelinyue/sinerr/tree/main/charts/seerr-chart>
 
 ## Requirements
 
@@ -58,7 +58,7 @@ If `replicaCount` value was used - remove it. Helm update should work fine after
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |
-| image.repository | string | `"Linyue-GitHub/sinerr"` |  |
+| image.repository | string | `"thelinyue/sinerr"` |  |
 | image.sha | string | `""` |  |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |

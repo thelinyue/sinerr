@@ -38,10 +38,10 @@ To verify images:
 
 Official Sinerr images are available from:
 
-- GitHub Container Registry (GHCR): `ghcr.io/Linyue-GitHub/sinerr:<tag>`
+- GitHub Container Registry (GHCR): `ghcr.io/thelinyue/sinerr:<tag>`
 - Docker Hub: `linyue/sinerr:<tag>`
 
-You can view all available tags on the [Sinerr Releases page](https://github.com/Linyue-GitHub/sinerr/releases).
+You can view all available tags on the [Sinerr Releases page](https://github.com/thelinyue/sinerr/releases).
 
 ---
 
@@ -56,14 +56,14 @@ Verification should always be performed using the image digest (SHA256).
   <TabItem value="docker" label="Docker">
 
 ```bash
-docker buildx imagetools inspect ghcr.io/Linyue-GitHub/sinerr:v2.7.4 --format '{{json .Manifest.Digest}}' | tr -d '"'
+docker buildx imagetools inspect ghcr.io/thelinyue/sinerr:v2.7.4 --format '{{json .Manifest.Digest}}' | tr -d '"'
 ```
   </TabItem>
 
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-skopeo inspect docker://ghcr.io/Linyue-GitHub/sinerr:v2.7.4 --format '{{.Digest}}'
+skopeo inspect docker://ghcr.io/thelinyue/sinerr:v2.7.4 --format '{{.Digest}}'
 ```
   </TabItem>
 </Tabs>
@@ -82,8 +82,8 @@ sha256:abcd1234...
   <TabItem value="ghcr" label="GitHub Container Registry (GHCR)">
 
 ```bash
-cosign verify ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
-  --certificate-identity "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
+cosign verify ghcr.io/thelinyue/sinerr@sha256:abcd1234... \
+  --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -92,14 +92,14 @@ cosign verify ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
 
 ```bash
 cosign verify linyue/sinerr@sha256:abcd1234... \
-  --certificate-identity "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
+  --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
 </Tabs>
 
 :::info Successful Verification Example
-Verification for `ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234...`
+Verification for `ghcr.io/thelinyue/sinerr@sha256:abcd1234...`
 
 The following checks were performed:
 
@@ -123,14 +123,14 @@ Always verify the digest that `latest` currently points to.
   <TabItem value="docker" label="Docker">
 
 ```bash
-docker buildx imagetools inspect ghcr.io/Linyue-GitHub/sinerr:latest --format '{{json .Manifest.Digest}}' | tr -d '"'
+docker buildx imagetools inspect ghcr.io/thelinyue/sinerr:latest --format '{{json .Manifest.Digest}}' | tr -d '"'
 ```
   </TabItem>
 
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-skopeo inspect docker://ghcr.io/Linyue-GitHub/sinerr:latest --format '{{.Digest}}'
+skopeo inspect docker://ghcr.io/thelinyue/sinerr:latest --format '{{.Digest}}'
 ```
   </TabItem>
 </Tabs>
@@ -147,8 +147,8 @@ sha256:abcd1234...
   <TabItem value="ghcr" label="GHCR">
 
 ```bash
-cosign verify ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
+cosign verify ghcr.io/thelinyue/sinerr@sha256:abcd1234... \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -157,7 +157,7 @@ cosign verify ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
 
 ```bash
 cosign verify linyue/sinerr@sha256:abcd1234... \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -176,13 +176,13 @@ Each image includes a CycloneDX SBOM attestation.
 #### Verify the Attestation
 
 ```bash
-cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
+cosign verify-attestation ghcr.io/thelinyue/sinerr@sha256:abcd1234... \
   --type cyclonedx \
-  --certificate-identity "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
+  --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 :::info Successful Verification Example
-Verification for `ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234...`
+Verification for `ghcr.io/thelinyue/sinerr@sha256:abcd1234...`
 
 The following checks were performed:
 
@@ -194,9 +194,9 @@ The following checks were performed:
 #### Extract the SBOM for Inspection
 
 ```bash
-cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr@sha256:abcd1234... \
+cosign verify-attestation ghcr.io/thelinyue/sinerr@sha256:abcd1234... \
   --type cyclonedx \
-  --certificate-identity "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
+  --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v2.7.4" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" | jq -r '.payload | @base64d' > sbom.json
 ```
 
@@ -209,13 +209,13 @@ You can open `sbom.json` in a CycloneDX viewer or analyse it with [Trivy](https:
 The expected certificate identity for all signed Sinerr images is:
 
 ```
-https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v*
+https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v*
 ```
 
 This confirms that the image was:
 
 - Built by the official Sinerr Release workflow
-- Produced from the Linyue-GitHub/sinerr repository
+- Produced from the thelinyue/sinerr repository
 - Signed using GitHub’s OIDC identity via Sigstore Fulcio
 
 ---
@@ -226,15 +226,15 @@ This confirms that the image was:
   <TabItem value="docker" label="Docker">
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/Linyue-GitHub/sinerr:latest --format '{{json .Manifest.Digest}}' | tr -d '"')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/thelinyue/sinerr:latest --format '{{json .Manifest.Digest}}' | tr -d '"')
 
-cosign verify ghcr.io/Linyue-GitHub/sinerr@"$DIGEST" \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
+cosign verify ghcr.io/thelinyue/sinerr@"$DIGEST" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
-cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr@"$DIGEST" \
+cosign verify-attestation ghcr.io/thelinyue/sinerr@"$DIGEST" \
   --type cyclonedx \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -242,10 +242,10 @@ cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr@"$DIGEST" \
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-DIGEST=$(skopeo inspect docker://ghcr.io/Linyue-GitHub/sinerr:latest --format '{{.Digest}}')
+DIGEST=$(skopeo inspect docker://ghcr.io/thelinyue/sinerr:latest --format '{{.Digest}}')
 
-cosign verify ghcr.io/Linyue-GitHub/sinerr@"$DIGEST" \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
+cosign verify ghcr.io/thelinyue/sinerr@"$DIGEST" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -257,9 +257,9 @@ cosign verify ghcr.io/Linyue-GitHub/sinerr@"$DIGEST" \
 
 Official Sinerr helm charts are available from:
 
-- GitHub Container Registry (GHCR): `ghcr.io/Linyue-GitHub/sinerr/seerr-chart/seerr-chart:<tag>`
+- GitHub Container Registry (GHCR): `ghcr.io/thelinyue/sinerr/seerr-chart/seerr-chart:<tag>`
 
-You can view all available tags on the [Sinerr Releases page](https://github.com/Linyue-GitHub/sinerr/pkgs/container/seerr%2Fseerr-chart).
+You can view all available tags on the [Sinerr Releases page](https://github.com/thelinyue/sinerr/pkgs/container/seerr%2Fseerr-chart).
 
 ---
 
@@ -274,14 +274,14 @@ Verification should always be performed using the image digest (SHA256).
   <TabItem value="docker" label="Docker">
 
 ```bash
-docker buildx imagetools inspect ghcr.io/Linyue-GitHub/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"'
+docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"'
 ```
   </TabItem>
 
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-skopeo inspect docker://ghcr.io/Linyue-GitHub/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}'
+skopeo inspect docker://ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}'
 ```
   </TabItem>
 </Tabs>
@@ -297,13 +297,13 @@ sha256:abcd1234...
 #### Verify the Helm Chart Signature
 
 ```bash
-cosign verify ghcr.io/Linyue-GitHub/sinerr/seerr-chart@sha256:abcd1234... \
-  --certificate-identity "https://github.com/Linyue-GitHub/sinerr/.github/workflows/helm.yml@refs/heads/main" \
+cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@sha256:abcd1234... \
+  --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
 :::info Successful Verification Example
-Verification for `ghcr.io/Linyue-GitHub/sinerr/seerr-chart@sha256:abcd1234...`
+Verification for `ghcr.io/thelinyue/sinerr/seerr-chart@sha256:abcd1234...`
 
 The following checks were performed:
 
@@ -319,13 +319,13 @@ The following checks were performed:
 The expected certificate identity for all signed Sinerr images is:
 
 ```
-https://github.com/Linyue-GitHub/sinerr/.github/workflows/helm.yml@refs/heads/main
+https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main
 ```
 
 This confirms that the image was:
 
 - Built by the official Sinerr Release workflow
-- Produced from the Linyue-GitHub/sinerr repository
+- Produced from the thelinyue/sinerr repository
 - Signed using GitHub’s OIDC identity via Sigstore Fulcio
 
 ---
@@ -336,15 +336,15 @@ This confirms that the image was:
   <TabItem value="docker" label="Docker">
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/Linyue-GitHub/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"')
 
-cosign verify ghcr.io/Linyue-GitHub/sinerr/seerr-chart@"$DIGEST" \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/helm.yml@refs/heads/main" \
+cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
-cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr/seerr-chart@"$DIGEST" \
+cosign verify-attestation ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
   --type cyclonedx \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/helm.yml@refs/heads/main" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -352,10 +352,10 @@ cosign verify-attestation ghcr.io/Linyue-GitHub/sinerr/seerr-chart@"$DIGEST" \
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-DIGEST=$(skopeo inspect docker://ghcr.io/Linyue-GitHub/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}')
+DIGEST=$(skopeo inspect docker://ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}')
 
-cosign verify ghcr.io/Linyue-GitHub/sinerr/seerr-chart@"$DIGEST" \
-  --certificate-identity-regexp "https://github.com/Linyue-GitHub/sinerr/.github/workflows/helm.yml@refs/heads/main" \
+cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
+  --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
   </TabItem>
@@ -383,4 +383,4 @@ cosign verify ghcr.io/Linyue-GitHub/sinerr/seerr-chart@"$DIGEST" \
 - [Skopeo Documentation](https://github.com/containers/skopeo)
 - [Podman Documentation](https://podman.io/get-started/)
 - [Docker Documentation](https://docs.docker.com/)
-- [Sinerr GitHub Repository](https://github.com/Linyue-GitHub/sinerr)
+- [Sinerr GitHub Repository](https://github.com/thelinyue/sinerr)

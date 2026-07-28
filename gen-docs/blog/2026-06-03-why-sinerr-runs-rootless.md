@@ -3,7 +3,7 @@ title: "Why Sinerr Doesn't Support PUID/PGID"
 description: "Sinerr runs rootless by design. Here's why we won't be adding PUID/PGID support, and why chown is the right approach."
 slug: why-seerr-doesnt-support-puid-pgid
 authors: [fallenbagel]
-image: https://raw.githubusercontent.com/Linyue-GitHub/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
+image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
 

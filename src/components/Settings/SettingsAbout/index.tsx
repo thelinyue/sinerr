@@ -86,8 +86,8 @@ const SettingsAbout = () => {
                   <a
                     href={
                       data.version.startsWith('develop-')
-                        ? `https://github.com/Linyue-GitHub/sinerr/compare/${status.commitTag}...develop`
-                        : 'https://github.com/Linyue-GitHub/sinerr/releases'
+                        ? `https://github.com/thelinyue/sinerr/compare/${status.commitTag}...develop`
+                        : 'https://github.com/thelinyue/sinerr/releases'
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -103,8 +103,8 @@ const SettingsAbout = () => {
                   <a
                     href={
                       data.version.startsWith('develop-')
-                        ? 'https://github.com/Linyue-GitHub/sinerr/commits/develop'
-                        : 'https://github.com/Linyue-GitHub/sinerr/releases'
+                        ? 'https://github.com/thelinyue/sinerr/commits/develop'
+                        : 'https://github.com/thelinyue/sinerr/releases'
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -122,8 +122,8 @@ const SettingsAbout = () => {
               <a
                 href={
                   data.version.startsWith('develop-')
-                    ? 'https://github.com/Linyue-GitHub/sinerr/commits/develop'
-                    : 'https://github.com/Linyue-GitHub/sinerr/releases'
+                    ? 'https://github.com/thelinyue/sinerr/commits/develop'
+                    : 'https://github.com/thelinyue/sinerr/releases'
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -167,12 +167,12 @@ const SettingsAbout = () => {
           </List.Item>
           <List.Item title={intl.formatMessage(messages.githubdiscussions)}>
             <a
-              href="https://github.com/Linyue-GitHub/sinerr/discussions"
+              href="https://github.com/thelinyue/sinerr/discussions"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-500 transition duration-300 hover:underline"
             >
-              https://github.com/Linyue-GitHub/sinerr/discussions
+              https://github.com/thelinyue/sinerr/discussions
             </a>
           </List.Item>
           <List.Item title="Discord">

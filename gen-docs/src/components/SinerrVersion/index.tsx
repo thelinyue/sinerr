@@ -7,7 +7,7 @@ export const SinerrVersion = () => {
     async function fetchVersion() {
       try {
         const response = await fetch(
-          'https://raw.githubusercontent.com/Linyue-GitHub/sinerr/main/package.json'
+          'https://raw.githubusercontent.com/thelinyue/sinerr/main/package.json'
         );
 
         const data = await response.json();

@@ -17,7 +17,7 @@ import type { NotificationAgent, NotificationPayload } from './agent';
 import { BaseAgent } from './agent';
 
 const PUBLIC_LOGO_URL =
-  'https://raw.githubusercontent.com/Linyue-GitHub/sinerr/refs/heads/develop/public/logo_full.svg';
+  'https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/public/logo_full.svg';
 
 const messages = defineMessages('notifications.agents.email', {
   issueType: '{type} issue',

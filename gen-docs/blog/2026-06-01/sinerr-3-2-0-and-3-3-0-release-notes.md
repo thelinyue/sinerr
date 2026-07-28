@@ -3,7 +3,7 @@ title: "Sinerr v3.2.0 and v3.3.0 Release Notes"
 description: "Sinerr v3.2.0 and v3.3.0"
 slug: seerr-3-2-0-and-3-3-0-release-notes
 authors: [gauthier-th]
-image: https://raw.githubusercontent.com/Linyue-GitHub/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
+image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
 
@@ -57,7 +57,7 @@ Discord users can now also include multiple user or role IDs in the `User IDs` f
 
 We've also officially promoted ourselves and removed the "BETA software" banner from the About Page. We are well past the beta phase and running with the big kids now.
 
-You can find the full list of the new features and bug fixes in the [v3.2.0 release notes](https://github.com/Linyue-GitHub/sinerr/releases/tag/v3.2.0) and the [v3.3.0 release notes](https://github.com/Linyue-GitHub/sinerr/releases/tag/v3.3.0).
+You can find the full list of the new features and bug fixes in the [v3.2.0 release notes](https://github.com/thelinyue/sinerr/releases/tag/v3.2.0) and the [v3.3.0 release notes](https://github.com/thelinyue/sinerr/releases/tag/v3.3.0).
 
 ## New Contributors
 

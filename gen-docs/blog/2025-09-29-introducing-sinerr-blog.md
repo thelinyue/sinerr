@@ -4,7 +4,7 @@ description: The official Sinerr blog for release notes, technical updates, and 
 slug: welcome
 authors: [fallenbagel, gauthier-th]
 tags: [announcement, seerr, blog]
-image: https://raw.githubusercontent.com/Linyue-GitHub/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
+image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
 

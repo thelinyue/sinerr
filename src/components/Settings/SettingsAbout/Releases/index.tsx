@@ -29,7 +29,7 @@ const messages = defineMessages('components.Settings.SettingsAbout.Releases', {
 });
 
 const REPO_RELEASE_API =
-  'https://api.github.com/repos/Linyue-GitHub/sinerr/releases?per_page=20';
+  'https://api.github.com/repos/thelinyue/sinerr/releases?per_page=20';
 
 interface GitHubRelease {
   url: string;
