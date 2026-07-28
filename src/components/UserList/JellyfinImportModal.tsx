@@ -104,14 +104,19 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
       if (onComplete) {
         onComplete();
       }
-    } catch {
+    } catch (e) {
       addToast(
         intl.formatMessage(messages.importfromJellyfinerror, {
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
               ? 'Emby'
               : 'Jellyfin',
-        }),
+        }) +
+          (e?.response?.data?.message
+            ? ` (${e.response.data.message})`
+            : e?.message
+              ? ` (${e.message})`
+              : ''),
         {
           autoDismiss: true,
           appearance: 'error',

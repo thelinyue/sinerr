@@ -719,6 +719,11 @@ router.post(
       }
       return res.status(201).json(User.filterMany(createdUsers));
     } catch (e) {
+      logger.error('Failed to import Jellyfin users', {
+        label: 'User Import',
+        error: e.errorCode || e.message,
+        status: e.statusCode || e.response?.status || e.status,
+      });
       next({
         status: 500,
         message:
