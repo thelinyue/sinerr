@@ -12,7 +12,7 @@ import { useIntl } from 'react-intl';
 
 const messages = defineMessages('components.Discover.DiscoverWatchlist', {
   discoverwatchlist: 'Your Watchlist',
-  watchlist: 'Plex Watchlist',
+  watchlist: 'Watchlist',
 });
 
 const DiscoverWatchlist = () => {
@@ -71,7 +71,7 @@ const DiscoverWatchlist = () => {
         </Header>
       </div>
       <ListView
-        plexItems={titles}
+        watchlistItems={titles}
         isEmpty={isEmpty}
         isLoading={
           isLoadingInitialData || (isLoadingMore && (titles?.length ?? 0) > 0)

@@ -1,3 +1,4 @@
+import MoviePilotLogo from '@app/assets/services/moviepilot.svg';
 import RadarrLogo from '@app/assets/services/radarr.svg';
 import SonarrLogo from '@app/assets/services/sonarr.svg';
 import Alert from '@app/components/Common/Alert';
@@ -6,6 +7,7 @@ import Button from '@app/components/Common/Button';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
+import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
 import OverrideRuleModal from '@app/components/Settings/OverrideRule/OverrideRuleModal';
 import OverrideRuleTiles from '@app/components/Settings/OverrideRule/OverrideRuleTiles';
 import RadarrModal from '@app/components/Settings/RadarrModal';
@@ -16,7 +18,11 @@ import { Transition } from '@headlessui/react';
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 import type OverrideRule from '@server/entity/OverrideRule';
 import type { OverrideRuleResultsResponse } from '@server/interfaces/api/overrideRuleInterfaces';
-import type { RadarrSettings, SonarrSettings } from '@server/lib/settings';
+import type {
+  MoviePilotSettings,
+  RadarrSettings,
+  SonarrSettings,
+} from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -26,8 +32,10 @@ const messages = defineMessages('components.Settings', {
   services: 'Services',
   radarrsettings: 'Radarr Settings',
   sonarrsettings: 'Sonarr Settings',
+  moviepilotsettings: 'MoviePilot Settings',
   serviceSettingsDescription:
     'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only two of them can be marked as defaults (one non-4K and one 4K). Administrators are able to override the server used to process new requests prior to approval.',
+  moviepilotSettingsDescription: 'Configure MoviePilot connection settings',
   deleteserverconfirm: 'Are you sure you want to delete this server?',
   ssl: 'SSL',
   default: 'Default',
@@ -37,6 +45,7 @@ const messages = defineMessages('components.Settings', {
   activeProfile: 'Active Profile',
   addradarr: 'Add Radarr Server',
   addsonarr: 'Add Sonarr Server',
+  addmoviepilot: 'Add MoviePilot Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
   noDefaultNon4kServer:
@@ -60,8 +69,9 @@ interface ServerInstanceProps {
   port: number;
   isSSL?: boolean;
   externalUrl?: string;
-  profileName: string;
+  profileName?: string;
   isSonarr?: boolean;
+  isMoviepilot?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -102,6 +112,7 @@ const ServerInstance = ({
   isDefault = false,
   isSSL = false,
   isSonarr = false,
+  isMoviepilot = false,
   externalUrl,
   onEdit,
   onDelete,
@@ -157,12 +168,14 @@ const ServerInstance = ({
               {internalUrl}
             </a>
           </p>
-          <p className="mt-1 truncate text-sm leading-5 text-gray-300">
-            <span className="mr-2 font-bold">
-              {intl.formatMessage(messages.activeProfile)}
-            </span>
-            {profileName}
-          </p>
+          {profileName && (
+            <p className="mt-1 truncate text-sm leading-5 text-gray-300">
+              <span className="mr-2 font-bold">
+                {intl.formatMessage(messages.activeProfile)}
+              </span>
+              {profileName}
+            </p>
+          )}
         </div>
         <a
           href={serviceUrl}
@@ -170,7 +183,9 @@ const ServerInstance = ({
           rel="noopener noreferrer"
           className="opacity-50 hover:opacity-100"
         >
-          {isSonarr ? (
+          {isMoviepilot ? (
+            <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
+          ) : isSonarr ? (
             <SonarrLogo className="h-10 w-10 flex-shrink-0" />
           ) : (
             <RadarrLogo className="h-10 w-10 flex-shrink-0" />
@@ -215,6 +230,11 @@ const SettingsServices = () => {
     error: sonarrError,
     mutate: revalidateSonarr,
   } = useSWR<SonarrSettings[]>('/api/v1/settings/sonarr');
+  const {
+    data: moviepilotData,
+    error: moviepilotError,
+    mutate: revalidateMoviePilot,
+  } = useSWR<MoviePilotSettings[]>('/api/v1/settings/moviepilot');
   const { data: rules, mutate: revalidate } =
     useSWR<OverrideRuleResultsResponse>('/api/v1/overrideRule');
   const [editRadarrModal, setEditRadarrModal] = useState<{
@@ -231,9 +251,16 @@ const SettingsServices = () => {
     open: false,
     sonarr: null,
   });
+  const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
+    open: boolean;
+    moviepilot: MoviePilotSettings | null;
+  }>({
+    open: false,
+    moviepilot: null,
+  });
   const [deleteServerModal, setDeleteServerModal] = useState<{
     open: boolean;
-    type: 'radarr' | 'sonarr';
+    type: 'radarr' | 'sonarr' | 'moviepilot';
     serverId: number | null;
   }>({
     open: false,
@@ -255,6 +282,7 @@ const SettingsServices = () => {
     setDeleteServerModal({ open: false, serverId: null, type: 'radarr' });
     revalidateRadarr();
     revalidateSonarr();
+    revalidateMoviePilot();
     mutate('/api/v1/settings/public');
   };
 
@@ -304,6 +332,20 @@ const SettingsServices = () => {
           }}
         />
       )}
+      {editMoviePilotModal.open && (
+        <MoviePilotModal
+          moviepilot={editMoviePilotModal.moviepilot}
+          onClose={() => {
+            if (!overrideRuleModal.open)
+              setEditMoviePilotModal({ open: false, moviepilot: null });
+          }}
+          onSave={() => {
+            revalidateMoviePilot();
+            mutate('/api/v1/settings/public');
+            setEditMoviePilotModal({ open: false, moviepilot: null });
+          }}
+        />
+      )}
       <Transition
         as={Fragment}
         show={deleteServerModal.open}
@@ -327,7 +369,11 @@ const SettingsServices = () => {
           }
           title={intl.formatMessage(messages.deleteServer, {
             serverType:
-              deleteServerModal.type === 'radarr' ? 'Radarr' : 'Sonarr',
+              deleteServerModal.type === 'radarr'
+                ? 'Radarr'
+                : deleteServerModal.type === 'moviepilot'
+                  ? 'MoviePilot'
+                  : 'Sonarr',
           })}
         >
           {intl.formatMessage(messages.deleteserverconfirm)}
@@ -492,6 +538,67 @@ const SettingsServices = () => {
                   >
                     <PlusIcon />
                     <span>{intl.formatMessage(messages.addsonarr)}</span>
+                  </Button>
+                </div>
+              </li>
+            </ul>
+          </>
+        )}
+      </div>
+      <div className="mb-6 mt-10">
+        <h3 className="heading">
+          {intl.formatMessage(messages.moviepilotsettings)}
+        </h3>
+        <p className="description">
+          {intl.formatMessage(messages.moviepilotSettingsDescription)}
+        </p>
+      </div>
+      <div className="section">
+        {!moviepilotData && !moviepilotError && <LoadingSpinner />}
+        {moviepilotData && !moviepilotError && (
+          <>
+            {moviepilotData.length > 0 &&
+              !moviepilotData.some((mp) => mp.isDefault) && (
+                <Alert
+                  title={intl.formatMessage(messages.noDefaultServer, {
+                    serverType: 'MoviePilot',
+                    mediaType: intl.formatMessage(messages.mediaTypeMovie),
+                  })}
+                />
+              )}
+            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {moviepilotData.map((mp) => (
+                <ServerInstance
+                  key={`moviepilot-config-${mp.id}`}
+                  name={mp.name}
+                  hostname={mp.hostname}
+                  port={mp.port}
+                  isSSL={mp.useSsl}
+                  isDefault={mp.isDefault}
+                  isMoviepilot
+                  externalUrl={mp.externalUrl}
+                  onEdit={() =>
+                    setEditMoviePilotModal({ open: true, moviepilot: mp })
+                  }
+                  onDelete={() =>
+                    setDeleteServerModal({
+                      open: true,
+                      serverId: mp.id,
+                      type: 'moviepilot',
+                    })
+                  }
+                />
+              ))}
+              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
+                <div className="flex h-full w-full items-center justify-center">
+                  <Button
+                    buttonType="ghost"
+                    onClick={() =>
+                      setEditMoviePilotModal({ open: true, moviepilot: null })
+                    }
+                  >
+                    <PlusIcon />
+                    <span>{intl.formatMessage(messages.addmoviepilot)}</span>
                   </Button>
                 </div>
               </li>

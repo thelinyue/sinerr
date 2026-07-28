@@ -92,7 +92,6 @@ const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
             await axios.post('/api/v1/auth/jellyfin', {
               username: values.username,
               password: values.password,
-              email: values.username,
             });
           } catch (e) {
             let errorMessage = messages.loginerror;

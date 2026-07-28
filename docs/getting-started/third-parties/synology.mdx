@@ -1,13 +1,13 @@
 ---
 title: Synology (Advanced)
-description: Install Seerr on Synology NAS using SynoCommunity
+description: Install Sinerr on Synology NAS using SynoCommunity
 sidebar_position: 4
 ---
 
 # Synology
 
 :::warning
-Third-party installation methods are maintained by the community. The Seerr team is not responsible for these packages.
+Third-party installation methods are maintained by the community. The Sinerr team is not responsible for these packages.
 :::
 
 :::warning
@@ -40,31 +40,31 @@ If you haven't already added SynoCommunity to your Package Center:
 3. Follow the installation wizard prompts
 4. Package Center will automatically install any required dependencies (Node.js v22)
 
-### Access Seerr
+### Access Sinerr
 
-Once installed, access Seerr at:
+Once installed, access Sinerr at:
 
 ```
 http://<your-synology-ip>:5055
 ```
 
-You can also click the **Open** button in Package Center or find Seerr in the DSM main menu.
+You can also click the **Open** button in Package Center or find Sinerr in the DSM main menu.
 
 ## Configuration
 
-Seerr's configuration files are stored at:
+Sinerr's configuration files are stored at:
 
 ```
 /var/packages/seerr/var/config
 ```
 
 :::info
-The Seerr package runs as a dedicated service user managed by DSM. No manual permission configuration is required.
+The Sinerr package runs as a dedicated service user managed by DSM. No manual permission configuration is required.
 :::
 
 ## Managing the Service
 
-You can start, stop, and restart Seerr from **Package Center** → Find Seerr → Use the action buttons.
+You can start, stop, and restart Sinerr from **Package Center** → Find Sinerr → Use the action buttons.
 
 ## Updating
 
@@ -75,24 +75,24 @@ When a new version is available:
 3. Find **Seerr** and click **Update** if available
 
 :::tip
-Enable automatic updates in Package Center settings to keep Seerr up to date.
+Enable automatic updates in Package Center settings to keep Sinerr up to date.
 :::
 
 ## Troubleshooting
 
 ### Viewing Logs
 
-Seerr logs are located at `/var/packages/seerr/var/config/logs` and can be accessed using:
+Sinerr logs are located at `/var/packages/seerr/var/config/logs` and can be accessed using:
 
 - **File Browser** package (recommended for most users)
 - SSH (advanced users)
 
 ### Port Conflicts
 
-Seerr uses port 5055. If this port is already in use:
+Sinerr uses port 5055. If this port is already in use:
 
 - **Docker containers**: Remap the conflicting container to a different port
-- **Other packages**: The conflicting package will need to be uninstalled as Seerr's port cannot be changed
+- **Other packages**: The conflicting package will need to be uninstalled as Sinerr's port cannot be changed
 
 SynoCommunity ensures there are no port conflicts with other SynoCommunity packages or official Synology packages.
 

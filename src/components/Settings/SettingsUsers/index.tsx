@@ -13,7 +13,7 @@ import { ArrowDownOnSquareIcon } from '@heroicons/react/24/outline';
 import { MediaServerType } from '@server/constants/server';
 import type { MainSettings } from '@server/lib/settings';
 import axios from 'axios';
-import { Field, Form, Formik } from 'formik';
+import { Form, Formik } from 'formik';
 import { useIntl } from 'react-intl';
 import useSWR, { mutate } from 'swr';
 import * as yup from 'yup';
@@ -33,9 +33,6 @@ const messages = defineMessages('components.Settings.SettingsUsers', {
   mediaServerLoginTip:
     'Allow users to sign in using their {mediaServerName} account',
   atLeastOneAuth: 'At least one authentication method must be selected.',
-  newPlexLogin: 'Enable New {mediaServerName} Sign-In',
-  newPlexLoginTip:
-    'Allow {mediaServerName} users to sign in without first being imported',
   movieRequestLimitLabel: 'Global Movie Request Limit',
   tvRequestLimitLabel: 'Global Series Request Limit',
   defaultPermissions: 'Default Permissions',
@@ -85,9 +82,7 @@ const SettingsUsers = () => {
         ? 'Jellyfin'
         : settings.currentSettings.mediaServerType === MediaServerType.EMBY
           ? 'Emby'
-          : settings.currentSettings.mediaServerType === MediaServerType.PLEX
-            ? 'Plex'
-            : undefined,
+          : undefined,
   };
 
   return (
@@ -109,7 +104,6 @@ const SettingsUsers = () => {
           initialValues={{
             localLogin: data?.localLogin,
             mediaServerLogin: data?.mediaServerLogin,
-            newPlexLogin: data?.newPlexLogin,
             movieQuotaLimit: data?.defaultQuotas.movie.quotaLimit ?? 0,
             movieQuotaDays: data?.defaultQuotas.movie.quotaDays ?? 7,
             tvQuotaLimit: data?.defaultQuotas.tv.quotaLimit ?? 0,
@@ -123,7 +117,6 @@ const SettingsUsers = () => {
               await axios.post('/api/v1/settings/main', {
                 localLogin: values.localLogin,
                 mediaServerLogin: values.mediaServerLogin,
-                newPlexLogin: values.newPlexLogin,
                 defaultQuotas: {
                   movie: {
                     quotaLimit: values.movieQuotaLimit,
@@ -222,30 +215,6 @@ const SettingsUsers = () => {
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <label htmlFor="newPlexLogin" className="checkbox-label">
-                    {intl.formatMessage(
-                      messages.newPlexLogin,
-                      mediaServerFormatValues
-                    )}
-                    <span className="label-tip">
-                      {intl.formatMessage(
-                        messages.newPlexLoginTip,
-                        mediaServerFormatValues
-                      )}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <Field
-                      type="checkbox"
-                      id="newPlexLogin"
-                      name="newPlexLogin"
-                      onChange={() => {
-                        setFieldValue('newPlexLogin', !values.newPlexLogin);
-                      }}
-                    />
-                  </div>
-                </div>
                 <div className="form-row">
                   <label htmlFor="applicationTitle" className="text-label">
                     {intl.formatMessage(messages.movieRequestLimitLabel)}

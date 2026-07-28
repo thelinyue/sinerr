@@ -200,7 +200,7 @@ const CoreApp: Omit<NextAppComponentType, 'origGetInitialProps'> = ({
       <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
         <IntlProvider
           locale={currentLocale}
-          defaultLocale="en"
+          defaultLocale="zh-CN"
           messages={loadedMessages}
         >
           <LoadingBar />
@@ -257,12 +257,10 @@ CoreApp.getInitialProps = async (initialProps) => {
     cacheImages: false,
     vapidPublic: '',
     enablePushRegistration: false,
-    locale: 'en',
+    locale: 'zh-CN',
     emailEnabled: false,
-    newPlexLogin: true,
     youtubeUrl: '',
     versionCheck: true,
-    plexClientIdentifier: '',
   };
 
   if (ctx.res) {
@@ -276,7 +274,7 @@ CoreApp.getInitialProps = async (initialProps) => {
     const initialized = response.data.initialized;
 
     if (!initialized) {
-      if (!router.pathname.match(/(setup|login\/plex)/)) {
+      if (!router.pathname.match(/(setup)/)) {
         ctx.res.writeHead(307, {
           Location: '/setup',
         });

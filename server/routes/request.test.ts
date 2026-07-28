@@ -88,7 +88,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
   const requestRepo = getRepository(MediaRequest);
 
   const requestedBy = await userRepo.findOneOrFail({
-    where: { email: 'friend@seerr.dev' },
+    where: { email: 'friend@sinerr.dev' },
   });
 
   const media = await mediaRepo.save(
@@ -121,7 +121,7 @@ describe('DELETE /request/:requestId', () => {
   it('allows the owner to delete their own pending request', async () => {
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -130,7 +130,7 @@ describe('DELETE /request/:requestId', () => {
   it('allows an admin to delete any pending request', async () => {
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -143,7 +143,7 @@ describe('DELETE /request/:requestId', () => {
 
     // Create a request owned by admin, then try to delete as friend
     const owner = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -165,7 +165,7 @@ describe('DELETE /request/:requestId', () => {
       })
     );
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 401);
@@ -174,14 +174,14 @@ describe('DELETE /request/:requestId', () => {
   it('prevents the owner from deleting an approved request', async () => {
     const mediaRequest = await seedRequest(MediaRequestStatus.APPROVED);
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 401);
   });
 
   it('returns 404 for a non-existent request', async () => {
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete('/request/99999999');
 
     assert.strictEqual(res.status, 404);
@@ -193,7 +193,7 @@ describe('PUT /request/:requestId (movie)', () => {
     const requestRepo = getRepository(MediaRequest);
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.put(`/request/${mediaRequest.id}`).send({
       mediaType: MediaType.MOVIE,
       serverId: 3,
@@ -223,13 +223,13 @@ describe('POST /request/:requestId/:status', () => {
     it(`transitions to ${action}d and records the acting user`, async () => {
       const repo = getRepository(MediaRequest);
       const pending = await seedRequest();
-      const admin = await loginAs('admin@seerr.dev', 'test1234');
+      const admin = await loginAs('admin@sinerr.dev', 'test1234');
 
       const res = await admin.post(`/request/${pending.id}/${action}`);
 
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.status, expected);
-      assert.strictEqual(res.body.modifiedBy.email, 'admin@seerr.dev');
+      assert.strictEqual(res.body.modifiedBy.email, 'admin@sinerr.dev');
 
       const persisted = await repo.findOneOrFail({
         where: { id: pending.id },
@@ -237,7 +237,7 @@ describe('POST /request/:requestId/:status', () => {
       });
 
       assert.strictEqual(persisted.status, expected);
-      assert.strictEqual(persisted.modifiedBy?.email, 'admin@seerr.dev');
+      assert.strictEqual(persisted.modifiedBy?.email, 'admin@sinerr.dev');
       assert.ok(persisted.updatedAt > pending.updatedAt);
     });
   }
@@ -247,13 +247,13 @@ describe('POST /request/:requestId/retry', () => {
   it('re-approves a failed request and records the acting user', async () => {
     const repo = getRepository(MediaRequest);
     const failed = await seedRequest(MediaRequestStatus.FAILED);
-    const admin = await loginAs('admin@seerr.dev', 'test1234');
+    const admin = await loginAs('admin@sinerr.dev', 'test1234');
 
     const res = await admin.post(`/request/${failed.id}/retry`);
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.status, MediaRequestStatus.APPROVED);
-    assert.strictEqual(res.body.modifiedBy.email, 'admin@seerr.dev');
+    assert.strictEqual(res.body.modifiedBy.email, 'admin@sinerr.dev');
 
     const persisted = await repo.findOneOrFail({
       where: { id: failed.id },
@@ -261,7 +261,7 @@ describe('POST /request/:requestId/retry', () => {
     });
 
     assert.strictEqual(persisted.status, MediaRequestStatus.APPROVED);
-    assert.strictEqual(persisted.modifiedBy?.email, 'admin@seerr.dev');
+    assert.strictEqual(persisted.modifiedBy?.email, 'admin@sinerr.dev');
     assert.ok(persisted.updatedAt > failed.updatedAt);
   });
 });
@@ -273,7 +273,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const requestRepo = getRepository(MediaRequest);
 
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -316,7 +316,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const mediaRepo = getRepository(Media);
     const { media, newRequest } = await seedDeletedMediaScenario();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${newRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -331,7 +331,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const requestRepo = getRepository(MediaRequest);
 
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -367,7 +367,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${newRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -382,7 +382,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const { media, newRequest, staleRequest } =
       await seedDeletedMediaScenario();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
 
     await agent.delete(`/request/${newRequest.id}`);
 
@@ -404,7 +404,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const requestRepo = getRepository(MediaRequest);
 
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -440,7 +440,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
 
     await agent.delete(`/request/${newRequest.id}`);
 
@@ -457,7 +457,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const requestRepo = getRepository(MediaRequest);
 
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -489,7 +489,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${req1.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -504,7 +504,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const requestRepo = getRepository(MediaRequest);
 
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     const media = await mediaRepo.save(
@@ -526,7 +526,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${completedRequest.id}`);
 
     assert.strictEqual(res.status, 204);

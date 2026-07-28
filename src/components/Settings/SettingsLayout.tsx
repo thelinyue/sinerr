@@ -10,7 +10,6 @@ import { useIntl } from 'react-intl';
 const messages = defineMessages('components.Settings', {
   menuGeneralSettings: 'General',
   menuUsers: 'Users',
-  menuPlexSettings: 'Plex',
   menuJellyfinSettings: '{mediaServerName}',
   menuServices: 'Services',
   menuNetwork: 'Network',
@@ -39,17 +38,11 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
       route: '/settings/users',
       regex: /^\/settings\/users/,
     },
-    settings.currentSettings.mediaServerType === MediaServerType.PLEX
-      ? {
-          text: intl.formatMessage(messages.menuPlexSettings),
-          route: '/settings/plex',
-          regex: /^\/settings\/plex/,
-        }
-      : {
-          text: getAvailableMediaServerName(),
-          route: '/settings/jellyfin',
-          regex: /^\/settings\/jellyfin/,
-        },
+    {
+      text: getAvailableMediaServerName(),
+      route: '/settings/jellyfin',
+      regex: /^\/settings\/jellyfin/,
+    },
     {
       text: intl.formatMessage(messages.menuServices),
       route: '/settings/services',
@@ -103,7 +96,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           ? 'Jellyfin'
           : settings.currentSettings.mediaServerType === MediaServerType.EMBY
             ? 'Emby'
-            : undefined,
+            : 'Jellyfin',
     });
   }
 };

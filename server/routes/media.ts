@@ -1,16 +1,11 @@
 import RadarrAPI from '@server/api/servarr/radarr';
 import SonarrAPI from '@server/api/servarr/sonarr';
-import TautulliAPI from '@server/api/tautulli';
 import TheMovieDb from '@server/api/themoviedb';
 import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import Season from '@server/entity/Season';
-import { User } from '@server/entity/User';
-import type {
-  MediaResultsResponse,
-  MediaWatchDataResponse,
-} from '@server/interfaces/api/mediaInterfaces';
+import type { MediaResultsResponse } from '@server/interfaces/api/mediaInterfaces';
 import { Permission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
@@ -289,105 +284,6 @@ mediaRoutes.delete(
         message: e.message,
       });
       next({ status: 404, message: 'Media not found' });
-    }
-  }
-);
-
-mediaRoutes.get<{ id: string }, MediaWatchDataResponse>(
-  '/:id/watch_data',
-  isAuthenticated(Permission.ADMIN),
-  async (req, res, next) => {
-    const settings = getSettings().tautulli;
-
-    if (!settings.hostname || !settings.port || !settings.apiKey) {
-      return next({
-        status: 404,
-        message: 'Tautulli API not configured.',
-      });
-    }
-
-    const media = await getRepository(Media).findOne({
-      where: { id: Number(req.params.id) },
-    });
-
-    if (!media) {
-      return next({ status: 404, message: 'Media does not exist.' });
-    }
-
-    try {
-      const tautulli = new TautulliAPI(settings);
-      const userRepository = getRepository(User);
-
-      const response: MediaWatchDataResponse = {};
-
-      if (media.ratingKey) {
-        const watchStats = await tautulli.getMediaWatchStats(media.ratingKey);
-        const watchUsers = await tautulli.getMediaWatchUsers(media.ratingKey);
-        const plexIds = watchUsers.map((u) => u.user_id);
-        if (!plexIds.length) plexIds.push(-1);
-
-        const users = await userRepository
-          .createQueryBuilder('user')
-          .where('user.plexId IN (:...plexIds)', { plexIds })
-          .getMany();
-
-        const playCount =
-          watchStats.find((i) => i.query_days == 0)?.total_plays ?? 0;
-
-        const playCount7Days =
-          watchStats.find((i) => i.query_days == 7)?.total_plays ?? 0;
-
-        const playCount30Days =
-          watchStats.find((i) => i.query_days == 30)?.total_plays ?? 0;
-
-        response.data = {
-          users: users,
-          playCount,
-          playCount7Days,
-          playCount30Days,
-        };
-      }
-
-      if (media.ratingKey4k) {
-        const watchStats4k = await tautulli.getMediaWatchStats(
-          media.ratingKey4k
-        );
-        const watchUsers4k = await tautulli.getMediaWatchUsers(
-          media.ratingKey4k
-        );
-        const plexIds4k = watchUsers4k.map((u) => u.user_id);
-        if (!plexIds4k.length) plexIds4k.push(-1);
-
-        const users = await userRepository
-          .createQueryBuilder('user')
-          .where('user.plexId IN (:...plexIds)', { plexIds: plexIds4k })
-          .getMany();
-
-        const playCount =
-          watchStats4k.find((i) => i.query_days == 0)?.total_plays ?? 0;
-
-        const playCount7Days =
-          watchStats4k.find((i) => i.query_days == 7)?.total_plays ?? 0;
-
-        const playCount30Days =
-          watchStats4k.find((i) => i.query_days == 30)?.total_plays ?? 0;
-
-        response.data4k = {
-          users,
-          playCount,
-          playCount7Days,
-          playCount30Days,
-        };
-      }
-
-      return res.status(200).json(response);
-    } catch (e) {
-      logger.error('Something went wrong fetching media watch data', {
-        label: 'API',
-        errorMessage: e.message,
-        mediaId: req.params.id,
-      });
-      next({ status: 500, message: 'Failed to fetch watch data.' });
     }
   }
 );

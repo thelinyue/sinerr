@@ -5,7 +5,7 @@
   "vapidPublic": "BK_EpP8NDm9waor2zn6_S28o3ZYv4kCkJOfYpO3pt3W6jnPmxrgTLANUBNbbyaNatPnSQ12De9CeqSYQrqWzHTs",
   "main": {
     "apiKey": "testkey",
-    "applicationTitle": "Seerr",
+    "applicationTitle": "Sinerr",
     "applicationUrl": "",
     "cacheImages": false,
     "defaultPermissions": 32,
@@ -15,7 +15,6 @@
     },
     "hideAvailable": false,
     "localLogin": true,
-    "newPlexLogin": true,
     "discoverRegion": "",
     "streamingRegion": "",
     "originalLanguage": "",
@@ -26,21 +25,6 @@
     "partialRequestsEnabled": true,
     "enableSpecialEpisodes": false,
     "locale": "en"
-  },
-  "plex": {
-    "name": "Seerr",
-    "ip": "192.168.1.1",
-    "port": 32400,
-    "useSsl": false,
-    "libraries": [
-      {
-        "id": "1",
-        "name": "Movies",
-        "enabled": true,
-        "type": "movie"
-      }
-    ],
-    "machineId": "test"
   },
   "jellyfin": {
     "name": "",
@@ -71,7 +55,7 @@
           "ignoreTls": false,
           "requireTls": false,
           "allowSelfSigned": false,
-          "senderName": "Seerr"
+          "senderName": "Sinerr"
         }
       },
       "discord": {
@@ -147,20 +131,11 @@
     }
   },
   "jobs": {
-    "plex-recently-added-scan": {
-      "schedule": "0 */5 * * * *"
-    },
-    "plex-full-scan": {
-      "schedule": "0 0 3 * * *"
-    },
     "radarr-scan": {
       "schedule": "0 0 4 * * *"
     },
     "sonarr-scan": {
       "schedule": "0 30 4 * * *"
-    },
-    "plex-watchlist-sync": {
-      "schedule": "0 */10 * * * *"
     },
     "availability-sync": {
       "schedule": "0 0 5 * * *"

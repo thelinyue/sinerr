@@ -1,6 +1,6 @@
 ---
 title: Nix Package Manager (Advanced)
-description: Install Seerr using Nixpkgs
+description: Install Sinerr using Nixpkgs
 sidebar_position: 4
 ---
 
@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 # Nix Package Manager
 :::warning
 This method is not recommended for most users. It is intended for advanced users who are using NixOS distribution.
-The Seerr service and package are available as of the 26.05 release.
+The Sinerr service and package are available as of the 26.05 release.
 :::
 
 Refer to [NixOS documentation](https://search.nixos.org/options?channel=26.05&query=seerr)
@@ -45,9 +45,9 @@ export const VersionMismatchWarning = () => {
   <Admonition type="warning">
     The{' '}
     <a href="https://github.com/NixOS/nixpkgs/blob/nixos-26.05/pkgs/by-name/se/seerr/package.nix#L23">
-      upstream Seerr Nix Stable Package (v{nixpkgVersions.stable})
+      upstream Sinerr Nix Stable Package (v{nixpkgVersions.stable})
     </a>{' '}
-    is not <b>up-to-date</b>. If you want to use <b>Seerr v{seerrVersion}</b>,{' '}
+    is not <b>up-to-date</b>. If you want to use <b>Sinerr v{seerrVersion}</b>,{' '}
     {isUnstableUpToDate ? (
       <>
         consider using the{' '}
@@ -87,5 +87,5 @@ After rebuild is complete seerr should be running, verify that it is with the fo
 systemctl status seerr
 ```
 :::info
-You can now access Seerr by visiting `http://localhost:5055` in your web browser.
+You can now access Sinerr by visiting `http://localhost:5055` in your web browser.
 :::

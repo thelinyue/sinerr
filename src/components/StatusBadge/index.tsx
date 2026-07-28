@@ -14,7 +14,7 @@ import { useIntl } from 'react-intl';
 const messages = defineMessages('components.StatusBadge', {
   status: '{status}',
   status4k: '4K {status}',
-  playonplex: 'Play on {mediaServerName}',
+  playonmediaserver: 'Play on {mediaServerName}',
   openinarr: 'Open in {arr}',
   managemedia: 'Manage {mediaType}',
   seasonnumber: 'S{seasonNumber}',
@@ -26,7 +26,7 @@ interface StatusBadgeProps {
   downloadItem?: DownloadingItem[];
   is4k?: boolean;
   inProgress?: boolean;
-  plexUrl?: string;
+  mediaUrl?: string;
   serviceUrl?: string;
   tmdbId?: number;
   mediaType?: 'movie' | 'tv';
@@ -39,7 +39,7 @@ const StatusBadge = ({
   downloadItem = [],
   is4k = false,
   inProgress = false,
-  plexUrl,
+  mediaUrl,
   serviceUrl,
   tmdbId,
   mediaType,
@@ -59,7 +59,7 @@ const StatusBadge = ({
 
   if (
     mediaType &&
-    plexUrl &&
+    mediaUrl &&
     hasPermission(
       is4k
         ? [
@@ -83,14 +83,12 @@ const StatusBadge = ({
         ? settings.currentSettings.movie4kEnabled
         : settings.currentSettings.series4kEnabled))
   ) {
-    mediaLink = plexUrl;
-    mediaLinkDescription = intl.formatMessage(messages.playonplex, {
+    mediaLink = mediaUrl;
+    mediaLinkDescription = intl.formatMessage(messages.playonmediaserver, {
       mediaServerName:
         settings.currentSettings.mediaServerType === MediaServerType.EMBY
           ? 'Emby'
-          : settings.currentSettings.mediaServerType === MediaServerType.PLEX
-            ? 'Plex'
-            : 'Jellyfin',
+          : 'Jellyfin',
     });
   } else if (hasPermission(Permission.MANAGE_REQUESTS)) {
     if (mediaType && tmdbId) {

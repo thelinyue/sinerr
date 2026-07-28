@@ -72,11 +72,9 @@ const RequestItemError = ({
     mutate('/api/v1/request/count');
   };
 
-  const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
+  const { mediaUrl, mediaUrl4k } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
     mediaUrl4k: requestData?.media?.mediaUrl4k,
-    iOSPlexUrl: requestData?.media?.iOSPlexUrl,
-    iOSPlexUrl4k: requestData?.media?.iOSPlexUrl4k,
   });
 
   return (
@@ -155,7 +153,7 @@ const RequestItemError = ({
                     }
                     is4k={requestData.is4k}
                     mediaType={requestData.type}
-                    plexUrl={requestData.is4k ? plexUrl4k : plexUrl}
+                    mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
                     serviceUrl={
                       requestData.is4k
                         ? requestData.media.serviceUrl4k
@@ -378,11 +376,9 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
     }
   };
 
-  const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
+  const { mediaUrl, mediaUrl4k } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
     mediaUrl4k: requestData?.media?.mediaUrl4k,
-    iOSPlexUrl: requestData?.media?.iOSPlexUrl,
-    iOSPlexUrl4k: requestData?.media?.iOSPlexUrl4k,
   });
 
   if (!title && !error) {
@@ -545,7 +541,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                   is4k={requestData.is4k}
                   tmdbId={requestData.media.tmdbId}
                   mediaType={requestData.type}
-                  plexUrl={requestData.is4k ? plexUrl4k : plexUrl}
+                  mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
                   serviceUrl={
                     requestData.is4k
                       ? requestData.media.serviceUrl4k

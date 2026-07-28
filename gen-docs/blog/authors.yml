@@ -1,8 +1,8 @@
 fallenbagel:
   name: Fallenbagel
   page: true
-  title: Developer & Maintainer of Seerr
-  description: Core Maintainer & Developer of Seerr | Full-Stack Software Engineer | MSc Software Engineering Student.
+  title: Developer & Maintainer of Sinerr
+  description: Core Maintainer & Developer of Sinerr | Full-Stack Software Engineer | MSc Software Engineering Student.
   url: https://github.com/fallenbagel
   image_url: https://github.com/fallenbagel.png
   email: hello@fallenbagel.com
@@ -12,18 +12,18 @@ fallenbagel:
 gauthier-th:
   name: Gauthier
   page: true
-  title: Developer & Maintainer of Seerr
-  description: Core Maintainer & Developer of Seerr | PhD Student in AI at ICB, Dijon
+  title: Developer & Maintainer of Sinerr
+  description: Core Maintainer & Developer of Sinerr | PhD Student in AI at ICB, Dijon
   url: https://gauthierth.fr
   image_url: https://github.com/gauthier-th.png
   email: mail@gauthierth.fr
   socials:
     github: gauthier-th
 
-seerr-team:
-  name: Seerr Team
-  title: The team behind Seerr, formerly known as the Jellyseerr and Overseerr teams.
+Linyue-GitHub:
+  name: Sinerr Team
+  title: The team behind Sinerr, formerly known as the Jellyseerr and Overseerr teams.
   url: https://seerr.dev
-  image_url: https://github.com/seerr-team.png
+  image_url: https://github.com/Linyue-GitHub.png
   socials:
-    github: seerr-team
+    github: Linyue-GitHub

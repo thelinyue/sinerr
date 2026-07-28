@@ -145,7 +145,7 @@ describe('Discover', () => {
           requestedBy: {
             permissions: 4194336,
             id: 18,
-            email: 'friend@seerr.dev',
+            email: 'friend@sinerr.dev',
             plexUsername: null,
             username: '',
             recoveryLinkExpirationDate: null,
@@ -159,7 +159,7 @@ describe('Discover', () => {
             createdAt: '2022-08-17T04:55:28.000Z',
             updatedAt: '2022-08-17T04:55:28.000Z',
             requestCount: 1,
-            displayName: 'friend@seerr.dev',
+            displayName: 'friend@sinerr.dev',
           },
           seasonCount: 0,
         },
@@ -174,41 +174,5 @@ describe('Discover', () => {
       .first()
       .find('[data-testid=request-card-title]')
       .contains('Movie Not Found');
-  });
-
-  it('loads plex watchlist', () => {
-    cy.intercept('/api/v1/discover/watchlist', {
-      fixture: 'watchlist.json',
-    }).as('getWatchlist');
-    // Wait for one of the watchlist movies to resolve
-    cy.intercept('/api/v1/movie/361743').as('getTmdbMovie');
-
-    cy.visit('/');
-
-    cy.wait('@getWatchlist');
-
-    const sliderHeader = cy.contains('.slider-header', 'Watchlist');
-
-    sliderHeader.scrollIntoView();
-
-    cy.wait('@getTmdbMovie');
-    // Wait a little longer to make sure the movie component reloaded
-    cy.wait(500);
-
-    sliderHeader
-      .next('[data-testid=media-slider]')
-      .find('[data-testid=title-card]')
-      .first()
-      .trigger('mouseover')
-      .find('[data-testid=title-card-title]')
-      .invoke('text')
-      .then((text) => {
-        cy.contains('.slider-header', 'Watchlist')
-          .next('[data-testid=media-slider]')
-          .find('[data-testid=title-card]')
-          .first()
-          .click();
-        cy.get('[data-testid=media-title]').should('contain', text);
-      });
   });
 });

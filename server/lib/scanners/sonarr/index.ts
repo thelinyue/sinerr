@@ -224,7 +224,6 @@ class SonarrScanner
         serviceId: this.currentServer.id,
         externalServiceId: sonarrSeries.id,
         externalServiceSlug: sonarrSeries.titleSlug,
-        title: sonarrSeries.title,
         is4k: server4k,
       });
     } catch (e) {

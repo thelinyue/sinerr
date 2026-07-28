@@ -35,7 +35,7 @@ const defaultCheckResponse = {
   Code: '123456',
   DeviceId: 'device-1',
   DeviceName: 'Test',
-  AppName: 'Seerr',
+  AppName: 'Sinerr',
   AppVersion: '1.0',
   DateAdded: new Date().toISOString(),
 };
@@ -122,7 +122,6 @@ async function authenticatedAgent(email: string, password: string) {
 function configureJellyfin() {
   const settings = getSettings();
   settings.main.mediaServerType = MediaServerType.JELLYFIN;
-  settings.main.newPlexLogin = true;
   settings.jellyfin.ip = 'localhost';
   settings.jellyfin.port = 8096;
   settings.jellyfin.useSsl = false;
@@ -325,7 +324,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
   it('signs in an existing Jellyfin user and sets session', async () => {
     const userRepo = getRepository(User);
     const existingUser = new User({
-      email: 'existing-qc@seerr.dev',
+      email: 'existing-qc@sinerr.dev',
       jellyfinUsername: 'quickconnectuser',
       jellyfinUserId: 'jf-qc-user-001',
       jellyfinDeviceId: 'old-device-id',
@@ -361,10 +360,7 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
     assert.notStrictEqual(updatedUser.jellyfinDeviceId, 'old-device-id');
   });
 
-  it('creates a new user when newPlexLogin is enabled and user does not exist', async () => {
-    const settings = getSettings();
-    settings.main.newPlexLogin = true;
-
+  it('creates a new user when user does not exist', async () => {
     authenticateQCMock.mock.mockImplementation(async () => ({
       User: {
         Id: 'jf-brand-new-user',
@@ -399,7 +395,6 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
   it('sets userType to EMBY when media server is Emby', async () => {
     const settings = getSettings();
     settings.main.mediaServerType = MediaServerType.EMBY;
-    settings.main.newPlexLogin = true;
 
     authenticateQCMock.mock.mockImplementation(async () => ({
       User: {
@@ -432,7 +427,6 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
 
   it('applies default permissions to newly created users', async () => {
     const settings = getSettings();
-    settings.main.newPlexLogin = true;
     settings.main.defaultPermissions = 32;
 
     authenticateQCMock.mock.mockImplementation(async () => ({
@@ -456,28 +450,6 @@ describe('POST /auth/jellyfin/quickconnect/authenticate', () => {
       where: { jellyfinUserId: 'jf-perms-test-user' },
     });
     assert.strictEqual(user.permissions, 32);
-  });
-
-  it('returns 403 when newPlexLogin is disabled and user does not exist', async () => {
-    const settings = getSettings();
-    settings.main.newPlexLogin = false;
-
-    authenticateQCMock.mock.mockImplementation(async () => ({
-      User: {
-        Id: 'jf-unknown-user',
-        Name: 'unknownuser',
-        ServerId: 'server-1',
-        Policy: { IsAdministrator: false },
-      },
-      AccessToken: 'unknown-token',
-    }));
-
-    const res = await request(app)
-      .post('/auth/jellyfin/quickconnect/authenticate')
-      .send({ secret: 'abc123def456abc123def456' });
-
-    assert.strictEqual(res.status, 403);
-    assert.strictEqual(res.body.message, 'Access denied.');
   });
 
   it('returns error when Jellyfin authenticateQuickConnect fails', async () => {
@@ -513,7 +485,7 @@ describe('GET /auth/me', () => {
   });
 
   it('returns the authenticated user', async () => {
-    const agent = await authenticatedAgent('admin@seerr.dev', 'test1234');
+    const agent = await authenticatedAgent('admin@sinerr.dev', 'test1234');
 
     const res = await agent.get('/auth/me');
 
@@ -529,7 +501,7 @@ describe('GET /auth/me', () => {
     // Change the user's email to something invalid
     const userRepo = getRepository(User);
     const user = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
     user.email = 'not-an-email';
     await userRepo.save(user);
@@ -560,7 +532,7 @@ describe('POST /auth/local', () => {
   it('returns 200 and user data on valid credentials', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'test1234' });
+      .send({ email: 'admin@sinerr.dev', password: 'test1234' });
 
     assert.strictEqual(res.status, 200);
     assert.ok('id' in res.body);
@@ -571,7 +543,7 @@ describe('POST /auth/local', () => {
   it('returns 403 on wrong password', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'wrongpassword' });
+      .send({ email: 'admin@sinerr.dev', password: 'wrongpassword' });
 
     assert.strictEqual(res.status, 403);
     assert.strictEqual(res.body.message, 'Access denied.');
@@ -580,7 +552,7 @@ describe('POST /auth/local', () => {
   it('returns 403 for nonexistent user', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'nobody@seerr.dev', password: 'test1234' });
+      .send({ email: 'nobody@sinerr.dev', password: 'test1234' });
 
     assert.strictEqual(res.status, 403);
     assert.strictEqual(res.body.message, 'Access denied.');
@@ -592,7 +564,7 @@ describe('POST /auth/local', () => {
 
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'test1234' });
+      .send({ email: 'admin@sinerr.dev', password: 'test1234' });
 
     assert.strictEqual(res.status, 500);
     assert.strictEqual(res.body.error, 'Password sign-in is disabled.');
@@ -610,7 +582,7 @@ describe('POST /auth/local', () => {
   it('returns 500 when password is missing', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev' });
+      .send({ email: 'admin@sinerr.dev' });
 
     assert.strictEqual(res.status, 500);
     assert.match(res.body.error, /email address and a password/);
@@ -619,7 +591,7 @@ describe('POST /auth/local', () => {
   it('is case-insensitive for email', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'Admin@Seerr.Dev', password: 'test1234' });
+      .send({ email: 'Admin@Sinerr.Dev', password: 'test1234' });
 
     assert.strictEqual(res.status, 200);
     assert.ok('id' in res.body);
@@ -628,7 +600,7 @@ describe('POST /auth/local', () => {
   it('allows the non-admin user to log in', async () => {
     const res = await request(app)
       .post('/auth/local')
-      .send({ email: 'friend@seerr.dev', password: 'test1234' });
+      .send({ email: 'friend@sinerr.dev', password: 'test1234' });
 
     assert.strictEqual(res.status, 200);
     assert.ok('id' in res.body);
@@ -639,7 +611,7 @@ describe('POST /auth/local', () => {
 
     await agent
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'test1234' });
+      .send({ email: 'admin@sinerr.dev', password: 'test1234' });
 
     // Session should persist — /me should succeed
     const meRes = await agent.get('/auth/me');
@@ -656,7 +628,7 @@ describe('POST /auth/logout', () => {
   });
 
   it('destroys session and returns 200 when logged in', async () => {
-    const agent = await authenticatedAgent('admin@seerr.dev', 'test1234');
+    const agent = await authenticatedAgent('admin@sinerr.dev', 'test1234');
 
     // Verify session is active
     const meBeforeRes = await agent.get('/auth/me');
@@ -680,7 +652,7 @@ describe('POST /auth/reset-password', () => {
   it('returns 200 for a valid email', async () => {
     const res = await request(app)
       .post('/auth/reset-password')
-      .send({ email: 'admin@seerr.dev' });
+      .send({ email: 'admin@sinerr.dev' });
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.status, 'ok');
@@ -690,7 +662,7 @@ describe('POST /auth/reset-password', () => {
   it('returns 200 for nonexistent email (does not reveal user existence)', async () => {
     const res = await request(app)
       .post('/auth/reset-password')
-      .send({ email: 'nonexistent@seerr.dev' });
+      .send({ email: 'nonexistent@sinerr.dev' });
 
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.status, 'ok');
@@ -708,13 +680,13 @@ describe('POST /auth/reset-password', () => {
   it('sets a resetPasswordGuid on the user', async () => {
     await request(app)
       .post('/auth/reset-password')
-      .send({ email: 'admin@seerr.dev' });
+      .send({ email: 'admin@sinerr.dev' });
 
     const userRepo = getRepository(User);
     const user = await userRepo
       .createQueryBuilder('user')
       .addSelect(['user.resetPasswordGuid', 'user.recoveryLinkExpirationDate'])
-      .where('user.email = :email', { email: 'admin@seerr.dev' })
+      .where('user.email = :email', { email: 'admin@sinerr.dev' })
       .getOneOrFail();
 
     assert.notStrictEqual(user.resetPasswordGuid, undefined);
@@ -740,7 +712,7 @@ describe('POST /auth/reset-password/:guid', () => {
   }
 
   it('resets password with a valid guid and password', async () => {
-    const guid = await getResetGuid('admin@seerr.dev');
+    const guid = await getResetGuid('admin@sinerr.dev');
 
     const res = await request(app)
       .post(`/auth/reset-password/${guid}`)
@@ -752,13 +724,13 @@ describe('POST /auth/reset-password/:guid', () => {
     // Old password no longer works
     const oldLogin = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'test1234' });
+      .send({ email: 'admin@sinerr.dev', password: 'test1234' });
     assert.strictEqual(oldLogin.status, 403);
 
     // New password works
     const newLogin = await request(app)
       .post('/auth/local')
-      .send({ email: 'admin@seerr.dev', password: 'newpassword123' });
+      .send({ email: 'admin@sinerr.dev', password: 'newpassword123' });
     assert.strictEqual(newLogin.status, 200);
   });
 
@@ -772,7 +744,7 @@ describe('POST /auth/reset-password/:guid', () => {
   });
 
   it('returns 500 when password is too short', async () => {
-    const guid = await getResetGuid('admin@seerr.dev');
+    const guid = await getResetGuid('admin@sinerr.dev');
 
     const res = await request(app)
       .post(`/auth/reset-password/${guid}`)
@@ -786,7 +758,7 @@ describe('POST /auth/reset-password/:guid', () => {
   });
 
   it('returns 500 when password is missing', async () => {
-    const guid = await getResetGuid('admin@seerr.dev');
+    const guid = await getResetGuid('admin@sinerr.dev');
 
     const res = await request(app)
       .post(`/auth/reset-password/${guid}`)
@@ -800,12 +772,12 @@ describe('POST /auth/reset-password/:guid', () => {
   });
 
   it('returns 500 for an expired recovery link', async () => {
-    const guid = await getResetGuid('admin@seerr.dev');
+    const guid = await getResetGuid('admin@sinerr.dev');
 
     // Expire the link
     const userRepo = getRepository(User);
     const user = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
     user.recoveryLinkExpirationDate = new Date('2020-01-01');
     await userRepo.save(user);
@@ -819,7 +791,7 @@ describe('POST /auth/reset-password/:guid', () => {
   });
 
   it('cannot reuse a guid after successful reset', async () => {
-    const guid = await getResetGuid('admin@seerr.dev');
+    const guid = await getResetGuid('admin@sinerr.dev');
 
     // First reset succeeds
     const first = await request(app)

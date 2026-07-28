@@ -34,16 +34,6 @@ export interface Language {
   name: string;
 }
 
-export interface PlexSettings {
-  name: string;
-  machineId?: string;
-  ip: string;
-  port: number;
-  useSsl?: boolean;
-  libraries: Library[];
-  webAppUrl?: string;
-}
-
 export interface JellyfinSettings {
   name: string;
   ip: string;
@@ -103,6 +93,19 @@ export interface SonarrSettings extends DVRSettings {
   monitorNewItems: 'all' | 'none';
 }
 
+export interface MoviePilotSettings {
+  id: number;
+  name: string;
+  hostname: string;
+  port: number;
+  apiKey: string;
+  useSsl: boolean;
+  baseUrl?: string;
+  isDefault: boolean;
+  externalUrl?: string;
+  syncEnabled: boolean;
+}
+
 interface Quota {
   quotaLimit?: number;
   quotaDays?: number;
@@ -143,7 +146,6 @@ export interface MainSettings {
   hideBlocklisted: boolean;
   localLogin: boolean;
   mediaServerLogin: boolean;
-  newPlexLogin: boolean;
   discoverRegion: string;
   streamingRegion: string;
   originalLanguage: string;
@@ -213,10 +215,8 @@ interface FullPublicSettings extends PublicSettings {
   locale: string;
   emailEnabled: boolean;
   userEmailRequired: boolean;
-  newPlexLogin: boolean;
   youtubeUrl: string;
   versionCheck: boolean;
-  plexClientIdentifier: string;
 }
 
 export interface NotificationAgentConfig {
@@ -357,12 +357,9 @@ interface JobSettings {
 }
 
 export type JobId =
-  | 'plex-recently-added-scan'
-  | 'plex-full-scan'
-  | 'plex-watchlist-sync'
-  | 'plex-refresh-token'
   | 'radarr-scan'
   | 'sonarr-scan'
+  | 'moviepilot-scan'
   | 'download-sync'
   | 'download-sync-reset'
   | 'jellyfin-recently-added-scan'
@@ -377,11 +374,11 @@ export interface AllSettings {
   vapidPublic: string;
   vapidPrivate: string;
   main: MainSettings;
-  plex: PlexSettings;
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
   radarr: RadarrSettings[];
   sonarr: SonarrSettings[];
+  moviepilot: MoviePilotSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
   jobs: Record<JobId, JobSettings>;
@@ -406,7 +403,7 @@ class Settings {
       vapidPublic: '',
       main: {
         apiKey: '',
-        applicationTitle: 'Seerr',
+        applicationTitle: 'Sinerr',
         applicationUrl: '',
         cacheImages: false,
         defaultPermissions: Permission.REQUEST,
@@ -418,7 +415,6 @@ class Settings {
         hideBlocklisted: false,
         localLogin: true,
         mediaServerLogin: true,
-        newPlexLogin: true,
         discoverRegion: '',
         streamingRegion: '',
         originalLanguage: '',
@@ -429,16 +425,9 @@ class Settings {
         mediaServerType: MediaServerType.NOT_CONFIGURED,
         partialRequestsEnabled: true,
         enableSpecialEpisodes: false,
-        locale: 'en',
+        locale: 'zh-CN',
         youtubeUrl: '',
         versionCheck: true,
-      },
-      plex: {
-        name: '',
-        ip: '',
-        port: 32400,
-        useSsl: false,
-        libraries: [],
       },
       jellyfin: {
         name: '',
@@ -459,6 +448,7 @@ class Settings {
       },
       radarr: [],
       sonarr: [],
+      moviepilot: [],
       public: {
         initialized: false,
       },
@@ -476,7 +466,7 @@ class Settings {
               ignoreTls: false,
               requireTls: false,
               allowSelfSigned: false,
-              senderName: 'Seerr',
+              senderName: 'Sinerr',
               usePublicLogo: false,
             },
           },
@@ -570,18 +560,6 @@ class Settings {
         },
       },
       jobs: {
-        'plex-recently-added-scan': {
-          schedule: '0 */5 * * * *',
-        },
-        'plex-full-scan': {
-          schedule: '0 0 3 * * *',
-        },
-        'plex-watchlist-sync': {
-          schedule: '0 */3 * * * *',
-        },
-        'plex-refresh-token': {
-          schedule: '0 0 5 * * *',
-        },
         'radarr-scan': {
           schedule: '0 0 4 * * *',
         },
@@ -602,6 +580,9 @@ class Settings {
         },
         'jellyfin-full-scan': {
           schedule: '0 0 3 * * *',
+        },
+        'moviepilot-scan': {
+          schedule: '0 30 4 * * *',
         },
         'image-cache-cleanup': {
           schedule: '0 0 5 * * *',
@@ -644,14 +625,6 @@ class Settings {
 
   set main(data: MainSettings) {
     this.data.main = mergeSettings(this.data.main, data);
-  }
-
-  get plex(): PlexSettings {
-    return this.data.plex;
-  }
-
-  set plex(data: PlexSettings) {
-    this.data.plex = mergeSettings(this.data.plex, data);
   }
 
   get jellyfin(): JellyfinSettings {
@@ -697,6 +670,14 @@ class Settings {
     this.data.sonarr = data;
   }
 
+  get moviepilot(): MoviePilotSettings[] {
+    return this.data.moviepilot;
+  }
+
+  set moviepilot(data: MoviePilotSettings[]) {
+    this.data.moviepilot = data;
+  }
+
   get public(): PublicSettings {
     return this.data.public;
   }
@@ -735,10 +716,8 @@ class Settings {
       emailEnabled: this.data.notifications.agents.email.enabled,
       userEmailRequired:
         this.data.notifications.agents.email.options.userEmailRequired,
-      newPlexLogin: this.data.main.newPlexLogin,
       youtubeUrl: this.data.main.youtubeUrl,
       versionCheck: this.data.main.versionCheck,
-      plexClientIdentifier: this.data.clientId,
     };
   }
 

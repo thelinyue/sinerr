@@ -1,8 +1,8 @@
-# Seerr Documentation
+# Sinerr Documentation
 
-Seerr docs is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+Sinerr docs is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-Seerr docs will be available at [docs.seerr.dev](https://docs.seerr.dev).
+Sinerr docs will be available at [docs.seerr.dev](https://docs.seerr.dev).
 
 ### Installation
 

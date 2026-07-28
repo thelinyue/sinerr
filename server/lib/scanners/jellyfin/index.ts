@@ -153,7 +153,6 @@ class JellyfinScanner
           mediaAddedAt,
           jellyfinMediaId: metadata.Id,
           imdbId,
-          title: metadata.Name,
         });
       }
 
@@ -163,7 +162,6 @@ class JellyfinScanner
           mediaAddedAt,
           jellyfinMediaId: metadata.Id,
           imdbId,
-          title: metadata.Name,
         });
       }
     } catch (e) {
@@ -373,7 +371,7 @@ class JellyfinScanner
                 // 1080p files (no 4K release available yet), those files will be counted
                 // as "standard" even though they're in the 4K library. This can cause
                 // non-4K users to see content as "available" when they can't access it.
-                // See issue https://github.com/seerr-team/seerr/issues/1744 for details.
+                // See issue https://github.com/Linyue-GitHub/sinerr/issues/1744 for details.
                 if (hasStandard) totalStandard += episodeCount;
                 if (has4k) total4k += episodeCount;
               }
@@ -420,7 +418,6 @@ class JellyfinScanner
               ? new Date(metadata.DateCreated)
               : undefined,
             jellyfinMediaId: Id,
-            title: tvShow.name,
           }
         );
       } else {

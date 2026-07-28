@@ -1,26 +1,26 @@
 <p align="center">
-<img src="./public/logo_full.svg" alt="Seerr" style="margin: 20px 0;">
+<img src="./public/logo_full.svg" alt="Sinerr" style="margin: 20px 0;">
 </p>
 <p align="center">
-<img src="https://github.com/seerr-team/seerr/actions/workflows/release.yml/badge.svg" alt="Seerr Release" />
-<img src="https://github.com/seerr-team/seerr/actions/workflows/ci.yml/badge.svg" alt="Seerr CI">
+<img src="https://github.com/Linyue-GitHub/sinerr/actions/workflows/release.yml/badge.svg" alt="Sinerr Release" />
+<img src="https://github.com/Linyue-GitHub/sinerr/actions/workflows/ci.yml/badge.svg" alt="Sinerr CI">
 </p>
 <p align="center">
 <a href="https://discord.gg/seerr"><img src="https://img.shields.io/discord/783137440809746482" alt="Discord"></a>
-<a href="https://hub.docker.com/r/seerr/seerr"><img src="https://img.shields.io/docker/pulls/seerr/seerr" alt="Docker pulls"></a>
+<a href="https://hub.docker.com/r/linyue/sinerr"><img src="https://img.shields.io/docker/pulls/linyue/sinerr" alt="Docker pulls"></a>
 <a href="https://translate.seerr.dev/engage/seerr/"><img src="https://translate.seerr.dev/widget/seerr/svg-badge.svg" alt="Translation status" /></a>
-<a href="https://github.com/seerr-team/seerr/blob/develop/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/seerr-team/seerr"></a>
+<a href="https://github.com/Linyue-GitHub/sinerr/blob/develop/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/Linyue-GitHub/sinerr"></a>
 
-**Seerr** is a free and open source software application for managing requests for your media library. It integrates with the media server of your choice: [Jellyfin](https://jellyfin.org), [Plex](https://plex.tv), and [Emby](https://emby.media/). In addition, it integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)**, **[Radarr](https://radarr.video/)**.
+**Seerr** is a free and open source software application for managing requests for your media library. It integrates with the media server of your choice: [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/). In addition, it integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)**, **[Radarr](https://radarr.video/)**.
 
 ## Current Features
 
-- Full Jellyfin/Emby/Plex integration including authentication with user import & management.
+- Full Jellyfin/Emby integration including authentication with user import & management.
 - Support for **PostgreSQL** and **SQLite** databases.
 - Supports Movies, Shows and Mixed Libraries.
 - Ability to change email addresses for SMTP purposes.
-- Easy integration with your existing services. Currently, Seerr supports Sonarr and Radarr. More to come!
-- Jellyfin/Emby/Plex library scan, to keep track of the titles which are already available.
+- Easy integration with your existing services. Currently, Sinerr supports Sonarr and Radarr. More to come!
+- Jellyfin/Emby library scan, to keep track of the titles which are already available.
 - Customizable request system, which allows users to request individual seasons or movies in a friendly, easy-to-use interface.
 - Incredibly simple request management UI. Don't dig through the app to simply approve recent requests!
 - Granular permission system.
@@ -32,42 +32,42 @@ With more features on the way! Check out our [issue tracker](/../../issues) to s
 
 ## Getting Started
 
-Check out our documentation for instructions on how to install and run Seerr:
+Check out our documentation for instructions on how to install and run Sinerr:
 
 https://docs.seerr.dev/getting-started/
 
 ## Preview
 
-<img src="./public/preview.jpg" alt="Seerr application preview" />
+<img src="./public/preview.jpg" alt="Sinerr application preview" />
 
-## Migrating from Overseerr/Jellyseerr to Seerr
+## Migrating from Overseerr/Jellyseerr to Sinerr
 
-Read our [release announcement](https://docs.seerr.dev/blog/seerr-release) to learn what Seerr means for Jellyseerr and Overseerr users.
+Read our [release announcement](https://docs.seerr.dev/blog/seerr-release) to learn what Sinerr means for Jellyseerr and Overseerr users.
 
 Please follow our [migration guide](https://docs.seerr.dev/migration-guide) for detailed instructions on migrating from Overseerr or Jellyseerr.
 
 ## Support
 
-- Check out the [Seerr Documentation](https://docs.seerr.dev) before asking for help. Your question might already be in the docs!
+- Check out the [Sinerr Documentation](https://docs.seerr.dev) before asking for help. Your question might already be in the docs!
 - You can get support on [Discord](https://discord.gg/seerr).
 - You can ask questions in the Help category of our [GitHub Discussions](/../../discussions).
 - Bug reports and feature requests can be submitted via [GitHub Issues](/../../issues).
 
 ## API Documentation
 
-You can access the API documentation from your local Seerr install at http://localhost:5055/api-docs
+You can access the API documentation from your local Sinerr install at http://localhost:5055/api-docs
 
 ## Community
 
 You can ask questions, share ideas, and more in [GitHub Discussions](/../../discussions).
 
-If you would like to chat with other members of our growing community, [join the Seerr Discord server](https://discord.gg/seerr)!
+If you would like to chat with other members of our growing community, [join the Sinerr Discord server](https://discord.gg/seerr)!
 
-Our [Code of Conduct](./CODE_OF_CONDUCT.md) applies to all Seerr community channels.
+Our [Code of Conduct](./CODE_OF_CONDUCT.md) applies to all Sinerr community channels.
 
 ## Contributing
 
-You can help improve Seerr too! Check out our [Contribution Guide](./CONTRIBUTING.md) to get started.
+You can help improve Sinerr too! Check out our [Contribution Guide](./CONTRIBUTING.md) to get started.
 
 ## Contributors ✨
 

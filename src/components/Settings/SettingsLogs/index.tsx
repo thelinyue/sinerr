@@ -35,7 +35,7 @@ import useSWR from 'swr';
 const messages = defineMessages('components.Settings.SettingsLogs', {
   logs: 'Logs',
   logsDescription:
-    'You can also view these logs directly via <code>stdout</code>, or in <code>{appDataPath}/logs/seerr.log</code>.',
+    'You can also view these logs directly via <code>stdout</code>, or in <code>{appDataPath}/logs/sinerr.log</code>.',
   time: 'Timestamp',
   level: 'Severity',
   label: 'Label',

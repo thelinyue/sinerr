@@ -17,7 +17,7 @@ import useSWR from 'swr';
 
 const messages = defineMessages('components.Settings.SettingsAbout', {
   about: 'About',
-  aboutseerr: 'About Seerr',
+  aboutseerr: 'About Sinerr',
   version: 'Version',
   totalmedia: 'Total Media',
   totalrequests: 'Total Requests',
@@ -25,14 +25,14 @@ const messages = defineMessages('components.Settings.SettingsAbout', {
   githubdiscussions: 'GitHub Discussions',
   timezone: 'Time Zone',
   appDataPath: 'Data Directory',
-  supportseerr: 'Support Seerr',
+  supportseerr: 'Support Sinerr',
   contribute: 'Make a Contribution',
   documentation: 'Documentation',
   outofdate: 'Out of Date',
   uptodate: 'Up to Date',
   versionCheckDisabled: 'Version Check Disabled',
   runningDevelop:
-    'You are running the <code>develop</code> branch of Seerr, which is only recommended for those contributing to development or assisting with bleeding-edge testing.',
+    'You are running the <code>develop</code> branch of Sinerr, which is only recommended for those contributing to development or assisting with bleeding-edge testing.',
 });
 
 const SettingsAbout = () => {
@@ -86,8 +86,8 @@ const SettingsAbout = () => {
                   <a
                     href={
                       data.version.startsWith('develop-')
-                        ? `https://github.com/seerr-team/seerr/compare/${status.commitTag}...develop`
-                        : 'https://github.com/seerr-team/seerr/releases'
+                        ? `https://github.com/Linyue-GitHub/sinerr/compare/${status.commitTag}...develop`
+                        : 'https://github.com/Linyue-GitHub/sinerr/releases'
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -103,8 +103,8 @@ const SettingsAbout = () => {
                   <a
                     href={
                       data.version.startsWith('develop-')
-                        ? 'https://github.com/seerr-team/seerr/commits/develop'
-                        : 'https://github.com/seerr-team/seerr/releases'
+                        ? 'https://github.com/Linyue-GitHub/sinerr/commits/develop'
+                        : 'https://github.com/Linyue-GitHub/sinerr/releases'
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -122,8 +122,8 @@ const SettingsAbout = () => {
               <a
                 href={
                   data.version.startsWith('develop-')
-                    ? 'https://github.com/seerr-team/seerr/commits/develop'
-                    : 'https://github.com/seerr-team/seerr/releases'
+                    ? 'https://github.com/Linyue-GitHub/sinerr/commits/develop'
+                    : 'https://github.com/Linyue-GitHub/sinerr/releases'
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -167,12 +167,12 @@ const SettingsAbout = () => {
           </List.Item>
           <List.Item title={intl.formatMessage(messages.githubdiscussions)}>
             <a
-              href="https://github.com/seerr-team/seerr/discussions"
+              href="https://github.com/Linyue-GitHub/sinerr/discussions"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-500 transition duration-300 hover:underline"
             >
-              https://github.com/seerr-team/seerr/discussions
+              https://github.com/Linyue-GitHub/sinerr/discussions
             </a>
           </List.Item>
           <List.Item title="Discord">

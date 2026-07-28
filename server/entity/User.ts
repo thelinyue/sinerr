@@ -42,12 +42,10 @@ export class User {
 
   static readonly filteredFields: string[] = [
     'email',
-    'plexId',
     'password',
     'resetPasswordGuid',
     'jellyfinDeviceId',
     'jellyfinAuthToken',
-    'plexToken',
     'settings',
   ];
 
@@ -57,16 +55,16 @@ export class User {
   public id: number;
 
   @Column({
+    type: 'varchar',
     unique: true,
+    nullable: true,
     transformer: {
-      from: (value: string): string => (value ?? '').toLowerCase(),
-      to: (value: string): string => (value ?? '').toLowerCase(),
+      from: (value: string | null): string => (value ?? '').toLowerCase(),
+      to: (value: string | null): string | null =>
+        value ? value.toLowerCase() : null,
     },
   })
-  public email: string;
-
-  @Column({ type: 'varchar', nullable: true })
-  public plexUsername?: string | null;
+  public email?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   public jellyfinUsername?: string | null;
@@ -83,11 +81,8 @@ export class User {
   @DbAwareColumn({ type: 'datetime', nullable: true })
   public recoveryLinkExpirationDate?: Date | null;
 
-  @Column({ type: 'integer', default: UserType.PLEX })
+  @Column({ type: 'integer', default: UserType.LOCAL })
   public userType: UserType;
-
-  @Column({ type: 'integer', nullable: true, select: true })
-  public plexId?: number | null;
 
   @Column({ type: 'varchar', nullable: true })
   public jellyfinUserId?: string | null;
@@ -97,9 +92,6 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true, select: false })
   public jellyfinAuthToken?: string | null;
-
-  @Column({ type: 'varchar', nullable: true, select: false })
-  public plexToken?: string | null;
 
   @Column({ type: 'integer', default: 0 })
   public permissions = 0;
@@ -199,6 +191,10 @@ export class User {
     const password = nanoid(16);
     await this.setPassword(password);
 
+    if (!this.email) {
+      return;
+    }
+
     const { applicationTitle, applicationUrl } = getSettings().main;
     try {
       logger.info(`Sending generated password email for ${this.email}`, {
@@ -238,6 +234,10 @@ export class User {
     const { applicationTitle, applicationUrl } = getSettings().main;
     const resetPasswordLink = `${applicationUrl}/resetpassword/${guid}`;
 
+    if (!this.email) {
+      return;
+    }
+
     try {
       logger.info(`Sending reset password email for ${this.email}`, {
         label: 'User Management',
@@ -267,7 +267,7 @@ export class User {
   @AfterLoad()
   public setDisplayName(): void {
     this.displayName =
-      this.username || this.plexUsername || this.jellyfinUsername || this.email;
+      this.username || this.jellyfinUsername || this.email || '';
   }
 
   public async getQuota(): Promise<QuotaResponse> {

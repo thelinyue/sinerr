@@ -1,6 +1,6 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: Seerr Release
+name: Sinerr Release
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOCKER_HUB: seerr/seerr
+  DOCKER_HUB: linyue/sinerr
 
 jobs:
   changelog:

@@ -152,7 +152,6 @@ class RadarrScanner
         serviceId: this.currentServer.id,
         externalServiceId: radarrMovie.id,
         externalServiceSlug: radarrMovie.titleSlug,
-        title: radarrMovie.title,
         processing: !radarrMovie.hasFile && radarrMovie.monitored,
         hasFile: radarrMovie.hasFile,
       });

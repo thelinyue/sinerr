@@ -453,7 +453,16 @@ const SonarrModal = ({ onClose, sonarr, onSave }: SonarrModalProps) => {
                         inputMode="url"
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           setIsValidated(false);
-                          setFieldValue('hostname', e.target.value);
+                          let value = e.target.value;
+                          const protocolMatch = value.match(/^(https?):\/\//i);
+                          if (protocolMatch) {
+                            setFieldValue(
+                              'ssl',
+                              protocolMatch[1].toLowerCase() === 'https'
+                            );
+                            value = value.replace(/^(https?):\/\//i, '');
+                          }
+                          setFieldValue('hostname', value);
                         }}
                         className="rounded-r-only"
                       />

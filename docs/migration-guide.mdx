@@ -6,11 +6,11 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 :::important
-Read our [release announcement](/blog/seerr-release) to learn what Seerr means for Jellyseerr and Overseerr users.
+Read our [release announcement](/blog/seerr-release) to learn what Sinerr means for Jellyseerr and Overseerr users.
 :::
 
-Whether you come from Overseerr or Jellyseerr, you don't need to perform any manual migration steps, your instance will automatically be migrated to Seerr.
-This migration will run automatically the first time you start your instance using the Seerr codebase (Docker image or source build or Kubernetes, etc.).
+Whether you come from Overseerr or Jellyseerr, you don't need to perform any manual migration steps, your instance will automatically be migrated to Sinerr.
+This migration will run automatically the first time you start your instance using the Sinerr codebase (Docker image or source build or Kubernetes, etc.).
 An additional migration will happen for Overseerr users, to migrate their configuration to the new codebase.
 
 :::danger
@@ -20,19 +20,19 @@ See [Backups](/using-seerr/backups) for details on how to properly backup your i
 
 :::warning
 Installation methods are now divided into two categories: official and third-party methods.
-The Seerr team is only responsible for official installation methods, while third-party methods are maintained by the community.
+The Sinerr team is only responsible for official installation methods, while third-party methods are maintained by the community.
 Some methods are currently not maintained, but this does not mean they are permanently discontinued. The community may restore and support them if they choose to do so.
 
 - **Snap package:** Not maintained
 :::
 
 ## Docker
-Refer to [Seerr Docker Documentation](/getting-started/docker), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr Docker Documentation](/getting-started/docker), all of our examples have been updated to reflect the below change.
 
 :::info
-Seerr provides a secure, fully featured image with everything you need included.
+Sinerr provides a secure, fully featured image with everything you need included.
 We sincerely appreciate the past contributions from third-party maintainers, which helped enhance this image and its capabilities.
-To maintain consistency and security, we encourage everyone to use the features available in the official Seerr image.
+To maintain consistency and security, we encourage everyone to use the features available in the official Sinerr image.
 If you feel something is missing, please submit a feature request—your feedback is always welcome!
 
 Our Docker images are available with the following tags:
@@ -72,7 +72,7 @@ Summary of changes :
   ---
   services:
     seerr:
-      image: ghcr.io/seerr-team/seerr:latest
+      image: ghcr.io/Linyue-GitHub/sinerr:latest
       init: true
       container_name: seerr
       environment:
@@ -103,7 +103,7 @@ Summary of changes :
     -p 5055:5055 \
     -v /path/to/appdata/config:/app/config \
     --restart unless-stopped \
-    ghcr.io/seerr-team/seerr:latest
+    ghcr.io/Linyue-GitHub/sinerr:latest
   ```
   </TabItem>
 </Tabs>
@@ -117,7 +117,7 @@ Summary of changes :
   ---
   services:
     seerr:
-      image: ghcr.io/seerr-team/seerr:latest
+      image: ghcr.io/Linyue-GitHub/sinerr:latest
       init: true
       container_name: seerr
       environment:
@@ -151,7 +151,7 @@ Summary of changes :
     -p 5055:5055 `
     -v seerr-data:/app/config `
     --restart unless-stopped `
-    ghcr.io/seerr-team/seerr:latest
+    ghcr.io/Linyue-GitHub/sinerr:latest
   ```
   </TabItem>
 
@@ -166,19 +166,19 @@ Summary of changes :
     -p 5055:5055 ^
     -v seerr-data:/app/config ^
     --restart unless-stopped ^
-    ghcr.io/seerr-team/seerr:latest
+    ghcr.io/Linyue-GitHub/sinerr:latest
   ```
   </TabItem>
 </Tabs>
 
 
 ## Build From Source
-Refer to [Seerr Build From Source Documentation](/getting-started/buildfromsource), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr Build From Source Documentation](/getting-started/buildfromsource), all of our examples have been updated to reflect the below change.
 
-Install from scratch by following the documentation, restore your data as described in [Backups](/using-seerr/backups), and then start Seerr. No additional steps are required.
+Install from scratch by following the documentation, restore your data as described in [Backups](/using-seerr/backups), and then start Sinerr. No additional steps are required.
 
 ## Kubernetes
-Refer to [Seerr Kubernetes Documentation](/getting-started/kubernetes), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr Kubernetes Documentation](/getting-started/kubernetes), all of our examples have been updated to reflect the below change.
 
 Changes :
 - All references to `jellyseerr` have been renamed to `seerr` in the manifests.
@@ -198,7 +198,7 @@ Summary of changes :
   <TabItem value="new" label="New values">
   ```yaml
   image:
-    repository: seerr-team/seerr
+    repository: Linyue-GitHub/sinerr
   podSecurityContext:
     fsGroup: 1000
     fsGroupChangePolicy: OnRootMismatch
@@ -220,14 +220,14 @@ Summary of changes :
 
 ## Nix
 
-Refer to [Seerr Documentation](/getting-started/nixpkg), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr Documentation](/getting-started/nixpkg), all of our examples have been updated to reflect the below change.
 
-The Seerr service and package are available as of the 26.05 release.
+The Sinerr service and package are available as of the 26.05 release.
 
 ## Third-party installation methods
 
 :::warning
-Third-party installation methods are maintained by the community. The Seerr team is not responsible for these packages.
+Third-party installation methods are maintained by the community. The Sinerr team is not responsible for these packages.
 :::
 
 ### AUR
@@ -236,7 +236,7 @@ See https://aur.archlinux.org/packages/seerr
 
 ### TrueNAS
 
-Refer to [Seerr TrueNAS Documentation](/getting-started/third-parties/truenas), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr TrueNAS Documentation](/getting-started/third-parties/truenas), all of our examples have been updated to reflect the below change.
 
 For detailed community-maintained TrueNAS SCALE walkthroughs, see the [Host Path setup](https://github.com/truenas/apps/issues/3374#issuecomment-3916418872) and [ixVolume setup](https://github.com/truenas/apps/issues/3374#issuecomment-3916700870) guides.
 
@@ -244,14 +244,14 @@ For detailed community-maintained TrueNAS SCALE walkthroughs, see the [Host Path
   <TabItem value="hostpath" label="Host Path">
     **This guide describes how to migrate from Host Path storage (not ixVolume).**
     1. Stop Jellyseerr/Overseerr
-    2. Install Seerr and use the same Host Path storage that was used by Jellyseerr/Overseerr
-    3. Start Seerr app
+    2. Install Sinerr and use the same Host Path storage that was used by Jellyseerr/Overseerr
+    3. Start Sinerr app
     4. Delete Jellyseerr/Overseerr app
   </TabItem>
   <TabItem value="ixvolume" label="ixVolume">
     **This guide describes how to migrate from ixVolume storage (not Host Path).**
     1. Stop Jellyseerr/Overseerr
-    2. Create a dataset for Seerr
+    2. Create a dataset for Sinerr
           If your apps normally store data under something like:
           ```
           /mnt/storage/<app-name>
@@ -269,24 +269,24 @@ For detailed community-maintained TrueNAS SCALE walkthroughs, see the [Host Path
           ```bash
           rsync -av --chown=568:568 /mnt/.ix-apps/app_mounts/jellyseerr/ /mnt/storage/seerr/
           ```
-    4. Install Seerr and use the same Host Path storage that was created before (`/mnt/storage/seerr/config` in our example)
-    5. Start Seerr app
+    4. Install Sinerr and use the same Host Path storage that was created before (`/mnt/storage/seerr/config` in our example)
+    5. Start Sinerr app
     6. Delete Jellyseerr/Overseerr app
   </TabItem>
 </Tabs>
 
 ### Unraid
 
-Refer to [Seerr Unraid Documentation](/getting-started/third-parties/unraid), all of our examples have been updated to reflect the below change.
+Refer to [Sinerr Unraid Documentation](/getting-started/third-parties/unraid), all of our examples have been updated to reflect the below change.
 
-Seerr will automatically migrate your existing Overseerr or Jellyseerr data on first startup. No manual database migration is needed.
+Sinerr will automatically migrate your existing Overseerr or Jellyseerr data on first startup. No manual database migration is needed.
 
 **1. Stop the existing container**
 In the Unraid **Docker** tab, stop your Overseerr (or Jellyseerr) container.
 **⚠️ Do not remove the container or delete the appdata folder yet ⚠️**
 
-**2. Copy existing data to Seerr appdata**
-Open the Unraid terminal and copy your existing appdata folder into the new Seerr appdata directory:
+**2. Copy existing data to Sinerr appdata**
+Open the Unraid terminal and copy your existing appdata folder into the new Sinerr appdata directory:
 ```bash
 cp -a /mnt/user/appdata/overseerr /mnt/user/appdata/seerr
 ```
@@ -294,10 +294,10 @@ cp -a /mnt/user/appdata/overseerr /mnt/user/appdata/seerr
 *(For Jellyseerr users, replace `overseerr` with `jellyseerr` in the paths).*
 
 **3. Set permissions and install Seerr**
-Follow the [Unraid Installation Guide](/getting-started/third-parties/unraid#2-set-folder-permissions), **starting from step 2** — this covers setting the correct folder permissions and adding the Docker container. The guide offers two permission methods (**Seerr Default** and **Unraid Default**), each with trade-offs — read the descriptions before choosing.
+Follow the [Unraid Installation Guide](/getting-started/third-parties/unraid#2-set-folder-permissions), **starting from step 2** — this covers setting the correct folder permissions and adding the Docker container. The guide offers two permission methods (**Sinerr Default** and **Unraid Default**), each with trade-offs — read the descriptions before choosing.
 
-**4. Start the new Seerr app**
-Start the newly created Seerr container. Check the container logs to confirm the automatic migration completed successfully.
+**4. Start the new Sinerr app**
+Start the newly created Sinerr container. Check the container logs to confirm the automatic migration completed successfully.
 
 **5. Remove the old app**
-Once you have confirmed Seerr is working properly and your data has successfully migrated, you can safely **Remove** the old Overseerr (or Jellyseerr) container from Unraid.
+Once you have confirmed Sinerr is working properly and your data has successfully migrated, you can safely **Remove** the old Overseerr (or Jellyseerr) container from Unraid.

@@ -1,6 +1,5 @@
 export enum UserType {
-  PLEX = 1,
-  LOCAL = 2,
-  JELLYFIN = 3,
-  EMBY = 4,
+  LOCAL = 1,
+  JELLYFIN = 2,
+  EMBY = 3,
 }

@@ -166,5 +166,5 @@ export interface LanguageContextProps {
 export const LanguageContext = React.createContext<
   Omit<LanguageContextProps, 'children'>
 >({
-  locale: 'en',
+  locale: 'zh-CN',
 });

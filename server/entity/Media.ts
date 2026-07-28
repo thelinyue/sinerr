@@ -174,12 +174,6 @@ class Media {
   public externalServiceSlug4k?: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
-  public ratingKey?: string | null;
-
-  @Column({ nullable: true, type: 'varchar' })
-  public ratingKey4k?: string | null;
-
-  @Column({ nullable: true, type: 'varchar' })
   public jellyfinMediaId?: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
@@ -192,9 +186,6 @@ class Media {
 
   public mediaUrl?: string;
   public mediaUrl4k?: string;
-
-  public iOSPlexUrl?: string;
-  public iOSPlexUrl4k?: string;
 
   public tautulliUrl?: string;
   public tautulliUrl4k?: string;
@@ -210,62 +201,27 @@ class Media {
     this.externalServiceId4k = null;
     this.externalServiceSlug = null;
     this.externalServiceSlug4k = null;
-    this.ratingKey = null;
-    this.ratingKey4k = null;
     this.jellyfinMediaId = null;
     this.jellyfinMediaId4k = null;
   }
 
   @AfterLoad()
-  public setPlexUrls(): void {
-    const { machineId, webAppUrl } = getSettings().plex;
-    const { externalUrl: tautulliUrl } = getSettings().tautulli;
+  public setMediaUrls(): void {
+    const pageName =
+      getSettings().main.mediaServerType == MediaServerType.EMBY
+        ? 'item'
+        : 'details';
+    const { serverId, externalHostname } = getSettings().jellyfin;
+    const jellyfinHost =
+      externalHostname && externalHostname.length > 0
+        ? externalHostname
+        : getHostname();
 
-    if (getSettings().main.mediaServerType == MediaServerType.PLEX) {
-      if (this.ratingKey) {
-        this.mediaUrl = `${
-          webAppUrl ? webAppUrl : 'https://app.plex.tv/desktop'
-        }#!/server/${machineId}/details?key=%2Flibrary%2Fmetadata%2F${
-          this.ratingKey
-        }`;
-
-        this.iOSPlexUrl = `plex://preplay/?metadataKey=%2Flibrary%2Fmetadata%2F${this.ratingKey}&server=${machineId}`;
-
-        if (tautulliUrl) {
-          this.tautulliUrl = `${tautulliUrl}/info?rating_key=${this.ratingKey}`;
-        }
-      }
-
-      if (this.ratingKey4k) {
-        this.mediaUrl4k = `${
-          webAppUrl ? webAppUrl : 'https://app.plex.tv/desktop'
-        }#!/server/${machineId}/details?key=%2Flibrary%2Fmetadata%2F${
-          this.ratingKey4k
-        }`;
-
-        this.iOSPlexUrl4k = `plex://preplay/?metadataKey=%2Flibrary%2Fmetadata%2F${this.ratingKey4k}&server=${machineId}`;
-
-        if (tautulliUrl) {
-          this.tautulliUrl4k = `${tautulliUrl}/info?rating_key=${this.ratingKey4k}`;
-        }
-      }
-    } else {
-      const pageName =
-        getSettings().main.mediaServerType == MediaServerType.EMBY
-          ? 'item'
-          : 'details';
-      const { serverId, externalHostname } = getSettings().jellyfin;
-      const jellyfinHost =
-        externalHostname && externalHostname.length > 0
-          ? externalHostname
-          : getHostname();
-
-      if (this.jellyfinMediaId) {
-        this.mediaUrl = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId}&context=home&serverId=${serverId}`;
-      }
-      if (this.jellyfinMediaId4k) {
-        this.mediaUrl4k = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId4k}&context=home&serverId=${serverId}`;
-      }
+    if (this.jellyfinMediaId) {
+      this.mediaUrl = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId}&context=home&serverId=${serverId}`;
+    }
+    if (this.jellyfinMediaId4k) {
+      this.mediaUrl4k = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId4k}&context=home&serverId=${serverId}`;
     }
   }
 

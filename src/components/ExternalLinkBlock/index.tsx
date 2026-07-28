@@ -2,7 +2,6 @@ import EmbyLogo from '@app/assets/services/emby.svg';
 import ImdbLogo from '@app/assets/services/imdb.svg';
 import JellyfinLogo from '@app/assets/services/jellyfin.svg';
 import LetterboxdLogo from '@app/assets/services/letterboxd.svg';
-import PlexLogo from '@app/assets/services/plex.svg';
 import RTLogo from '@app/assets/services/rt.svg';
 import SimklLogo from '@app/assets/services/simkl.svg';
 import TmdbLogo from '@app/assets/services/tmdb.svg';
@@ -44,10 +43,7 @@ const ExternalLinkBlock = ({
           target="_blank"
           rel="noreferrer"
         >
-          {settings.currentSettings.mediaServerType === MediaServerType.PLEX ? (
-            <PlexLogo />
-          ) : settings.currentSettings.mediaServerType ===
-            MediaServerType.EMBY ? (
+          {settings.currentSettings.mediaServerType === MediaServerType.EMBY ? (
             <EmbyLogo />
           ) : (
             <JellyfinLogo />

@@ -49,7 +49,7 @@ const PermissionOption = ({
   let checked = hasPermission(option.permission, currentPermission);
 
   if (
-    // Permissions for user ID 1 (Plex server owner) cannot be changed
+    // Permissions for user ID 1 (server owner) cannot be changed
     (currentUser && currentUser.id === 1) ||
     // Admin permission automatically bypasses/grants all other permissions
     (option.permission !== Permission.ADMIN &&

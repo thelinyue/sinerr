@@ -35,7 +35,7 @@ You cannot configure both the **Authorization Header** field and a custom `Autho
 
 ### JSON Payload
 
-Customize the JSON payload to suit your needs. Seerr provides several [template variables](#template-variables) for use in the payload, which will be replaced with the relevant data when the notifications are triggered.
+Customize the JSON payload to suit your needs. Sinerr provides several [template variables](#template-variables) for use in the payload, which will be replaced with the relevant data when the notifications are triggered.
 
 ## Template Variables
 
@@ -104,8 +104,6 @@ These following special variables are only included in media-related notificatio
 | `{{media_status}}`          | The media's availability status (`UNKNOWN`, `PENDING`, `PROCESSING`, `PARTIALLY_AVAILABLE`, or `AVAILABLE`)    |
 | `{{media_status4k}}`        | The media's 4K availability status (`UNKNOWN`, `PENDING`, `PROCESSING`, `PARTIALLY_AVAILABLE`, or `AVAILABLE`) |
 | `{{media_jellyfinMediaId}}` | The media's Jellyfin Media ID                                                                                  |
-| `{{media_plexRatingKey}}`   | The media's Plex ratingKey, if available (for standard library match)                                          |
-| `{{media_plexRatingKey4k}}` | The media's Plex ratingKey for 4K match, if available                                                          |
 
 #### Request
 

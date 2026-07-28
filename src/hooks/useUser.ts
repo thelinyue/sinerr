@@ -12,11 +12,10 @@ export type { PermissionCheckOptions };
 export interface User {
   id: number;
   warnings: string[];
-  plexUsername?: string | null;
   jellyfinUsername?: string | null;
   username?: string;
   displayName: string;
-  email: string;
+  email?: string | null;
   avatar: string;
   permissions: number;
   userType: number;

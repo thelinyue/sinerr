@@ -29,7 +29,7 @@ import useDeepLinks from '@app/hooks/useDeepLinks';
 import useLocale from '@app/hooks/useLocale';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
-import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import ErrorPage from '@app/pages/_error';
 import { sortCrewPriority } from '@app/utils/creditHelpers';
@@ -168,11 +168,9 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     []
   );
 
-  const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
+  const { mediaUrl, mediaUrl4k } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
     mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
-    iOSPlexUrl: data?.mediaInfo?.iOSPlexUrl,
-    iOSPlexUrl4k: data?.mediaInfo?.iOSPlexUrl4k,
   });
 
   if (!data && !error) {
@@ -186,28 +184,28 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
   const mediaLinks: PlayButtonLink[] = [];
 
   if (
-    plexUrl &&
+    mediaUrl &&
     hasPermission([Permission.REQUEST, Permission.REQUEST_TV], {
       type: 'or',
     })
   ) {
     mediaLinks.push({
       text: getAvailableMediaServerName(),
-      url: plexUrl,
+      url: mediaUrl,
       svg: <PlayIcon />,
     });
   }
 
   if (
     settings.currentSettings.series4kEnabled &&
-    plexUrl4k &&
+    mediaUrl4k &&
     hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_TV], {
       type: 'or',
     })
   ) {
     mediaLinks.push({
       text: getAvailable4kMediaServerName(),
-      url: plexUrl4k,
+      url: mediaUrl4k,
       svg: <PlayIcon />,
     });
   }
@@ -338,10 +336,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
       return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
     }
 
-    if (settings.currentSettings.mediaServerType === MediaServerType.PLEX) {
-      return intl.formatMessage(messages.play, { mediaServerName: 'Plex' });
-    }
-
     return intl.formatMessage(messages.play, { mediaServerName: 'Jellyfin' });
   }
 
@@ -350,11 +344,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
       return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
     }
 
-    if (settings.currentSettings.mediaServerType === MediaServerType.PLEX) {
-      return intl.formatMessage(messages.play4k, { mediaServerName: 'Plex' });
-    }
-
-    return intl.formatMessage(messages.play, { mediaServerName: 'Jellyfin' });
+    return intl.formatMessage(messages.play4k, { mediaServerName: 'Jellyfin' });
   }
 
   const onClickWatchlistBtn = async (): Promise<void> => {
@@ -559,7 +549,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
               inProgress={(data.mediaInfo?.downloadStatus ?? []).length > 0}
               tmdbId={data.mediaInfo?.tmdbId}
               mediaType="tv"
-              plexUrl={plexUrl}
+              mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
             {settings.currentSettings.series4kEnabled &&
@@ -583,7 +573,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                   }
                   tmdbId={data.mediaInfo?.tmdbId}
                   mediaType="tv"
-                  plexUrl={plexUrl4k}
+                  mediaUrl={mediaUrl4k}
                   serviceUrl={data.mediaInfo?.serviceUrl4k}
                 />
               )}
@@ -629,41 +619,38 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 </Button>
               </Tooltip>
             )}
-          {data?.mediaInfo?.status !== MediaStatus.BLOCKLISTED &&
-            user?.userType !== UserType.PLEX && (
-              <>
-                {toggleWatchlist ? (
-                  <Tooltip
-                    content={intl.formatMessage(messages.addtowatchlist)}
+          {data?.mediaInfo?.status !== MediaStatus.BLOCKLISTED && (
+            <>
+              {toggleWatchlist ? (
+                <Tooltip content={intl.formatMessage(messages.addtowatchlist)}>
+                  <Button
+                    buttonType={'ghost'}
+                    className="z-40 mr-2"
+                    buttonSize={'md'}
+                    onClick={onClickWatchlistBtn}
                   >
-                    <Button
-                      buttonType={'ghost'}
-                      className="z-40 mr-2"
-                      buttonSize={'md'}
-                      onClick={onClickWatchlistBtn}
-                    >
-                      {isUpdating ? (
-                        <Spinner />
-                      ) : (
-                        <StarIcon className={'text-amber-300'} />
-                      )}
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Tooltip
-                    content={intl.formatMessage(messages.removefromwatchlist)}
+                    {isUpdating ? (
+                      <Spinner />
+                    ) : (
+                      <StarIcon className={'text-amber-300'} />
+                    )}
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip
+                  content={intl.formatMessage(messages.removefromwatchlist)}
+                >
+                  <Button
+                    className="z-40 mr-2"
+                    buttonSize={'md'}
+                    onClick={onClickDeleteWatchlistBtn}
                   >
-                    <Button
-                      className="z-40 mr-2"
-                      buttonSize={'md'}
-                      onClick={onClickDeleteWatchlistBtn}
-                    >
-                      {isUpdating ? <Spinner /> : <MinusCircleIcon />}
-                    </Button>
-                  </Tooltip>
-                )}
-              </>
-            )}
+                    {isUpdating ? <Spinner /> : <MinusCircleIcon />}
+                  </Button>
+                </Tooltip>
+              )}
+            </>
+          )}
           <div className="z-20">
             <PlayButton links={mediaLinks} />
           </div>
@@ -1320,7 +1307,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 tvdbId={data.externalIds.tvdbId}
                 imdbId={data.externalIds.imdbId}
                 rtUrl={ratingData?.url}
-                mediaUrl={plexUrl ?? plexUrl4k}
+                mediaUrl={mediaUrl ?? mediaUrl4k}
               />
             </div>
           </div>

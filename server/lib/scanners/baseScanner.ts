@@ -32,19 +32,16 @@ export interface MediaIds {
   tmdbId: number;
   imdbId?: string;
   tvdbId?: number;
-  isHama?: boolean;
 }
 
 interface ProcessOptions {
   is4k?: boolean;
   mediaAddedAt?: Date;
-  ratingKey?: string;
   jellyfinMediaId?: string;
   imdbId?: string;
   serviceId?: number;
   externalServiceId?: number;
   externalServiceSlug?: string;
-  title?: string;
   processing?: boolean;
   hasFile?: boolean;
 }
@@ -102,14 +99,12 @@ class BaseScanner<T> {
     {
       is4k = false,
       mediaAddedAt,
-      ratingKey,
       jellyfinMediaId,
       imdbId,
       serviceId,
       externalServiceId,
       externalServiceSlug,
       processing = false,
-      title = 'Unknown Title',
       hasFile = true,
     }: ProcessOptions = {}
   ): Promise<void> {
@@ -148,14 +143,6 @@ class BaseScanner<T> {
 
         if (!changedExisting && !existing.mediaAddedAt && mediaAddedAt) {
           existing.mediaAddedAt = mediaAddedAt;
-          changedExisting = true;
-        }
-
-        if (
-          ratingKey &&
-          existing[is4k ? 'ratingKey4k' : 'ratingKey'] !== ratingKey
-        ) {
-          existing[is4k ? 'ratingKey4k' : 'ratingKey'] = ratingKey;
           changedExisting = true;
         }
 
@@ -205,11 +192,11 @@ class BaseScanner<T> {
         if (changedExisting) {
           await mediaRepository.save(existing);
           this.log(
-            `Media for ${title} exists. Changes were detected and the title will be updated.`,
+            `Media already exists. Changes were detected and the title will be updated.`,
             'info'
           );
         } else {
-          this.log(`Title already exists and no changes detected for ${title}`);
+          this.log(`Title already exists and no changes detected`);
         }
       } else {
         if (!processing && !hasFile) {
@@ -244,12 +231,6 @@ class BaseScanner<T> {
           newMedia.mediaAddedAt = mediaAddedAt;
         }
 
-        if (ratingKey) {
-          newMedia.ratingKey = !is4k ? ratingKey : undefined;
-          newMedia.ratingKey4k =
-            is4k && this.enable4kMovie ? ratingKey : undefined;
-        }
-
         if (jellyfinMediaId) {
           newMedia.jellyfinMediaId = !is4k ? jellyfinMediaId : undefined;
           newMedia.jellyfinMediaId4k =
@@ -257,7 +238,7 @@ class BaseScanner<T> {
         }
 
         await mediaRepository.save(newMedia);
-        this.log(`Saved new media: ${title}`);
+        this.log(`Saved new media`);
       }
     });
   }
@@ -278,13 +259,11 @@ class BaseScanner<T> {
     seasons: ProcessableSeason[],
     {
       mediaAddedAt,
-      ratingKey,
       jellyfinMediaId,
       serviceId,
       externalServiceId,
       externalServiceSlug,
       is4k = false,
-      title = 'Unknown Title',
     }: ProcessOptions = {}
   ): Promise<void> {
     const mediaRepository = getRepository(Media);
@@ -310,20 +289,6 @@ class BaseScanner<T> {
         const existingSeason = media?.seasons.find(
           (es) => es.seasonNumber === season.seasonNumber
         );
-
-        // We update the rating keys and jellyfinMediaId in the seasons loop because we need episode counts
-        if (media && season.episodes > 0 && media.ratingKey !== ratingKey) {
-          media.ratingKey = ratingKey;
-        }
-
-        if (
-          media &&
-          season.episodes4k > 0 &&
-          this.enable4kShow &&
-          media.ratingKey4k !== ratingKey
-        ) {
-          media.ratingKey4k = ratingKey;
-        }
 
         if (
           media &&
@@ -430,7 +395,7 @@ class BaseScanner<T> {
           this.log(
             `Detected ${
               newStandardSeasonsAvailable - currentStandardSeasonsAvailable
-            } new standard season(s) for ${title}`,
+            } new standard season(s)`,
             'debug'
           );
           media.lastSeasonChange = new Date();
@@ -444,7 +409,7 @@ class BaseScanner<T> {
           this.log(
             `Detected ${
               new4kSeasonsAvailable - current4kSeasonsAvailable
-            } new 4K season(s) for ${title}`,
+            } new 4K season(s)`,
             'debug'
           );
           media.lastSeasonChange = new Date();
@@ -540,7 +505,7 @@ class BaseScanner<T> {
                   ? MediaStatus.DELETED
                   : MediaStatus.UNKNOWN;
         await mediaRepository.save(media);
-        this.log(`Updating existing title: ${title}`);
+        this.log(`Updating existing title`);
       } else {
         // For new media, check actual newSeasons objects instead of scanner
         // input to determine overall availability status
@@ -575,22 +540,6 @@ class BaseScanner<T> {
           externalServiceId4k: is4k ? externalServiceId : undefined,
           externalServiceSlug: !is4k ? externalServiceSlug : undefined,
           externalServiceSlug4k: is4k ? externalServiceSlug : undefined,
-          ratingKey: newSeasons.some(
-            (sn) =>
-              sn.status === MediaStatus.PARTIALLY_AVAILABLE ||
-              sn.status === MediaStatus.AVAILABLE
-          )
-            ? ratingKey
-            : undefined,
-          ratingKey4k:
-            this.enable4kShow &&
-            newSeasons.some(
-              (sn) =>
-                sn.status4k === MediaStatus.PARTIALLY_AVAILABLE ||
-                sn.status4k === MediaStatus.AVAILABLE
-            )
-              ? ratingKey
-              : undefined,
           jellyfinMediaId: newSeasons.some(
             (sn) =>
               sn.status === MediaStatus.PARTIALLY_AVAILABLE ||
@@ -637,7 +586,7 @@ class BaseScanner<T> {
                   : MediaStatus.UNKNOWN,
         });
         await mediaRepository.save(newMedia);
-        this.log(`Saved ${title}`);
+        this.log(`Saved new series`);
       }
     });
   }

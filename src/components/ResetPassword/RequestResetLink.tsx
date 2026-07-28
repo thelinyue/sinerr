@@ -10,18 +10,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import validator from 'validator';
 import * as Yup from 'yup';
 
 const messages = defineMessages('components.ResetPassword', {
   passwordreset: 'Password Reset',
   resetpassword: 'Reset your password',
   emailresetlink: 'Email Recovery Link',
-  email: 'Email Address',
-  validationemailrequired: 'You must provide a valid email address',
+  username: 'Username',
+  validationusernamerequired: 'You must provide a username',
   gobacklogin: 'Return to Sign-In Page',
   requestresetlinksuccessmessage:
-    'A password reset link will be sent to the provided email address if it is associated with a valid user.',
+    'A password reset link will be sent to the provided email address if a matching user is found.',
 });
 
 const ResetPassword = () => {
@@ -29,13 +28,9 @@ const ResetPassword = () => {
   const [hasSubmitted, setSubmitted] = useState(false);
 
   const ResetSchema = Yup.object().shape({
-    email: Yup.string()
-      .test(
-        'email',
-        intl.formatMessage(messages.validationemailrequired),
-        (value) => !value || validator.isEmail(value, { require_tld: false })
-      )
-      .required(intl.formatMessage(messages.validationemailrequired)),
+    username: Yup.string().required(
+      intl.formatMessage(messages.validationusernamerequired)
+    ),
   });
 
   return (
@@ -86,14 +81,14 @@ const ResetPassword = () => {
             ) : (
               <Formik
                 initialValues={{
-                  email: '',
+                  username: '',
                 }}
                 validationSchema={ResetSchema}
                 onSubmit={async (values) => {
                   const response = await axios.post(
                     `/api/v1/auth/reset-password`,
                     {
-                      email: values.email,
+                      username: values.username,
                     }
                   );
 
@@ -107,25 +102,24 @@ const ResetPassword = () => {
                     <Form>
                       <div>
                         <label
-                          htmlFor="email"
+                          htmlFor="username"
                           className="my-1 block text-sm font-medium leading-5 text-gray-400 sm:mt-px"
                         >
-                          {intl.formatMessage(messages.email)}
+                          {intl.formatMessage(messages.username)}
                         </label>
                         <div className="mb-2 mt-1 sm:col-span-2 sm:mt-0">
                           <div className="form-input-field">
                             <Field
-                              id="email"
-                              name="email"
+                              id="username"
+                              name="username"
                               type="text"
-                              inputMode="email"
                               className="form-input-area block w-full min-w-0 flex-1 rounded-md border border-gray-500 bg-gray-700 text-white transition duration-150 ease-in-out sm:text-sm sm:leading-5"
                             />
                           </div>
-                          {errors.email &&
-                            touched.email &&
-                            typeof errors.email === 'string' && (
-                              <div className="error">{errors.email}</div>
+                          {errors.username &&
+                            touched.username &&
+                            typeof errors.username === 'string' && (
+                              <div className="error">{errors.username}</div>
                             )}
                         </div>
                       </div>

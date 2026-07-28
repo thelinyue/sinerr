@@ -1,6 +1,6 @@
 ---
 title: Deleting Users
-description: Delete users from Seerr.
+description: Delete users from Sinerr.
 sidebar_position: 4
 ---
 

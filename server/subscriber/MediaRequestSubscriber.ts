@@ -1,3 +1,4 @@
+import MoviePilotAPI from '@server/api/moviepilot';
 import type { RadarrMovieOptions } from '@server/api/servarr/radarr';
 import RadarrAPI from '@server/api/servarr/radarr';
 import type {
@@ -817,6 +818,169 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
   }
 
+  public async sendToMoviePilot(entity: MediaRequest): Promise<void> {
+    if (entity.status === MediaRequestStatus.APPROVED) {
+      try {
+        const settings = getSettings();
+        if (settings.moviepilot.length === 0) {
+          logger.info(
+            'No MoviePilot server configured, skipping request processing',
+            {
+              label: 'Media Request',
+              requestId: entity.id,
+              mediaId: entity.media.id,
+            }
+          );
+          return;
+        }
+
+        const mpSettings = settings.moviepilot.find((mp) => mp.isDefault);
+
+        if (!mpSettings) {
+          logger.warn(
+            'There is no default MoviePilot server configured. Did you set a MoviePilot server as default?',
+            {
+              label: 'Media Request',
+              requestId: entity.id,
+              mediaId: entity.media.id,
+            }
+          );
+          return;
+        }
+
+        const tmdb = new TheMovieDb();
+        const mp = new MoviePilotAPI({
+          url: MoviePilotAPI.buildUrl(mpSettings),
+          apiKey: mpSettings.apiKey,
+        });
+
+        let name: string;
+        let year: number | undefined;
+        let seasons: string | undefined;
+
+        if (entity.type === MediaType.MOVIE) {
+          const movie = await tmdb.getMovie({ movieId: entity.media.tmdbId });
+          name = movie.title;
+          year = movie.release_date
+            ? Number(movie.release_date.slice(0, 4))
+            : undefined;
+        } else {
+          const tv = await tmdb.getTvShow({ tvId: entity.media.tmdbId });
+          name = tv.name;
+          year = tv.first_air_date
+            ? Number(tv.first_air_date.slice(0, 4))
+            : undefined;
+          seasons = entity.seasons?.map((s) => s.seasonNumber).join(', ');
+        }
+
+        const response = await mp.addSubscribe({
+          tmdbid: entity.media.tmdbId,
+          type: entity.type === MediaType.MOVIE ? 'movie' : 'tv',
+          name,
+          year,
+          seasons,
+        });
+
+        if (response.success) {
+          logger.info('Sent request to MoviePilot', {
+            label: 'Media Request',
+            requestId: entity.id,
+            mediaId: entity.media.id,
+            tmdbId: entity.media.tmdbId,
+          });
+        } else {
+          throw new Error(response.message ?? 'Unknown MoviePilot error');
+        }
+      } catch (e) {
+        const requestRepository = getRepository(MediaRequest);
+        const mediaRepository = getRepository(Media);
+        const media = await mediaRepository.findOne({
+          where: { id: entity.media.id },
+        });
+
+        if (media) {
+          entity.status = MediaRequestStatus.FAILED;
+          await requestRepository.save(entity);
+
+          logger.warn(
+            'Failed to send request to MoviePilot, marking status as FAILED',
+            {
+              label: 'Media Request',
+              requestId: entity.id,
+              mediaId: entity.media.id,
+              errorMessage: e.message,
+            }
+          );
+
+          MediaRequest.sendNotification(
+            entity,
+            media,
+            Notification.MEDIA_FAILED
+          );
+        }
+      }
+    }
+  }
+
+  public async removeFromMoviePilot(entity: MediaRequest): Promise<void> {
+    try {
+      const settings = getSettings();
+      if (settings.moviepilot.length === 0) {
+        return;
+      }
+
+      const mpSettings = settings.moviepilot.find((mp) => mp.isDefault);
+      if (!mpSettings) {
+        return;
+      }
+
+      const mp = new MoviePilotAPI({
+        url: MoviePilotAPI.buildUrl(mpSettings),
+        apiKey: mpSettings.apiKey,
+      });
+
+      if (
+        entity.type === MediaType.TV &&
+        entity.seasons &&
+        entity.seasons.length > 0
+      ) {
+        for (const season of entity.seasons) {
+          const response = await mp.deleteSubscribe(
+            entity.media.tmdbId,
+            season.seasonNumber
+          );
+          if (response.success) {
+            logger.info('Removed season subscription from MoviePilot', {
+              label: 'Media Request',
+              requestId: entity.id,
+              mediaId: entity.media.id,
+              tmdbId: entity.media.tmdbId,
+              season: season.seasonNumber,
+            });
+          }
+        }
+      } else {
+        const response = await mp.deleteSubscribe(entity.media.tmdbId);
+        if (response.success) {
+          logger.info('Removed subscription from MoviePilot', {
+            label: 'Media Request',
+            requestId: entity.id,
+            mediaId: entity.media.id,
+            tmdbId: entity.media.tmdbId,
+          });
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to remove subscription from MoviePilot', {
+        label: 'Media Request',
+        requestId: entity.id,
+        mediaId: entity.media.id,
+        tmdbId: entity.media.tmdbId,
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
   public async updateParentStatus(entity: MediaRequest): Promise<void> {
     const mediaRepository = getRepository(Media);
     const media = await mediaRepository.findOne({
@@ -1011,6 +1175,7 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     try {
       await this.sendToRadarr(event.entity as MediaRequest);
       await this.sendToSonarr(event.entity as MediaRequest);
+      await this.sendToMoviePilot(event.entity as MediaRequest);
     } catch (e) {
       logger.error('Error while sending to *arr in afterUpdate subscriber', {
         label: 'Media Request',
@@ -1050,6 +1215,7 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     try {
       await this.sendToRadarr(event.entity as MediaRequest);
       await this.sendToSonarr(event.entity as MediaRequest);
+      await this.sendToMoviePilot(event.entity as MediaRequest);
     } catch (e) {
       logger.error('Error while sending to *arr in afterInsert subscriber', {
         label: 'Media Request',
@@ -1081,6 +1247,8 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
       event.manager as EntityManager,
       event.entity as MediaRequest
     );
+
+    await this.removeFromMoviePilot(event.entity as MediaRequest);
   }
 
   public listenTo(): typeof MediaRequest {

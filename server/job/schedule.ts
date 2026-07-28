@@ -3,17 +3,14 @@ import blocklistedTagsProcessor from '@server/job/blocklistedTagsProcessor';
 import availabilitySync from '@server/lib/availabilitySync';
 import downloadTracker from '@server/lib/downloadtracker';
 import ImageProxy from '@server/lib/imageproxy';
-import refreshToken from '@server/lib/refreshToken';
 import {
   jellyfinFullScanner,
   jellyfinRecentScanner,
 } from '@server/lib/scanners/jellyfin';
-import { plexFullScanner, plexRecentScanner } from '@server/lib/scanners/plex';
 import { radarrScanner } from '@server/lib/scanners/radarr';
 import { sonarrScanner } from '@server/lib/scanners/sonarr';
 import type { JobId } from '@server/lib/settings';
 import { getSettings } from '@server/lib/settings';
-import watchlistSync from '@server/lib/watchlistsync';
 import logger from '@server/logger';
 import schedule from 'node-schedule';
 
@@ -34,78 +31,7 @@ export const startJobs = (): void => {
   const jobs = getSettings().jobs;
   const mediaServerType = getSettings().main.mediaServerType;
 
-  if (mediaServerType === MediaServerType.PLEX) {
-    // Run recently added plex scan every 5 minutes
-    scheduledJobs.push({
-      id: 'plex-recently-added-scan',
-      name: 'Plex Recently Added Scan',
-      type: 'process',
-      interval: 'minutes',
-      cronSchedule: jobs['plex-recently-added-scan'].schedule,
-      job: schedule.scheduleJob(
-        jobs['plex-recently-added-scan'].schedule,
-        () => {
-          logger.info('Starting scheduled job: Plex Recently Added Scan', {
-            label: 'Jobs',
-          });
-          plexRecentScanner.run();
-        }
-      ),
-      running: () => plexRecentScanner.status().running,
-      cancelFn: () => plexRecentScanner.cancel(),
-    });
-
-    // Run full plex scan every 24 hours
-    scheduledJobs.push({
-      id: 'plex-full-scan',
-      name: 'Plex Full Library Scan',
-      type: 'process',
-      interval: 'hours',
-      cronSchedule: jobs['plex-full-scan'].schedule,
-      job: schedule.scheduleJob(jobs['plex-full-scan'].schedule, () => {
-        logger.info('Starting scheduled job: Plex Full Library Scan', {
-          label: 'Jobs',
-        });
-        plexFullScanner.run();
-      }),
-      running: () => plexFullScanner.status().running,
-      cancelFn: () => plexFullScanner.cancel(),
-    });
-
-    scheduledJobs.push({
-      id: 'plex-refresh-token',
-      name: 'Plex Refresh Token',
-      type: 'process',
-      interval: 'fixed',
-      cronSchedule: jobs['plex-refresh-token'].schedule,
-      job: schedule.scheduleJob(jobs['plex-refresh-token'].schedule, () => {
-        logger.info('Starting scheduled job: Plex Refresh Token', {
-          label: 'Jobs',
-        });
-        refreshToken.run();
-      }),
-    });
-
-    // Watchlist Sync
-    scheduledJobs.push({
-      id: 'plex-watchlist-sync',
-      name: 'Plex Watchlist Sync',
-      type: 'process',
-      interval: 'seconds',
-      cronSchedule: jobs['plex-watchlist-sync'].schedule,
-      job: schedule.scheduleJob(jobs['plex-watchlist-sync'].schedule, () => {
-        logger.info('Starting scheduled job: Plex Watchlist Sync', {
-          label: 'Jobs',
-        });
-        watchlistSync.syncWatchlist().catch((e) => {
-          logger.error('Failed to sync watchlists', {
-            label: 'Plex Watchlist Sync',
-            errorMessage: e.message,
-          });
-        });
-      }),
-    });
-  } else if (
+  if (
     mediaServerType === MediaServerType.JELLYFIN ||
     mediaServerType === MediaServerType.EMBY
   ) {
@@ -177,7 +103,7 @@ export const startJobs = (): void => {
     cancelFn: () => sonarrScanner.cancel(),
   });
 
-  // Checks if media is still available in plex/sonarr/radarr libs
+  // Checks if media is still available in jellyfin/sonarr/radarr libs
   scheduledJobs.push({
     id: 'availability-sync',
     name: 'Media Availability Sync',

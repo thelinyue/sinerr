@@ -1,16 +1,10 @@
-import PlexTvAPI from '@server/api/plextv';
 import type { SortOptions } from '@server/api/themoviedb';
 import TheMovieDb from '@server/api/themoviedb';
 import type { TmdbKeyword } from '@server/api/themoviedb/interfaces';
 import { MediaType } from '@server/constants/media';
-import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
-import { User } from '@server/entity/User';
-import { Watchlist } from '@server/entity/Watchlist';
-import type {
-  GenreSliderItem,
-  WatchlistResponse,
-} from '@server/interfaces/api/discoverInterfaces';
+import type { User } from '@server/entity/User';
+import type { GenreSliderItem } from '@server/interfaces/api/discoverInterfaces';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { mapProductionCompany } from '@server/models/Movie';
@@ -731,6 +725,7 @@ discoverRoutes.get('/trending', async (req, res, next) => {
       }),
       all: async () => ({
         data: await tmdb.getAllTrending({ page, language, timeWindow }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mapper: (result: any, media?: Media) => {
           if (isMovie(result)) {
             return mapMovieResult(result, media);
@@ -916,69 +911,6 @@ discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
         message: 'Unable to retrieve series genre slider.',
       });
     }
-  }
-);
-
-discoverRoutes.get<Record<string, unknown>, WatchlistResponse>(
-  '/watchlist',
-  async (req, res) => {
-    const userRepository = getRepository(User);
-    const itemsPerPage = 20;
-    const page = req.query.page ? Number(req.query.page) : 1;
-    const offset = (page - 1) * itemsPerPage;
-
-    const activeUser = await userRepository.findOne({
-      where: { id: req.user?.id },
-      select: ['id', 'plexToken'],
-    });
-
-    if (activeUser && !activeUser?.plexToken) {
-      // Non-Plex users can only see their own watchlist
-      const [result, total] = await getRepository(Watchlist).findAndCount({
-        where: { requestedBy: { id: activeUser?.id } },
-        relations: {
-          /*requestedBy: true,media:true*/
-        },
-        // loadRelationIds: true,
-        take: itemsPerPage,
-        skip: offset,
-      });
-      if (total) {
-        return res.json({
-          page: page,
-          totalPages: Math.ceil(total / itemsPerPage),
-          totalResults: total,
-          results: result,
-        });
-      }
-    }
-    if (!activeUser?.plexToken) {
-      // We will just return an empty array if the user has no Plex token
-      return res.json({
-        page: 1,
-        totalPages: 1,
-        totalResults: 0,
-        results: [],
-      });
-    }
-
-    // List watchlist from Plex
-    const plexTV = new PlexTvAPI(activeUser.plexToken);
-
-    const watchlist = await plexTV.getWatchlist({ offset });
-
-    return res.json({
-      page,
-      totalPages: Math.ceil(watchlist.totalSize / itemsPerPage),
-      totalResults: watchlist.totalSize,
-      results: watchlist.items.map((item) => ({
-        id: item.tmdbId,
-        ratingKey: item.ratingKey,
-        title: item.title,
-        mediaType: item.type === 'show' ? 'tv' : 'movie',
-        tmdbId: item.tmdbId,
-      })),
-    });
   }
 );
 

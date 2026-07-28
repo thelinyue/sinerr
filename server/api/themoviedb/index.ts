@@ -135,7 +135,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
     super(
       'https://api.themoviedb.org/3',
       {
-        api_key: '431a8708161bcd1f1fbe7536137e61ed',
+        api_key: '3fd52e6951387635a3710416b83d40d6',
       },
       {
         nodeCache: cacheManager.getCache('tmdb').data,

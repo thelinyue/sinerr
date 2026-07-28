@@ -1,6 +1,6 @@
 ---
 title: Build From Source (Advanced)
-description: Install Seerr by building from source
+description: Install Sinerr by building from source
 sidebar_position: 2
 ---
 # Build from Source (Advanced)
@@ -24,9 +24,9 @@ import TabItem from '@theme/TabItem';
 ```bash
 sudo mkdir -p /opt/seerr && cd /opt/seerr
 ```
-2. Clone the Seerr repository and checkout the main branch:
+2. Clone the Sinerr repository and checkout the main branch:
 ```bash
-git clone https://github.com/seerr-team/seerr.git .
+git clone https://github.com/Linyue-GitHub/sinerr.git .
 git checkout main
 ```
 3. Install the dependencies:
@@ -37,22 +37,22 @@ CYPRESS_INSTALL_BINARY=0 pnpm install --frozen-lockfile
 ```bash
 pnpm build
 ```
-5. Start Seerr:
+5. Start Sinerr:
 ```bash
 pnpm start
 ```
 
 :::info
-You can now access Seerr by visiting `http://localhost:5055` in your web browser.
+You can now access Sinerr by visiting `http://localhost:5055` in your web browser.
 :::
 
 #### Extending the installation
 <Tabs groupId="unix-extensions" queryString>
   <TabItem value="linux" label="Linux">
 To run seerr as a systemd service:
-1. create the environment file at `/etc/seerr/seerr.conf`:
+1. create the environment file at `/etc/linyue/sinerr.conf`:
 ```bash
-## Seerr's default port is 5055, if you want to use both, change this.
+## Sinerr's default port is 5055, if you want to use both, change this.
 ## specify on which port to listen
 PORT=5055
 
@@ -71,12 +71,12 @@ Copy the path to node, it should be something like `/usr/bin/node`.
 3. Create the systemd service file at `/etc/systemd/system/seerr.service`, using either `sudo systemctl edit seerr` or `sudo nano /etc/systemd/system/seerr.service`:
 ```bash
 [Unit]
-Description=Seerr Service
+Description=Sinerr Service
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/seerr/seerr.conf
+EnvironmentFile=/etc/linyue/sinerr.conf
 Environment=NODE_ENV=production
 Type=exec
 Restart=on-failure
@@ -198,9 +198,9 @@ pm2 status seerr
 mkdir C:\seerr
 cd C:\seerr
 ```
-2. Clone the Seerr repository and checkout the main branch:
+2. Clone the Sinerr repository and checkout the main branch:
 ```powershell
-git clone https://github.com/seerr-team/seerr.git .
+git clone https://github.com/Linyue-GitHub/sinerr.git .
 git checkout main
 ```
 3. Install the dependencies:
@@ -212,17 +212,17 @@ $env:CYPRESS_INSTALL_BINARY = 0; pnpm install --frozen-lockfile
 ```powershell
 pnpm build
 ```
-5. Start Seerr:
+5. Start Sinerr:
 ```powershell
 pnpm start
 ```
 
 :::tip
-You can add the environment variables to a `.env` file in the Seerr directory.
+You can add the environment variables to a `.env` file in the Sinerr directory.
 :::
 
 :::info
-You can now access Seerr by visiting `http://localhost:5055` in your web browser.
+You can now access Sinerr by visiting `http://localhost:5055` in your web browser.
 :::
 
 #### Extending the installation
@@ -239,14 +239,14 @@ node dist/index.js
 2. Create a task in Task Scheduler:
 - Open Task Scheduler
 - Click on "Create Basic Task"
-- Name the task "Seerr"
+- Name the task "Sinerr"
 - Set the trigger to "When the computer starts"
 - Set the action to "Start a program"
 - Set the program/script to the path of the `start-seerr.bat` file
 - Set the "Start in" to the seerr directory.
 - Click "Finish"
 
-Now, Seerr will start when the computer boots up in the background.
+Now, Sinerr will start when the computer boots up in the background.
   </TabItem>
 
   <TabItem value="nssm" label="NSSM">
@@ -254,17 +254,17 @@ To run seerr as a service:
 1. Download the [Non-Sucking Service Manager](https://nssm.cc/download)
 2. Install NSSM:
 ```powershell
-nssm install Seerr "C:\Program Files\nodejs\node.exe" "C:\seerr\dist\index.js"
-nssm set Seerr AppDirectory "C:\seerr"
-nssm set Seerr AppEnvironmentExtra NODE_ENV=production
+nssm install Sinerr "C:\Program Files\nodejs\node.exe" "C:\seerr\dist\index.js"
+nssm set Sinerr AppDirectory "C:\seerr"
+nssm set Sinerr AppEnvironmentExtra NODE_ENV=production
 ```
 3. Start the service:
 ```powershell
-nssm start Seerr
+nssm start Sinerr
 ```
 4. To ensure the service starts on boot, run the following command:
 ```powershell
-nssm set Seerr Start SERVICE_AUTO_START
+nssm set Sinerr Start SERVICE_AUTO_START
 ```
   </TabItem>
   <TabItem value="pm2" label="PM2">
@@ -310,9 +310,9 @@ pm2 status seerr
 </Tabs>
 
 ### Updating
-To update Seerr, navigate to the Seerr directory and run the following commands:
+To update Sinerr, navigate to the Sinerr directory and run the following commands:
 ```bash
 git pull
 ```
-Then, follow the steps in the installation section to rebuild and restart Seerr.
+Then, follow the steps in the installation section to rebuild and restart Sinerr.
 

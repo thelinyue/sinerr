@@ -35,7 +35,7 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
 
   // We have to replace Jellyseerr migrations not working with Overseerr with a custom one
   try {
-    // Filter out the Jellyseerr migrations and replace them with the Seerr migration
+    // Filter out the Jellyseerr migrations and replace them with the Sinerr migration
     // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     const newMigrations: MixedList<string | Function> = migrations
       ?.filter(
@@ -56,7 +56,7 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     });
   } catch (error) {
     logger.error('Failed to load migrations for Overseerr merge', {
-      label: 'Seerr Migration',
+      label: 'Sinerr Migration',
       error: error.message,
     });
     process.exit(1);
@@ -76,7 +76,7 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     );
   } catch (error) {
     logger.error('Failed to insert migration records', {
-      label: 'Seerr Migration',
+      label: 'Sinerr Migration',
       error: error.message,
     });
     process.exit(1);
@@ -105,7 +105,7 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     );
   } catch (error) {
     logger.error('Failed to clean up corrupted quota values', {
-      label: 'Seerr Migration',
+      label: 'Sinerr Migration',
       error: error.message,
     });
   }
@@ -127,21 +127,21 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     }
   } catch (error) {
     logger.error('Failed to update Media status from Blacklisted to Deleted', {
-      label: 'Seerr Migration',
+      label: 'Sinerr Migration',
       error: error.message,
     });
     process.exit(1);
   }
 
-  // Set media server type to Plex (default for Overseerr)
-  settings.main.mediaServerType = MediaServerType.PLEX;
+  // Set media server type to Jellyfin (default for Sinerr)
+  settings.main.mediaServerType = MediaServerType.JELLYFIN;
 
-  // Replace default Overseerr values with Seerr values
+  // Replace default Overseerr values with Sinerr values
   if (settings.main.applicationTitle === 'Overseerr') {
-    settings.main.applicationTitle = 'Seerr';
+    settings.main.applicationTitle = 'Sinerr';
   }
   if (settings.notifications.agents.email.options.senderName === 'Overseerr') {
-    settings.notifications.agents.email.options.senderName = 'Seerr';
+    settings.notifications.agents.email.options.senderName = 'Sinerr';
   }
 
   // Save the updated settings
@@ -149,14 +149,14 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     await settings.save();
   } catch (error) {
     logger.error('Failed to save updated settings for Overseerr merge', {
-      label: 'Seerr Migration',
+      label: 'Sinerr Migration',
       error: error.message,
     });
     process.exit(1);
   }
 
-  logger.info('Yeah! Overseerr to Seerr migration completed successfully!', {
-    label: 'Seerr Migration',
+  logger.info('Yeah! Overseerr to Sinerr migration completed successfully!', {
+    label: 'Sinerr Migration',
   });
 
   return true;

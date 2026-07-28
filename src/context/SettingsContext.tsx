@@ -10,7 +10,7 @@ export interface SettingsContextProps {
 
 const defaultSettings = {
   initialized: false,
-  applicationTitle: 'Seerr',
+  applicationTitle: 'Sinerr',
   applicationUrl: '',
   hideAvailable: false,
   hideBlocklisted: false,
@@ -27,12 +27,10 @@ const defaultSettings = {
   cacheImages: false,
   vapidPublic: '',
   enablePushRegistration: false,
-  locale: 'en',
+  locale: 'zh-CN',
   emailEnabled: false,
-  newPlexLogin: true,
   youtubeUrl: '',
   versionCheck: true,
-  plexClientIdentifier: '',
 };
 
 export const SettingsContext = React.createContext<SettingsContextProps>({

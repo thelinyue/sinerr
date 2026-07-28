@@ -1,11 +1,11 @@
 ---
 title: Configuring the Database (Advanced)
-description: Configure the database for Seerr
+description: Configure the database for Sinerr
 sidebar_position: 2
 ---
 # Configuring the Database
 
-Seerr supports SQLite and PostgreSQL. The database connection can be configured using the following environment variables:
+Sinerr supports SQLite and PostgreSQL. The database connection can be configured using the following environment variables:
 
 ## SQLite Options
 
@@ -34,7 +34,7 @@ DB_HOST=localhost # (optional) The host (URL) of the database. The default is "l
 DB_PORT="5432" # (optional) The port to connect to. The default is "5432".
 DB_USER= # (required) Username used to connect to the database.
 DB_PASS= # (required) Password of the user used to connect to the database.
-DB_NAME="seerr" # (optional) The name of the database to connect to. The default is "seerr".
+DB_NAME="sinerr" # (optional) The name of the database to connect to. The default is "sinerr".
 DB_POOL_SIZE="10" # (optional) The number of connections to maintain in the connection pool. The default is "10".
 DB_LOG_QUERIES="false" # (optional) Whether to log the DB queries for debugging. The default is "false".
 ```
@@ -48,7 +48,7 @@ DB_TYPE=postgres # Which DB engine to use, either sqlite or postgres. The defaul
 DB_SOCKET_PATH="/var/run/postgresql" # (required) The path to the PostgreSQL Unix socket directory.
 DB_USER= # (required) Username used to connect to the database.
 DB_PASS= # (optional) Password of the user used to connect to the database, depending on the server's authentication configuration.
-DB_NAME="seerr" # (optional) The name of the database to connect to. The default is "seerr".
+DB_NAME="sinerr" # (optional) The name of the database to connect to. The default is "sinerr".
 DB_POOL_SIZE="10" # (optional) The number of connections to maintain in the connection pool. The default is "10".
 DB_LOG_QUERIES="false" # (optional) Whether to log the DB queries for debugging. The default is "false".
 ```
@@ -93,9 +93,9 @@ DB_SSL_CERT_FILE= # (optional) Path to certificate chain in pem format for the p
 
 ### Migrating from SQLite to PostgreSQL
 
-1. Set up your PostgreSQL database and configure Seerr to use it
-2. Run Seerr to create the tables in the PostgreSQL database
-3. Stop Seerr
+1. Set up your PostgreSQL database and configure Sinerr to use it
+2. Run Sinerr to create the tables in the PostgreSQL database
+3. Stop Sinerr
 4. Run the following command to export the data from the SQLite database and import it into the PostgreSQL database:
 
 :::info
@@ -114,7 +114,7 @@ import TabItem from '@theme/TabItem';
 <Tabs>
 <TabItem value="docker" label="Using pgloader Container (Recommended)" default>
 
-**Recommended method**: Use the pgloader container even for standalone Seerr installations. This avoids building from source and ensures compatibility.
+**Recommended method**: Use the pgloader container even for standalone Sinerr installations. This avoids building from source and ensures compatibility.
 
 ```bash
 # For standalone installations (no Docker network needed)
@@ -169,4 +169,4 @@ Once pgloader is built, run the migration:
 </TabItem>
 </Tabs>
 
-5. Start Seerr
+5. Start Sinerr
