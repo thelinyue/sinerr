@@ -12,10 +12,7 @@ class OverrideRule {
   public id: number;
 
   @Column({ type: 'int', nullable: true })
-  public radarrServiceId?: number;
-
-  @Column({ type: 'int', nullable: true })
-  public sonarrServiceId?: number;
+  public serviceId?: number;
 
   @Column({ nullable: true })
   public users?: string;

@@ -1,14 +1,11 @@
 import { MediaServerType } from '@server/constants/server';
 import blocklistedTagsProcessor from '@server/job/blocklistedTagsProcessor';
 import availabilitySync from '@server/lib/availabilitySync';
-import downloadTracker from '@server/lib/downloadtracker';
 import ImageProxy from '@server/lib/imageproxy';
 import {
   jellyfinFullScanner,
   jellyfinRecentScanner,
 } from '@server/lib/scanners/jellyfin';
-import { radarrScanner } from '@server/lib/scanners/radarr';
-import { sonarrScanner } from '@server/lib/scanners/sonarr';
 import type { JobId } from '@server/lib/settings';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
@@ -73,37 +70,7 @@ export const startJobs = (): void => {
     });
   }
 
-  // Run full radarr scan every 24 hours
-  scheduledJobs.push({
-    id: 'radarr-scan',
-    name: 'Radarr Scan',
-    type: 'process',
-    interval: 'hours',
-    cronSchedule: jobs['radarr-scan'].schedule,
-    job: schedule.scheduleJob(jobs['radarr-scan'].schedule, () => {
-      logger.info('Starting scheduled job: Radarr Scan', { label: 'Jobs' });
-      radarrScanner.run();
-    }),
-    running: () => radarrScanner.status().running,
-    cancelFn: () => radarrScanner.cancel(),
-  });
-
-  // Run full sonarr scan every 24 hours
-  scheduledJobs.push({
-    id: 'sonarr-scan',
-    name: 'Sonarr Scan',
-    type: 'process',
-    interval: 'hours',
-    cronSchedule: jobs['sonarr-scan'].schedule,
-    job: schedule.scheduleJob(jobs['sonarr-scan'].schedule, () => {
-      logger.info('Starting scheduled job: Sonarr Scan', { label: 'Jobs' });
-      sonarrScanner.run();
-    }),
-    running: () => sonarrScanner.status().running,
-    cancelFn: () => sonarrScanner.cancel(),
-  });
-
-  // Checks if media is still available in jellyfin/sonarr/radarr libs
+  // Checks if media is still available in jellyfin libs
   scheduledJobs.push({
     id: 'availability-sync',
     name: 'Media Availability Sync',
@@ -118,36 +85,6 @@ export const startJobs = (): void => {
     }),
     running: () => availabilitySync.running,
     cancelFn: () => availabilitySync.cancel(),
-  });
-
-  // Run download sync every minute
-  scheduledJobs.push({
-    id: 'download-sync',
-    name: 'Download Sync',
-    type: 'command',
-    interval: 'seconds',
-    cronSchedule: jobs['download-sync'].schedule,
-    job: schedule.scheduleJob(jobs['download-sync'].schedule, () => {
-      logger.debug('Starting scheduled job: Download Sync', {
-        label: 'Jobs',
-      });
-      downloadTracker.updateDownloads();
-    }),
-  });
-
-  // Reset download sync everyday at 01:00 am
-  scheduledJobs.push({
-    id: 'download-sync-reset',
-    name: 'Download Sync Reset',
-    type: 'command',
-    interval: 'hours',
-    cronSchedule: jobs['download-sync-reset'].schedule,
-    job: schedule.scheduleJob(jobs['download-sync-reset'].schedule, () => {
-      logger.info('Starting scheduled job: Download Sync Reset', {
-        label: 'Jobs',
-      });
-      downloadTracker.resetDownloadTracker();
-    }),
   });
 
   // Run image cache cleanup every 24 hours

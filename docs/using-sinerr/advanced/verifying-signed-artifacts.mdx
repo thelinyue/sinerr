@@ -257,9 +257,9 @@ cosign verify ghcr.io/thelinyue/sinerr@"$DIGEST" \
 
 Official Sinerr helm charts are available from:
 
-- GitHub Container Registry (GHCR): `ghcr.io/thelinyue/sinerr/seerr-chart/seerr-chart:<tag>`
+- GitHub Container Registry (GHCR): `ghcr.io/thelinyue/sinerr/sinerr-chart/sinerr-chart:<tag>`
 
-You can view all available tags on the [Sinerr Releases page](https://github.com/thelinyue/sinerr/pkgs/container/seerr%2Fseerr-chart).
+You can view all available tags on the [Sinerr Releases page](https://github.com/thelinyue/sinerr/pkgs/container/sinerr%2Fsinerr-chart).
 
 ---
 
@@ -274,14 +274,14 @@ Verification should always be performed using the image digest (SHA256).
   <TabItem value="docker" label="Docker">
 
 ```bash
-docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"'
+docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/sinerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"'
 ```
   </TabItem>
 
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-skopeo inspect docker://ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}'
+skopeo inspect docker://ghcr.io/thelinyue/sinerr/sinerr-chart:3.0.0 --format '{{.Digest}}'
 ```
   </TabItem>
 </Tabs>
@@ -297,13 +297,13 @@ sha256:abcd1234...
 #### Verify the Helm Chart Signature
 
 ```bash
-cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@sha256:abcd1234... \
+cosign verify ghcr.io/thelinyue/sinerr/sinerr-chart@sha256:abcd1234... \
   --certificate-identity "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
 :::info Successful Verification Example
-Verification for `ghcr.io/thelinyue/sinerr/seerr-chart@sha256:abcd1234...`
+Verification for `ghcr.io/thelinyue/sinerr/sinerr-chart@sha256:abcd1234...`
 
 The following checks were performed:
 
@@ -336,13 +336,13 @@ This confirms that the image was:
   <TabItem value="docker" label="Docker">
 
 ```bash
-DIGEST=$(docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"')
+DIGEST=$(docker buildx imagetools inspect ghcr.io/thelinyue/sinerr/sinerr-chart:3.0.0 --format '{{json .Manifest.Digest}}' | tr -d '"')
 
-cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
+cosign verify ghcr.io/thelinyue/sinerr/sinerr-chart@"$DIGEST" \
   --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
-cosign verify-attestation ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
+cosign verify-attestation ghcr.io/thelinyue/sinerr/sinerr-chart@"$DIGEST" \
   --type cyclonedx \
   --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
@@ -352,9 +352,9 @@ cosign verify-attestation ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
   <TabItem value="podman" label="Podman / Skopeo">
 
 ```bash
-DIGEST=$(skopeo inspect docker://ghcr.io/thelinyue/sinerr/seerr-chart:3.0.0 --format '{{.Digest}}')
+DIGEST=$(skopeo inspect docker://ghcr.io/thelinyue/sinerr/sinerr-chart:3.0.0 --format '{{.Digest}}')
 
-cosign verify ghcr.io/thelinyue/sinerr/seerr-chart@"$DIGEST" \
+cosign verify ghcr.io/thelinyue/sinerr/sinerr-chart@"$DIGEST" \
   --certificate-identity-regexp "https://github.com/thelinyue/sinerr/.github/workflows/helm.yml@refs/heads/main" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```

@@ -15,8 +15,8 @@ body:
     id: doc-location
     attributes:
       label: Page / Location
-      description: Link to the docs page or the file/path (e.g. https://docs.seerr.dev/... or README.md)
-      placeholder: "https://docs.seerr.dev/..."
+      description: Link to the docs page or the file/path (e.g. https://docs.sinerr.dev/... or README.md)
+      placeholder: "https://docs.sinerr.dev/..."
     validations:
       required: true
   - type: dropdown

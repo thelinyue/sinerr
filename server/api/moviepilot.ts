@@ -22,7 +22,7 @@ interface MoviePilotSubscribeOptions {
   seasons?: string;
 }
 
-interface MoviePilotSeerrPayload {
+interface MoviePilotSinerrPayload {
   notification_type: string;
   subject: string;
   media: {
@@ -89,7 +89,7 @@ class MoviePilotAPI extends ExternalAPI {
     options: MoviePilotSubscribeOptions
   ): Promise<MoviePilotResponse> {
     try {
-      const payload: MoviePilotSeerrPayload = {
+      const payload: MoviePilotSinerrPayload = {
         notification_type: 'MEDIA_APPROVED',
         subject: options.name ?? '',
         media: {

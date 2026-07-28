@@ -1,23 +1,23 @@
 ---
-title: "Sinerr Release: Unifying Overseerr and Jellyseerr"
-description: "Overseerr and Jellyseerr are merging into a unified project: Sinerr"
-slug: seerr-release
+title: "Sinerr Release: Unifying Overseerr and Jellysinerr"
+description: "Overseerr and Jellysinerr are merging into a unified project: Sinerr"
+slug: sinerr-release
 authors: [thelinyue]
 image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
 
-We're excited to announce a major update: the Jellyseerr and Overseerr teams are officially merging into a single team called **Seerr**. This unification marks an important step forward as we bring our efforts together under one banner.
+We're excited to announce a major update: the Jellysinerr and Overseerr teams are officially merging into a single team called **sinerr**. This unification marks an important step forward as we bring our efforts together under one banner.
 
-For users, this means one shared codebase combining all existing Overseerr functionalities with the latest Jellyseerr features, along with Jellyfin and Emby support, allowing us to deliver updates more efficiently and keep the project moving forward.
+For users, this means one shared codebase combining all existing Overseerr functionalities with the latest Jellysinerr features, along with Jellyfin and Emby support, allowing us to deliver updates more efficiently and keep the project moving forward.
 
-Please check how to migrate to Sinerr in our [migration guide](https://docs.seerr.dev/migration-guide) and stay tuned for more updates on the project!
+Please check how to migrate to Sinerr in our [migration guide](https://docs.sinerr.dev/migration-guide) and stay tuned for more updates on the project!
 
 <!--truncate-->
 
 ## What's new in Sinerr for Overseerr users
 
-Sinerr brings several features that were previously available in Jellyseerr but missing from Overseerr. These additions improve flexibility, performance, and overall control for admins and power users:
+Sinerr brings several features that were previously available in Jellysinerr but missing from Overseerr. These additions improve flexibility, performance, and overall control for admins and power users:
 
 * **Alternative media solution:** Added support for Jellyfin and Emby as alternatives to Plex. Only one integration can be used at a time.
 * **PostgreSQL support**: In addition to SQLite, you can now opt in to using a PostgreSQL database.
@@ -30,7 +30,7 @@ Sinerr brings several features that were previously available in Jellyseerr but 
 * **Disable special seasons:** Adds a setting to prevent special seasons from being shown or requested.
 * **New languages**: Turkish and Basque
 
-## What's new since the previous Jellyseerr release
+## What's new since the previous Jellysinerr release
 
 This release also brings several important improvements and long-requested features, including **TheTVDB metadata support**, **DNS caching**, and **dynamic webhook placeholders**, along with a few quality-of-life improvements for developers and users alike.
 
@@ -55,7 +55,7 @@ Previously, Sinerr relied solely on **TMDB** for movie and TV show information, 
 
 With this new integration, Sinerr can now use **the same data source as Sonarr** for series and anime, ensuring consistent and accurate season and episode information across both platforms.
 
-You can try this new experimental feature in the new “Metadata Providers” tab of the settings page:
+You can try this new experimental feature in the new “Metadata Providers�?tab of the settings page:
 
 ![Metadata Providers](./metadata-providers.png)
 
@@ -65,7 +65,7 @@ By default, Node.js doesn't cache any DNS requests. Our DNS cache manager addres
 
 We will post another blog post soon on all the issues we encountered with DNS caching in Node.js.
 
-You can enable this by checking the “DNS Cache” setting in the network tabs of the Sinerr settings:
+You can enable this by checking the “DNS Cache�?setting in the network tabs of the Sinerr settings:
 
 ![DNS Cache](./dns-cache.png)
 

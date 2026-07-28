@@ -7,7 +7,7 @@ sidebar_position: 2
 :::warning
 This method is not recommended for most users. It is intended for advanced users who are familiar with managing their own server infrastructure.
 
-Refer to [Configuring Databases](/extending-seerr/database-config#postgresql-options) for details on how to configure your database.
+Refer to [Configuring Databases](/extending-sinerr/database-config#postgresql-options) for details on how to configure your database.
 :::
 
 import Tabs from '@theme/Tabs';
@@ -20,9 +20,9 @@ import TabItem from '@theme/TabItem';
 
 ## Unix (Linux, macOS)
 ### Installation
-1. Assuming you want the working directory to be `/opt/seerr`, create the directory and navigate to it:
+1. Assuming you want the working directory to be `/opt/sinerr`, create the directory and navigate to it:
 ```bash
-sudo mkdir -p /opt/seerr && cd /opt/seerr
+sudo mkdir -p /opt/sinerr && cd /opt/sinerr
 ```
 2. Clone the Sinerr repository and checkout the main branch:
 ```bash
@@ -49,14 +49,14 @@ You can now access Sinerr by visiting `http://localhost:5055` in your web browse
 #### Extending the installation
 <Tabs groupId="unix-extensions" queryString>
   <TabItem value="linux" label="Linux">
-To run seerr as a systemd service:
+To run sinerr as a systemd service:
 1. create the environment file at `/etc/linyue/sinerr.conf`:
 ```bash
 ## Sinerr's default port is 5055, if you want to use both, change this.
 ## specify on which port to listen
 PORT=5055
 
-## specify on which interface to listen, by default seerr listens on all interfaces
+## specify on which interface to listen, by default sinerr listens on all interfaces
 #HOST=127.0.0.1
 
 ## Uncomment if you want to force Node.js to resolve IPv4 before IPv6 (advanced users only)
@@ -68,7 +68,7 @@ which node
 ```
 Copy the path to node, it should be something like `/usr/bin/node`.
 
-3. Create the systemd service file at `/etc/systemd/system/seerr.service`, using either `sudo systemctl edit seerr` or `sudo nano /etc/systemd/system/seerr.service`:
+3. Create the systemd service file at `/etc/systemd/system/sinerr.service`, using either `sudo systemctl edit sinerr` or `sudo nano /etc/systemd/system/sinerr.service`:
 ```bash
 [Unit]
 Description=Sinerr Service
@@ -80,7 +80,7 @@ EnvironmentFile=/etc/linyue/sinerr.conf
 Environment=NODE_ENV=production
 Type=exec
 Restart=on-failure
-WorkingDirectory=/opt/seerr
+WorkingDirectory=/opt/sinerr
 ExecStart=/usr/bin/node dist/index.js
 
 [Install]
@@ -92,33 +92,33 @@ If you are using a different path to node, replace `/usr/bin/node` with the path
 
 4. Enable and start the service:
 ```bash
-sudo systemctl enable seerr
-sudo systemctl start seerr
+sudo systemctl enable sinerr
+sudo systemctl start sinerr
 ```
   </TabItem>
   <TabItem value="macos" label="macOS">
-To run seerr as a launchd service:
+To run sinerr as a launchd service:
 1. Find the path to node:
 ```bash
 which node
 ```
 Copy the path to node, it should be something like `/usr/local/bin/node`.
 
-2. Create a launchd plist file at `~/Library/LaunchAgents/com.seerr.plist`:
+2. Create a launchd plist file at `~/Library/LaunchAgents/com.sinerr.plist`:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.seerr</string>
+  <string>com.sinerr</string>
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
-    <string>/opt/seerr/dist/index.js</string>
+    <string>/opt/sinerr/dist/index.js</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/opt/seerr</string>
+  <string>/opt/sinerr</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>NODE_ENV</key>
@@ -138,11 +138,11 @@ If you are using a different path to node, replace `/usr/local/bin/node` with th
 :::
 3. Load the service:
 ```bash
-sudo launchctl load ~/Library/LaunchAgents/com.seerr.plist
+sudo launchctl load ~/Library/LaunchAgents/com.sinerr.plist
 ```
 3. Start the service:
 ```bash
-sudo launchctl start com.seerr
+sudo launchctl start com.sinerr
 ```
 4. To ensure the service starts on boot, run the following command:
 ```bash
@@ -150,14 +150,14 @@ sudo lauchctl load
 ```
   </TabItem>
   <TabItem value="pm2" label="PM2">
-To run seerr as a PM2 service:
+To run sinerr as a PM2 service:
 1. Install PM2:
 ```bash
 npm install -g pm2
 ```
-2. Start seerr with PM2:
+2. Start sinerr with PM2:
 ```bash
-NODE_ENV=production pm2 start dist/index.js --name seerr
+NODE_ENV=production pm2 start dist/index.js --name sinerr
 ```
 3. Save the process list:
 ```bash
@@ -170,33 +170,33 @@ pm2 startup
 **Managing the service**
 - To start the service:
 ```powershell
-pm2 start seerr
+pm2 start sinerr
 ```
 - To stop the service:
 ```powershell
-pm2 stop seerr
+pm2 stop sinerr
 ```
 - To restart the service:
 ```powershell
-pm2 restart seerr
+pm2 restart sinerr
 ```
 - To view the logs:
 ```powershell
-pm2 logs seerr
+pm2 logs sinerr
 ```
 - To view the status:
 ```powershell
-pm2 status seerr
+pm2 status sinerr
 ```
   </TabItem>
 </Tabs>
 
 ## Windows
 ### Installation
-1. Assuming you want the working directory to be `C:\seerr`, create the directory and navigate to it:
+1. Assuming you want the working directory to be `C:\sinerr`, create the directory and navigate to it:
 ```powershell
-mkdir C:\seerr
-cd C:\seerr
+mkdir C:\sinerr
+cd C:\sinerr
 ```
 2. Clone the Sinerr repository and checkout the main branch:
 ```powershell
@@ -228,8 +228,8 @@ You can now access Sinerr by visiting `http://localhost:5055` in your web browse
 #### Extending the installation
 <Tabs groupId="windows-extensions" queryString>
   <TabItem value="task-scheduler" label="Task Scheduler">
-To run seerr as a bat script:
-1. Create a file named `start-seerr.bat` in the seerr directory:
+To run sinerr as a bat script:
+1. Create a file named `start-sinerr.bat` in the sinerr directory:
 ```batch
 @echo off
 set PORT=5055
@@ -242,20 +242,20 @@ node dist/index.js
 - Name the task "Sinerr"
 - Set the trigger to "When the computer starts"
 - Set the action to "Start a program"
-- Set the program/script to the path of the `start-seerr.bat` file
-- Set the "Start in" to the seerr directory.
+- Set the program/script to the path of the `start-sinerr.bat` file
+- Set the "Start in" to the sinerr directory.
 - Click "Finish"
 
 Now, Sinerr will start when the computer boots up in the background.
   </TabItem>
 
   <TabItem value="nssm" label="NSSM">
-To run seerr as a service:
+To run sinerr as a service:
 1. Download the [Non-Sucking Service Manager](https://nssm.cc/download)
 2. Install NSSM:
 ```powershell
-nssm install Sinerr "C:\Program Files\nodejs\node.exe" "C:\seerr\dist\index.js"
-nssm set Sinerr AppDirectory "C:\seerr"
+nssm install Sinerr "C:\Program Files\nodejs\node.exe" "C:\sinerr\dist\index.js"
+nssm set Sinerr AppDirectory "C:\sinerr"
 nssm set Sinerr AppEnvironmentExtra NODE_ENV=production
 ```
 3. Start the service:
@@ -268,14 +268,14 @@ nssm set Sinerr Start SERVICE_AUTO_START
 ```
   </TabItem>
   <TabItem value="pm2" label="PM2">
-To run seerr as a PM2 service:
+To run sinerr as a PM2 service:
 1. Install PM2:
 ```powershell
 npm install -g pm2
 ```
-2. Start seerr with PM2:
+2. Start sinerr with PM2:
 ```powershell
-$env:NODE_ENV = "production"; pm2 start dist/index.js --name seerr
+$env:NODE_ENV = "production"; pm2 start dist/index.js --name sinerr
 ```
 3. Save the process list:
 ```powershell
@@ -288,23 +288,23 @@ pm2 startup
 ##### Managing the service
 - To start the service:
 ```powershell
-pm2 start seerr
+pm2 start sinerr
 ```
 - To stop the service:
 ```powershell
-pm2 stop seerr
+pm2 stop sinerr
 ```
 - To restart the service:
 ```powershell
-pm2 restart seerr
+pm2 restart sinerr
 ```
 - To view the logs:
 ```powershell
-pm2 logs seerr
+pm2 logs sinerr
 ```
 - To view the status:
 ```powershell
-pm2 status seerr
+pm2 status sinerr
 ```
   </TabItem>
 </Tabs>

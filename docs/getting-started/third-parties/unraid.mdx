@@ -28,25 +28,25 @@ In case you still want to do it manually, please follow the instructions below.
 
 Before proceeding, choose which installation method best suits your server:
 
-**Sinerr Default** (`UID 1000:1000`) â€” Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
+**Sinerr Default** (`UID 1000:1000`) â€?Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
 
-**Unraid Default** (`UID 99:100`) â€” Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Sinerr's built-in rootless user and may cause compatibility issues with future Sinerr updates.
+**Unraid Default** (`UID 99:100`) â€?Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Sinerr's built-in rootless user and may cause compatibility issues with future Sinerr updates.
 
 <Tabs groupId="unraid-permissions" queryString>
-  <TabItem value="seerr-default" label="Sinerr Default">
+  <TabItem value="sinerr-default" label="Sinerr Default">
 
   ### 1. Create the config directory
 
   Open the Unraid terminal and run:
 
   ```bash
-  mkdir -p /mnt/user/appdata/seerr
+  mkdir -p /mnt/user/appdata/sinerr
   ```
 
   ### 2. Set folder permissions
 
   ```bash
-  chown -R 1000:1000 /mnt/user/appdata/seerr
+  chown -R 1000:1000 /mnt/user/appdata/sinerr
   ```
 
   ### 3. Add the Docker container
@@ -61,7 +61,7 @@ Before proceeding, choose which installation method best suits your server:
 
   | Field | Value |
   |---|---|
-  | **Name** | `seerr` |
+  | **Name** | `sinerr` |
   | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
   | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
@@ -82,7 +82,7 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | Container Path | `/app/config` |
-  | Host Path | `/mnt/user/appdata/seerr` |
+  | Host Path | `/mnt/user/appdata/sinerr` |
 
   **Variable:**
   | Field | Value |
@@ -110,13 +110,13 @@ Before proceeding, choose which installation method best suits your server:
   Open the Unraid terminal and run:
 
   ```bash
-  mkdir -p /mnt/user/appdata/seerr
+  mkdir -p /mnt/user/appdata/sinerr
   ```
 
   ### 2. Set folder permissions
 
   ```bash
-  chown -R 99:100 /mnt/user/appdata/seerr
+  chown -R 99:100 /mnt/user/appdata/sinerr
   ```
 
   ### 3. Add the Docker container
@@ -131,7 +131,7 @@ Before proceeding, choose which installation method best suits your server:
 
   | Field | Value |
   |---|---|
-  | **Name** | `seerr` |
+  | **Name** | `sinerr` |
   | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
   | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
@@ -152,7 +152,7 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | Container Path | `/app/config` |
-  | Host Path | `/mnt/user/appdata/seerr` |
+  | Host Path | `/mnt/user/appdata/sinerr` |
 
   **Variable:**
   | Field | Value |

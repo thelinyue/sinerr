@@ -76,23 +76,6 @@ export interface DVRSettings {
   overrideRule: number[];
 }
 
-export interface RadarrSettings extends DVRSettings {
-  minimumAvailability: string;
-}
-
-export interface SonarrSettings extends DVRSettings {
-  seriesType: 'standard' | 'daily' | 'anime';
-  animeSeriesType: 'standard' | 'daily' | 'anime';
-  activeAnimeProfileId?: number;
-  activeAnimeProfileName?: string;
-  activeAnimeDirectory?: string;
-  activeAnimeLanguageProfileId?: number;
-  activeLanguageProfileId?: number;
-  animeTags?: number[];
-  enableSeasonFolders: boolean;
-  monitorNewItems: 'all' | 'none';
-}
-
 export interface MoviePilotSettings {
   id: number;
   name: string;
@@ -357,11 +340,7 @@ interface JobSettings {
 }
 
 export type JobId =
-  | 'radarr-scan'
-  | 'sonarr-scan'
   | 'moviepilot-scan'
-  | 'download-sync'
-  | 'download-sync-reset'
   | 'jellyfin-recently-added-scan'
   | 'jellyfin-full-scan'
   | 'image-cache-cleanup'
@@ -376,8 +355,6 @@ export interface AllSettings {
   main: MainSettings;
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
-  radarr: RadarrSettings[];
-  sonarr: SonarrSettings[];
   moviepilot: MoviePilotSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
@@ -446,8 +423,6 @@ class Settings {
         tv: MetadataProviderType.TMDB,
         anime: MetadataProviderType.TMDB,
       },
-      radarr: [],
-      sonarr: [],
       moviepilot: [],
       public: {
         initialized: false,
@@ -560,20 +535,8 @@ class Settings {
         },
       },
       jobs: {
-        'radarr-scan': {
-          schedule: '0 0 4 * * *',
-        },
-        'sonarr-scan': {
-          schedule: '0 30 4 * * *',
-        },
         'availability-sync': {
           schedule: '0 0 5 * * *',
-        },
-        'download-sync': {
-          schedule: '0 * * * * *',
-        },
-        'download-sync-reset': {
-          schedule: '0 0 1 * * *',
         },
         'jellyfin-recently-added-scan': {
           schedule: '0 */5 * * * *',
@@ -654,22 +617,6 @@ class Settings {
     );
   }
 
-  get radarr(): RadarrSettings[] {
-    return this.data.radarr;
-  }
-
-  set radarr(data: RadarrSettings[]) {
-    this.data.radarr = data;
-  }
-
-  get sonarr(): SonarrSettings[] {
-    return this.data.sonarr;
-  }
-
-  set sonarr(data: SonarrSettings[]) {
-    this.data.sonarr = data;
-  }
-
   get moviepilot(): MoviePilotSettings[] {
     return this.data.moviepilot;
   }
@@ -697,11 +644,11 @@ class Settings {
       mediaServerLogin: this.data.main.mediaServerLogin,
       jellyfinExternalHost: this.data.jellyfin.externalHostname,
       jellyfinForgotPasswordUrl: this.data.jellyfin.jellyfinForgotPasswordUrl,
-      movie4kEnabled: this.data.radarr.some(
-        (radarr) => radarr.is4k && radarr.isDefault
+      movie4kEnabled: this.data.moviepilot.some(
+        (moviepilot) => moviepilot.isDefault
       ),
-      series4kEnabled: this.data.sonarr.some(
-        (sonarr) => sonarr.is4k && sonarr.isDefault
+      series4kEnabled: this.data.moviepilot.some(
+        (moviepilot) => moviepilot.isDefault
       ),
       discoverRegion: this.data.main.discoverRegion,
       streamingRegion: this.data.main.streamingRegion,

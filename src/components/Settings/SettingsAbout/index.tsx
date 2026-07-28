@@ -17,7 +17,7 @@ import useSWR from 'swr';
 
 const messages = defineMessages('components.Settings.SettingsAbout', {
   about: 'About',
-  aboutseerr: 'About Sinerr',
+  aboutsinerr: 'About Sinerr',
   version: 'Version',
   totalmedia: 'Total Media',
   totalrequests: 'Total Requests',
@@ -25,7 +25,7 @@ const messages = defineMessages('components.Settings.SettingsAbout', {
   githubdiscussions: 'GitHub Discussions',
   timezone: 'Time Zone',
   appDataPath: 'Data Directory',
-  supportseerr: 'Support Sinerr',
+  supportsinerr: 'Support Sinerr',
   contribute: 'Make a Contribution',
   documentation: 'Documentation',
   outofdate: 'Out of Date',
@@ -63,7 +63,7 @@ const SettingsAbout = () => {
         ]}
       />
       <div className="section">
-        <List title={intl.formatMessage(messages.aboutseerr)}>
+        <List title={intl.formatMessage(messages.aboutsinerr)}>
           {data.version.startsWith('develop-') && (
             <Alert
               title={intl.formatMessage(messages.runningDevelop, {
@@ -157,12 +157,12 @@ const SettingsAbout = () => {
         <List title={intl.formatMessage(messages.gettingsupport)}>
           <List.Item title={intl.formatMessage(messages.documentation)}>
             <a
-              href="https://docs.seerr.dev"
+              href="https://docs.sinerr.dev"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-500 transition duration-300 hover:underline"
             >
-              https://docs.seerr.dev
+              https://docs.sinerr.dev
             </a>
           </List.Item>
           <List.Item title={intl.formatMessage(messages.githubdiscussions)}>
@@ -177,26 +177,26 @@ const SettingsAbout = () => {
           </List.Item>
           <List.Item title="Discord">
             <a
-              href="https://discord.gg/seerr"
+              href="https://discord.gg/sinerr"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-500 transition duration-300 hover:underline"
             >
-              https://discord.gg/seerr
+              https://discord.gg/sinerr
             </a>
           </List.Item>
         </List>
       </div>
       <div className="section">
-        <List title={intl.formatMessage(messages.supportseerr)}>
+        <List title={intl.formatMessage(messages.supportsinerr)}>
           <List.Item title={intl.formatMessage(messages.contribute)}>
             <a
-              href="https://opencollective.com/seerr"
+              href="https://opencollective.com/sinerr"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-500 transition duration-300 hover:underline"
             >
-              https://opencollective.com/seerr
+              https://opencollective.com/sinerr
             </a>
           </List.Item>
         </List>

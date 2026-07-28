@@ -8,7 +8,7 @@ sidebar_position: 4
 
 ## Settings  
 
-All configurations from the **Settings** panel in the Sinerr web UI are saved, including integrations with Radarr, Sonarr, Jellyfin, and notification settings.  
+All configurations from the **Settings** panel in the Sinerr web UI are saved, including integrations with Jellyfin, and notification settings.  
 These settings are stored in the `settings.json` file located in the Sinerr data folder.
 
 ## User Data  
@@ -25,10 +25,10 @@ Otherwise, you need to stop the Sinerr application and back up the `config` fold
 For advanced users, it's possible to back up the database without stopping the application by using the [SQLite CLI](https://www.sqlite.org/download.html). Run the following command to create a backup:  
 
 ```bash
-sqlite3 db/db.sqlite3 ".backup '/tmp/seerr_db.sqlite3.bak'"
+sqlite3 db/db.sqlite3 ".backup '/tmp/sinerr_db.sqlite3.bak'"
 ```  
 
-Then, copy the `/tmp/seerr_dump.sqlite3.bak` file to your desired backup location.
+Then, copy the `/tmp/sinerr_dump.sqlite3.bak` file to your desired backup location.
 
 ### PostgreSQL
 
@@ -45,7 +45,7 @@ Depending on how your PostgreSQL instance is configured, you may need to add the
 :::
 
 ```bash
-pg_dump -U <database_user> -d <database_name> -f /tmp/seerr_db.sql
+pg_dump -U <database_user> -d <database_name> -f /tmp/sinerr_db.sql
 ```
 
 # Restore
@@ -58,7 +58,7 @@ After restoring your `db/db.sqlite3` file and, optionally, the `settings.json` f
 .
 ├── cache            <-- Optional
 ├── db
-│   └── db.sqlite3
+�?  └── db.sqlite3
 ├── logs             <-- Optional
 └── settings.json    <-- Optional (required if you want to avoid reconfiguring Sinerr)
 ```
@@ -78,7 +78,7 @@ Depending on how your PostgreSQL instance is configured, you may need to add the
 :::
 
 ```bash
-pg_restore -U <database_user> -d <database_name> /tmp/seerr_db.sql
+pg_restore -U <database_user> -d <database_name> /tmp/sinerr_db.sql
 ```
 
 Optionally, restore the `settings.json` file. The `config` folder structure should look like this:

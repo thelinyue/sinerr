@@ -7,10 +7,10 @@ sidebar_position: 4
 # Terraform/OpenTofu Provider (Advanced)
 
 :::warning
-This provider is maintained by the community, not by the Sinerr team. Please report bugs or feature requests in the [provider repository](https://github.com/Josh-Archer/terraform-provider-seerr).
+This provider is maintained by the community, not by the Sinerr team. Please report bugs or feature requests in the [provider repository](https://github.com/Josh-Archer/terraform-provider-sinerr).
 :::
 
-The community-maintained [Sinerr Terraform/OpenTofu provider](https://search.opentofu.org/provider/josh-archer/seerr/latest) can manage Sinerr settings and integrations from infrastructure-as-code workflows.
+The community-maintained [Sinerr Terraform/OpenTofu provider](https://search.opentofu.org/provider/josh-archer/sinerr/latest) can manage Sinerr settings and integrations from infrastructure-as-code workflows.
 
 ## Basic Example
 
@@ -19,26 +19,26 @@ Configure the provider with your Sinerr URL and API key, then manage Sinerr reso
 ```hcl
 terraform {
   required_providers {
-    seerr = {
-      source = "registry.opentofu.org/josh-archer/seerr"
+    sinerr = {
+      source = "registry.opentofu.org/josh-archer/sinerr"
     }
   }
 }
 
-variable "seerr_api_key" {
+variable "sinerr_api_key" {
   type      = string
   sensitive = true
 }
 
 provider "sinerr" {
-  url                  = "https://seerr.example.com"
-  api_key              = var.seerr_api_key
+  url                  = "https://sinerr.example.com"
+  api_key              = var.sinerr_api_key
   insecure_skip_verify = false # Set to true for self-signed certificates.
 }
 
-resource "seerr_main_settings" "main" {
+resource "sinerr_main_settings" "main" {
   app_title               = "Sinerr"
-  application_url         = "https://seerr.example.com"
+  application_url         = "https://sinerr.example.com"
   locale                  = "en"
   movie_requests_enabled  = true
   series_requests_enabled = true
@@ -50,8 +50,7 @@ The provider also includes resources and data sources for common Sinerr integrat
 - Plex
 - Jellyfin
 - Emby
-- Radarr
-- Sonarr
+- MoviePilot
 - Tautulli
 - Notifications
 - Users

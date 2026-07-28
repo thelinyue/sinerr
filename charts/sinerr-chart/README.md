@@ -1,4 +1,4 @@
-# seerr-chart
+# sinerr-chart
 
 ![Version: 3.8.0](https://img.shields.io/badge/Version-3.8.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v3.4.0](https://img.shields.io/badge/AppVersion-v3.4.0-informational?style=flat-square)
 
@@ -14,7 +14,7 @@ Sinerr helm chart for Kubernetes
 
 ## Source Code
 
-* <https://github.com/thelinyue/sinerr/tree/main/charts/seerr-chart>
+* <https://github.com/thelinyue/sinerr/tree/main/charts/sinerr-chart>
 
 ## Requirements
 
@@ -22,13 +22,13 @@ Kubernetes: `>=1.23.0-0`
 
 ## Installation
 
-Refer to [Sinerr kubernetes documentation](https://docs.seerr.dev/getting-started/kubernetes)
+Refer to [Sinerr kubernetes documentation](https://docs.sinerr.dev/getting-started/kubernetes)
 
 ## Update Notes
 
 ### Updating to 3.0.0
 
-Nothing has changed; we just rebranded the `jellyseerr` Helm chart to `seerr` 🥳 refer to our [Migration guide](https://docs.seerr.dev/migration-guide).
+Nothing has changed; we just rebranded the `jellyseerr` Helm chart to `sinerr` 🥳 refer to our [Migration guide](https://docs.sinerr.dev/migration-guide).
 
 ### Updating to 2.7.0
 
@@ -53,8 +53,8 @@ If `replicaCount` value was used - remove it. Helm update should work fine after
 | config.persistence.storageClass | string | `""` | Storage class for the PVC. Set to "-" to disable dynamic provisioning. Uses default storage class if no value is provided |
 | config.persistence.subPath | string | `""` | Subpath of the pvc which should be mounted |
 | config.persistence.volumeName | string | `""` | Name of the permanent volume to reference in the claim. Can be used to bind to existing volumes. |
-| extraEnv | list | `[]` | Environment variables to add to the seerr pods |
-| extraEnvFrom | list | `[]` | Environment variables from secrets or configmaps to add to the seerr pods |
+| extraEnv | list | `[]` | Environment variables to add to the sinerr pods |
+| extraEnvFrom | list | `[]` | Environment variables from secrets or configmaps to add to the sinerr pods |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` |  |

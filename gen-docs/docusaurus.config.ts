@@ -8,7 +8,7 @@ const config: Config = {
   tagline: 'One Stop Solution for all your media request needs',
   favicon: 'img/favicon.ico',
 
-  url: 'https://docs.seerr.dev',
+  url: 'https://docs.sinerr.dev',
   baseUrl: '/',
   trailingSlash: true,
 
@@ -19,7 +19,7 @@ const config: Config = {
   },
 
   organizationName: 'thelinyue',
-  projectName: 'seerr',
+  projectName: 'sinerr',
   deploymentBranch: 'gh-pages',
 
   onBrokenLinks: 'throw',
@@ -74,7 +74,7 @@ const config: Config = {
         id: 'api',
         docsPluginId: 'classic',
         config: {
-          seerr: {
+          sinerr: {
             specPath: '../sinerr-api.yml',
             outputDir: '../docs/api',
             sidebarOptions: {
@@ -117,7 +117,7 @@ const config: Config = {
       },
       items: [
         {
-          to: '/api/seerr-api',
+          to: '/api/sinerr-api',
           label: 'REST API',
           position: 'right',
         },
@@ -127,7 +127,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://discord.gg/seerr',
+          href: 'https://discord.gg/sinerr',
           label: 'Discord',
           position: 'right',
         },
@@ -150,7 +150,7 @@ const config: Config = {
             },
             {
               label: 'REST API',
-              to: '/api/seerr-api',
+              to: '/api/sinerr-api',
             },
           ],
         },
@@ -172,7 +172,7 @@ const config: Config = {
           items: [
             {
               label: 'Discord',
-              href: 'https://discord.gg/seerr',
+              href: 'https://discord.gg/sinerr',
             },
             {
               label: 'Github Discussions',

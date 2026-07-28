@@ -26,7 +26,7 @@ You must configure this setting in order to enable password reset and generation
 
 ## Enable Image Caching
 
-When enabled, Jellseerr will proxy and cache images from pre-configured sources (such as TMDB). This can use a significant amount of disk space.
+When enabled, Jellsinerr will proxy and cache images from pre-configured sources (such as TMDB). This can use a significant amount of disk space.
 
 Images are saved in the `config/cache/images` and stale images are cleared out every 24 hours.
 

@@ -1,4 +1,16 @@
-import type { DownloadingItem } from '@server/lib/downloadtracker';
+interface DownloadingItem {
+  title: string;
+  status: string;
+  size: number;
+  sizeLeft: number;
+  estimatedCompletionTime: string;
+  downloadId: string;
+  externalId: string;
+  episode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+  };
+}
 
 export const refreshIntervalHelper = (
   downloadItem: {

@@ -2,7 +2,7 @@
 
 Sinerr docs is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
-Sinerr docs will be available at [docs.seerr.dev](https://docs.seerr.dev).
+Sinerr docs will be available at [docs.sinerr.dev](https://docs.sinerr.dev).
 
 ### Installation
 

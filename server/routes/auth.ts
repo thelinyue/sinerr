@@ -111,7 +111,12 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
     }
 
     // First we need to attempt to log the user in to jellyfin
-    const jellyfinserver = new JellyfinAPI(hostname ?? '', undefined, deviceId);
+    const jellyfinserver = new JellyfinAPI(
+      hostname ?? '',
+      undefined,
+      deviceId,
+      body.serverType
+    );
 
     const ip = req.ip;
     let clientIp;
@@ -221,7 +226,8 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
       const jellyfinClient = new JellyfinAPI(
         hostname,
         account.AccessToken,
-        deviceId
+        deviceId,
+        body.serverType
       );
       const apiKey = await jellyfinClient.createApiToken('Sinerr');
 

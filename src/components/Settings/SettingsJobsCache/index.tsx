@@ -80,8 +80,6 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     'jellyfin-full-scan': 'Jellyfin Full Library Scan',
     'jellyfin-recently-added-scan': 'Jellyfin Recently Added Scan',
     'availability-sync': 'Media Availability Sync',
-    'radarr-scan': 'Radarr Scan',
-    'sonarr-scan': 'Sonarr Scan',
     'download-sync': 'Download Sync',
     'download-sync-reset': 'Download Sync Reset',
     'image-cache-cleanup': 'Image Cache Cleanup',

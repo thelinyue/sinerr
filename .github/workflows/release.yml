@@ -233,22 +233,22 @@ jobs:
 
       - name: Generate SBOMs
         run: |
-          trivy image --format cyclonedx --output seerr-ghcr-image-${{ env.VERSION }}.sbom \
+          trivy image --format cyclonedx --output sinerr-ghcr-image-${{ env.VERSION }}.sbom \
             "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}"
 
-          trivy image --format cyclonedx --output seerr-dockerhub-image-${{ env.VERSION }}.sbom \
+          trivy image --format cyclonedx --output sinerr-dockerhub-image-${{ env.VERSION }}.sbom \
             "${{ env.DOCKER_HUB }}@${{ needs.publish.outputs.image_digest }}"
 
       - name: Attest SBOMs
         run: |
           cosign attest \
             --type cyclonedx \
-            --predicate seerr-ghcr-image-${{ env.VERSION }}.sbom \
+            --predicate sinerr-ghcr-image-${{ env.VERSION }}.sbom \
             "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}"
 
           cosign attest \
             --type cyclonedx \
-            --predicate seerr-dockerhub-image-${{ env.VERSION }}.sbom \
+            --predicate sinerr-dockerhub-image-${{ env.VERSION }}.sbom \
             "${{ env.DOCKER_HUB }}@${{ needs.publish.outputs.image_digest }}"
 
       - name: Upload SBOMs

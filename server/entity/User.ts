@@ -16,6 +16,8 @@ import { nanoid } from 'nanoid';
 import path from 'path';
 import {
   AfterLoad,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   Entity,
   Not,
@@ -54,16 +56,7 @@ export class User {
   @PrimaryGeneratedColumn()
   public id: number;
 
-  @Column({
-    type: 'varchar',
-    unique: true,
-    nullable: true,
-    transformer: {
-      from: (value: string | null): string => (value ?? '').toLowerCase(),
-      to: (value: string | null): string | null =>
-        value ? value.toLowerCase() : null,
-    },
-  })
+  @Column({ type: 'varchar', unique: true, nullable: true })
   public email?: string | null;
 
   @Column({ type: 'varchar', nullable: true })
@@ -261,6 +254,16 @@ export class User {
         label: 'User Management',
         message: e.message,
       });
+    }
+  }
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  public normalizeEmail(): void {
+    if (this.email) {
+      this.email = this.email.toLowerCase();
+    } else {
+      this.email = null;
     }
   }
 

@@ -79,8 +79,6 @@ const messages = defineMessages('components.MovieDetails', {
   overviewunavailable: 'Overview unavailable.',
   studio: '{studioCount, plural, one {Studio} other {Studios}}',
   viewfullcrew: 'View Full Crew',
-  openradarr: 'Open Movie in Radarr',
-  openradarr4k: 'Open Movie in 4K Radarr',
   downloadstatus: 'Download Status',
   play: 'Play on {mediaServerName}',
   play4k: 'Play 4K on {mediaServerName}',
@@ -486,7 +484,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
             src={
               data.posterPath
                 ? `https://image.tmdb.org/t/p/w600_and_h900_bestv2${data.posterPath}`
-                : '/images/seerr_poster_not_found.png'
+                : '/images/sinerr_poster_not_found.png'
             }
             alt=""
             sizes="100vw"

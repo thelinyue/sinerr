@@ -38,8 +38,6 @@
     "serverId": ""
   },
   "tautulli": {},
-  "radarr": [],
-  "sonarr": [],
   "public": {
     "initialized": true
   },
@@ -131,22 +129,10 @@
     }
   },
   "jobs": {
-    "radarr-scan": {
-      "schedule": "0 0 4 * * *"
-    },
-    "sonarr-scan": {
-      "schedule": "0 30 4 * * *"
-    },
-    "availability-sync": {
-      "schedule": "0 0 5 * * *"
-    },
-    "download-sync": {
-      "schedule": "0 * * * * *"
-    },
-    "download-sync-reset": {
-      "schedule": "0 0 1 * * *"
-    },
-    "jellyfin-recently-added-scan": {
+   "availability-sync": {
+    "schedule": "0 0 5 * * *"
+   },
+   "jellyfin-recently-added-scan": {
       "schedule": "0 */5 * * * *"
     },
     "jellyfin-full-scan": {

@@ -147,7 +147,8 @@ class JellyfinAPI extends ExternalAPI {
   constructor(
     jellyfinHost: string,
     authToken?: string | null,
-    deviceId?: string | null
+    deviceId?: string | null,
+    mediaServerType?: MediaServerType
   ) {
     const settings = getSettings();
     const safeDeviceId =
@@ -155,10 +156,9 @@ class JellyfinAPI extends ExternalAPI {
         ? deviceId
         : Buffer.from('BOT_sinerr').toString('base64');
 
+    const resolvedType = mediaServerType ?? settings.main.mediaServerType;
     const version =
-      settings.main.mediaServerType === MediaServerType.EMBY
-        ? '1.0.0'
-        : getAppVersion();
+      resolvedType === MediaServerType.EMBY ? '1.0.0' : getAppVersion();
 
     let authHeaderVal = `MediaBrowser Client="Sinerr", Device="Sinerr", DeviceId="${safeDeviceId}", Version="${version}"`;
     if (authToken) {
@@ -177,7 +177,7 @@ class JellyfinAPI extends ExternalAPI {
       }
     );
 
-    this.mediaServerType = settings.main.mediaServerType;
+    this.mediaServerType = resolvedType;
   }
 
   public async login(

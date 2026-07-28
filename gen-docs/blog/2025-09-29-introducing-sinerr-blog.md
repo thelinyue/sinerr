@@ -3,7 +3,7 @@ title: Welcome to the Sinerr Blog
 description: The official Sinerr blog for release notes, technical updates, and community news.
 slug: welcome
 authors: [fallenbagel, gauthier-th]
-tags: [announcement, seerr, blog]
+tags: [announcement, sinerr, blog]
 image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
@@ -14,7 +14,7 @@ This space will serve as the central place for:
 
 - Release announcements
 - Updates on new features and improvements
-- Technical articles, such as details on our [**DNS caching package**](https://github.com/seerr/dns-caching) and other enhancements
+- Technical articles, such as details on our [**DNS caching package**](https://github.com/sinerr/dns-caching) and other enhancements
 - Community-related news
 
 <!--truncate-->

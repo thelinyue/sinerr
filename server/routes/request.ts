@@ -1,5 +1,3 @@
-import RadarrAPI from '@server/api/servarr/radarr';
-import SonarrAPI from '@server/api/servarr/sonarr';
 import {
   MediaRequestStatus,
   MediaStatus,
@@ -22,7 +20,6 @@ import type {
   RequestResultsResponse,
 } from '@server/interfaces/api/requestInterfaces';
 import { Permission } from '@server/lib/permissions';
-import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
@@ -181,92 +178,6 @@ requestRoutes.get<Record<string, unknown>, RequestResultsResponse>(
         .skip(skip)
         .getManyAndCount();
 
-      const settings = getSettings();
-
-      // get all quality profiles for every configured sonarr server
-      const sonarrServers = await Promise.all(
-        settings.sonarr.map(async (sonarrSetting) => {
-          const sonarr = new SonarrAPI({
-            apiKey: sonarrSetting.apiKey,
-            url: SonarrAPI.buildUrl(sonarrSetting, '/api/v3'),
-          });
-
-          return {
-            id: sonarrSetting.id,
-            profiles: await sonarr.getProfiles().catch(() => undefined),
-          };
-        })
-      );
-
-      // get all quality profiles for every configured radarr server
-      const radarrServers = await Promise.all(
-        settings.radarr.map(async (radarrSetting) => {
-          const radarr = new RadarrAPI({
-            apiKey: radarrSetting.apiKey,
-            url: RadarrAPI.buildUrl(radarrSetting, '/api/v3'),
-          });
-
-          return {
-            id: radarrSetting.id,
-            profiles: await radarr.getProfiles().catch(() => undefined),
-          };
-        })
-      );
-
-      // add profile names to the media requests, with undefined if not found
-      let mappedRequests = requests.map((r) => {
-        switch (r.type) {
-          case MediaType.MOVIE: {
-            const profileName = radarrServers
-              .find((serverr) => serverr.id === r.serverId)
-              ?.profiles?.find((profile) => profile.id === r.profileId)?.name;
-
-            return {
-              ...r,
-              profileName,
-            };
-          }
-          case MediaType.TV: {
-            return {
-              ...r,
-              profileName: sonarrServers
-                .find((serverr) => serverr.id === r.serverId)
-                ?.profiles?.find((profile) => profile.id === r.profileId)?.name,
-            };
-          }
-        }
-      });
-
-      // add canRemove prop if user has permission
-      if (req.user?.hasPermission(Permission.MANAGE_REQUESTS)) {
-        mappedRequests = mappedRequests.map((r) => {
-          switch (r.type) {
-            case MediaType.MOVIE: {
-              return {
-                ...r,
-                // check if the radarr server for this request is configured
-                canRemove: radarrServers.some(
-                  (server) =>
-                    server.id ===
-                    (r.is4k ? r.media.serviceId4k : r.media.serviceId)
-                ),
-              };
-            }
-            case MediaType.TV: {
-              return {
-                ...r,
-                // check if the sonarr server for this request is configured
-                canRemove: sonarrServers.some(
-                  (server) =>
-                    server.id ===
-                    (r.is4k ? r.media.serviceId4k : r.media.serviceId)
-                ),
-              };
-            }
-          }
-        });
-      }
-
       return res.status(200).json({
         pageInfo: {
           pages: Math.ceil(requestCount / pageSize),
@@ -274,24 +185,9 @@ requestRoutes.get<Record<string, unknown>, RequestResultsResponse>(
           results: requestCount,
           page: Math.ceil(skip / pageSize) + 1,
         },
-        results: mappedRequests,
+        results: requests,
         serviceErrors: {
-          radarr: radarrServers
-            .filter((s) => !s.profiles)
-            .map((s) => ({
-              id: s.id,
-              name:
-                settings.radarr.find((r) => r.id === s.id)?.name ||
-                `Radarr ${s.id}`,
-            })),
-          sonarr: sonarrServers
-            .filter((s) => !s.profiles)
-            .map((s) => ({
-              id: s.id,
-              name:
-                settings.sonarr.find((r) => r.id === s.id)?.name ||
-                `Sonarr ${s.id}`,
-            })),
+          moviepilot: [],
         },
       });
     } catch (e) {

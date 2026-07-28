@@ -1418,7 +1418,7 @@
   "components.Settings.RadarrModal.server4kHelp": "",
   "components.Settings.RadarrModal.syncEnabledHelp": "",
   "components.Settings.SettingsAbout.contribute": "",
-  "components.Settings.SettingsAbout.supportseerr": "",
+  "components.Settings.SettingsAbout.supportsinerr": "",
   "components.Settings.SettingsJobsCache.dnsCache": "",
   "components.Settings.SettingsJobsCache.dnsCacheGlobalStats": "",
   "components.Settings.SettingsJobsCache.dnsCacheGlobalStatsDescription": "",
@@ -1626,5 +1626,5 @@
   "components.Settings.menuMetadataProviders": "",
   "components.Settings.SettingsUsers.mediaServerLogin": "",
   "components.Settings.metadataProviderSettings": "",
-  "components.Settings.SettingsAbout.aboutseerr": ""
+  "components.Settings.SettingsAbout.aboutsinerr": ""
 }

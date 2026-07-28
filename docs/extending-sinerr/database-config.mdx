@@ -128,7 +128,7 @@ docker run --rm \
 **For Docker Compose setups**: Add the network parameter if your PostgreSQL is also in a container:
 ```bash
 docker run --rm \
-  --network your-seerr-network \
+  --network your-sinerr-network \
   -v /path/to/your/config/db.sqlite3:/db.sqlite3:ro \
   ghcr.io/ralgar/pgloader:pr-1531 \
   pgloader --with "quote identifiers" --with "data only" \

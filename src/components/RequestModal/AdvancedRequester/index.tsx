@@ -76,7 +76,7 @@ const AdvancedRequester = ({
   const intl = useIntl();
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
   const { data, error } = useSWR<ServiceCommonServer[]>(
-    `/api/v1/service/${type === 'movie' ? 'radarr' : 'sonarr'}`,
+    `/api/v1/service/moviepilot`,
     {
       refreshInterval: 0,
       refreshWhenHidden: false,
@@ -114,9 +114,7 @@ const AdvancedRequester = ({
   const { data: serverData, isValidating } =
     useSWR<ServiceCommonServerWithDetails>(
       selectedServer !== null
-        ? `/api/v1/service/${
-            type === 'movie' ? 'radarr' : 'sonarr'
-          }/${selectedServer}`
+        ? `/api/v1/service/moviepilot/${selectedServer}`
         : null,
       {
         refreshInterval: 0,

@@ -1,6 +1,4 @@
 import MoviePilotLogo from '@app/assets/services/moviepilot.svg';
-import RadarrLogo from '@app/assets/services/radarr.svg';
-import SonarrLogo from '@app/assets/services/sonarr.svg';
 import Alert from '@app/components/Common/Alert';
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
@@ -10,8 +8,6 @@ import PageTitle from '@app/components/Common/PageTitle';
 import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
 import OverrideRuleModal from '@app/components/Settings/OverrideRule/OverrideRuleModal';
 import OverrideRuleTiles from '@app/components/Settings/OverrideRule/OverrideRuleTiles';
-import RadarrModal from '@app/components/Settings/RadarrModal';
-import SonarrModal from '@app/components/Settings/SonarrModal';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
@@ -20,8 +16,6 @@ import type OverrideRule from '@server/entity/OverrideRule';
 import type { OverrideRuleResultsResponse } from '@server/interfaces/api/overrideRuleInterfaces';
 import type {
   MoviePilotSettings,
-  RadarrSettings,
-  SonarrSettings,
 } from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
@@ -30,8 +24,6 @@ import useSWR, { mutate } from 'swr';
 
 const messages = defineMessages('components.Settings', {
   services: 'Services',
-  radarrsettings: 'Radarr Settings',
-  sonarrsettings: 'Sonarr Settings',
   moviepilotsettings: 'MoviePilot Settings',
   serviceSettingsDescription:
     'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only two of them can be marked as defaults (one non-4K and one 4K). Administrators are able to override the server used to process new requests prior to approval.',
@@ -43,8 +35,6 @@ const messages = defineMessages('components.Settings', {
   is4k: '4K',
   address: 'Address',
   activeProfile: 'Active Profile',
-  addradarr: 'Add Radarr Server',
-  addsonarr: 'Add Sonarr Server',
   addmoviepilot: 'Add MoviePilot Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
@@ -70,7 +60,6 @@ interface ServerInstanceProps {
   isSSL?: boolean;
   externalUrl?: string;
   profileName?: string;
-  isSonarr?: boolean;
   isMoviepilot?: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -92,16 +81,7 @@ export interface DVRTestResponse {
   urlBase?: string;
 }
 
-export type RadarrTestResponse = DVRTestResponse;
-
-export type SonarrTestResponse = DVRTestResponse & {
-  languageProfiles:
-    | {
-        id: number;
-        name: string;
-      }[]
-    | null;
-};
+export type MoviePilotTestResponse = DVRTestResponse;
 
 const ServerInstance = ({
   name,
@@ -111,7 +91,6 @@ const ServerInstance = ({
   is4k = false,
   isDefault = false,
   isSSL = false,
-  isSonarr = false,
   isMoviepilot = false,
   externalUrl,
   onEdit,
@@ -183,13 +162,7 @@ const ServerInstance = ({
           rel="noopener noreferrer"
           className="opacity-50 hover:opacity-100"
         >
-          {isMoviepilot ? (
-            <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
-          ) : isSonarr ? (
-            <SonarrLogo className="h-10 w-10 flex-shrink-0" />
-          ) : (
-            <RadarrLogo className="h-10 w-10 flex-shrink-0" />
-          )}
+          <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
         </a>
       </div>
       <div className="border-t border-gray-500">
@@ -221,36 +194,12 @@ const ServerInstance = ({
 const SettingsServices = () => {
   const intl = useIntl();
   const {
-    data: radarrData,
-    error: radarrError,
-    mutate: revalidateRadarr,
-  } = useSWR<RadarrSettings[]>('/api/v1/settings/radarr');
-  const {
-    data: sonarrData,
-    error: sonarrError,
-    mutate: revalidateSonarr,
-  } = useSWR<SonarrSettings[]>('/api/v1/settings/sonarr');
-  const {
     data: moviepilotData,
     error: moviepilotError,
     mutate: revalidateMoviePilot,
   } = useSWR<MoviePilotSettings[]>('/api/v1/settings/moviepilot');
   const { data: rules, mutate: revalidate } =
     useSWR<OverrideRuleResultsResponse>('/api/v1/overrideRule');
-  const [editRadarrModal, setEditRadarrModal] = useState<{
-    open: boolean;
-    radarr: RadarrSettings | null;
-  }>({
-    open: false,
-    radarr: null,
-  });
-  const [editSonarrModal, setEditSonarrModal] = useState<{
-    open: boolean;
-    sonarr: SonarrSettings | null;
-  }>({
-    open: false,
-    sonarr: null,
-  });
   const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
     open: boolean;
     moviepilot: MoviePilotSettings | null;
@@ -260,11 +209,11 @@ const SettingsServices = () => {
   });
   const [deleteServerModal, setDeleteServerModal] = useState<{
     open: boolean;
-    type: 'radarr' | 'sonarr' | 'moviepilot';
+    type: 'moviepilot';
     serverId: number | null;
   }>({
     open: false,
-    type: 'radarr',
+    type: 'moviepilot',
     serverId: null,
   });
   const [overrideRuleModal, setOverrideRuleModal] = useState<{
@@ -279,9 +228,7 @@ const SettingsServices = () => {
     await axios.delete(
       `/api/v1/settings/${deleteServerModal.type}/${deleteServerModal.serverId}`
     );
-    setDeleteServerModal({ open: false, serverId: null, type: 'radarr' });
-    revalidateRadarr();
-    revalidateSonarr();
+    setDeleteServerModal({ open: false, serverId: null, type: 'moviepilot' });
     revalidateMoviePilot();
     mutate('/api/v1/settings/public');
   };
@@ -294,44 +241,6 @@ const SettingsServices = () => {
           intl.formatMessage(globalMessages.settings),
         ]}
       />
-      <div className="mb-6">
-        <h3 className="heading">
-          {intl.formatMessage(messages.radarrsettings)}
-        </h3>
-        <p className="description">
-          {intl.formatMessage(messages.serviceSettingsDescription, {
-            serverType: 'Radarr',
-          })}
-        </p>
-      </div>
-      {editRadarrModal.open && (
-        <RadarrModal
-          radarr={editRadarrModal.radarr}
-          onClose={() => {
-            if (!overrideRuleModal.open)
-              setEditRadarrModal({ open: false, radarr: null });
-          }}
-          onSave={() => {
-            revalidateRadarr();
-            mutate('/api/v1/settings/public');
-            setEditRadarrModal({ open: false, radarr: null });
-          }}
-        />
-      )}
-      {editSonarrModal.open && (
-        <SonarrModal
-          sonarr={editSonarrModal.sonarr}
-          onClose={() => {
-            if (!overrideRuleModal.open)
-              setEditSonarrModal({ open: false, sonarr: null });
-          }}
-          onSave={() => {
-            revalidateSonarr();
-            mutate('/api/v1/settings/public');
-            setEditSonarrModal({ open: false, sonarr: null });
-          }}
-        />
-      )}
       {editMoviePilotModal.open && (
         <MoviePilotModal
           moviepilot={editMoviePilotModal.moviepilot}
@@ -364,187 +273,16 @@ const SettingsServices = () => {
             setDeleteServerModal({
               open: false,
               serverId: null,
-              type: 'radarr',
+              type: 'moviepilot',
             })
           }
           title={intl.formatMessage(messages.deleteServer, {
-            serverType:
-              deleteServerModal.type === 'radarr'
-                ? 'Radarr'
-                : deleteServerModal.type === 'moviepilot'
-                  ? 'MoviePilot'
-                  : 'Sonarr',
+            serverType: 'MoviePilot',
           })}
         >
           {intl.formatMessage(messages.deleteserverconfirm)}
         </Modal>
       </Transition>
-      <div className="section">
-        {!radarrData && !radarrError && <LoadingSpinner />}
-        {radarrData && !radarrError && (
-          <>
-            {radarrData.length > 0 &&
-              (!radarrData.some((radarr) => radarr.isDefault) ? (
-                <Alert
-                  title={intl.formatMessage(messages.noDefaultServer, {
-                    serverType: 'Radarr',
-                    mediaType: intl.formatMessage(messages.mediaTypeMovie),
-                  })}
-                />
-              ) : !radarrData.some(
-                  (radarr) => radarr.isDefault && !radarr.is4k
-                ) ? (
-                <Alert
-                  title={intl.formatMessage(messages.noDefaultNon4kServer, {
-                    serverType: 'Radarr',
-                    strong: (msg: React.ReactNode) => (
-                      <strong className="font-semibold text-white">
-                        {msg}
-                      </strong>
-                    ),
-                  })}
-                />
-              ) : (
-                radarrData.some((radarr) => radarr.is4k) &&
-                !radarrData.some(
-                  (radarr) => radarr.isDefault && radarr.is4k
-                ) && (
-                  <Alert
-                    title={intl.formatMessage(messages.noDefault4kServer, {
-                      serverType: 'Radarr',
-                      mediaType: intl.formatMessage(messages.mediaTypeMovie),
-                    })}
-                  />
-                )
-              ))}
-            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {radarrData.map((radarr) => (
-                <ServerInstance
-                  key={`radarr-config-${radarr.id}`}
-                  name={radarr.name}
-                  hostname={radarr.hostname}
-                  port={radarr.port}
-                  profileName={radarr.activeProfileName}
-                  isSSL={radarr.useSsl}
-                  isDefault={radarr.isDefault}
-                  is4k={radarr.is4k}
-                  externalUrl={radarr.externalUrl}
-                  onEdit={() => setEditRadarrModal({ open: true, radarr })}
-                  onDelete={() =>
-                    setDeleteServerModal({
-                      open: true,
-                      serverId: radarr.id,
-                      type: 'radarr',
-                    })
-                  }
-                />
-              ))}
-              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
-                <div className="flex h-full w-full items-center justify-center">
-                  <Button
-                    buttonType="ghost"
-                    className="mb-3 mt-3"
-                    onClick={() =>
-                      setEditRadarrModal({ open: true, radarr: null })
-                    }
-                  >
-                    <PlusIcon />
-                    <span>{intl.formatMessage(messages.addradarr)}</span>
-                  </Button>
-                </div>
-              </li>
-            </ul>
-          </>
-        )}
-      </div>
-      <div className="mb-6 mt-10">
-        <h3 className="heading">
-          {intl.formatMessage(messages.sonarrsettings)}
-        </h3>
-        <p className="description">
-          {intl.formatMessage(messages.serviceSettingsDescription, {
-            serverType: 'Sonarr',
-          })}
-        </p>
-      </div>
-      <div className="section">
-        {!sonarrData && !sonarrError && <LoadingSpinner />}
-        {sonarrData && !sonarrError && (
-          <>
-            {sonarrData.length > 0 &&
-              (!sonarrData.some((sonarr) => sonarr.isDefault) ? (
-                <Alert
-                  title={intl.formatMessage(messages.noDefaultServer, {
-                    serverType: 'Sonarr',
-                    mediaType: intl.formatMessage(messages.mediaTypeSeries),
-                  })}
-                />
-              ) : !sonarrData.some(
-                  (sonarr) => sonarr.isDefault && !sonarr.is4k
-                ) ? (
-                <Alert
-                  title={intl.formatMessage(messages.noDefaultNon4kServer, {
-                    serverType: 'Sonarr',
-                    strong: (msg: React.ReactNode) => (
-                      <strong className="font-semibold text-white">
-                        {msg}
-                      </strong>
-                    ),
-                  })}
-                />
-              ) : (
-                sonarrData.some((sonarr) => sonarr.is4k) &&
-                !sonarrData.some(
-                  (sonarr) => sonarr.isDefault && sonarr.is4k
-                ) && (
-                  <Alert
-                    title={intl.formatMessage(messages.noDefault4kServer, {
-                      serverType: 'Sonarr',
-                      mediaType: intl.formatMessage(messages.mediaTypeSeries),
-                    })}
-                  />
-                )
-              ))}
-            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {sonarrData.map((sonarr) => (
-                <ServerInstance
-                  key={`sonarr-config-${sonarr.id}`}
-                  name={sonarr.name}
-                  hostname={sonarr.hostname}
-                  port={sonarr.port}
-                  profileName={sonarr.activeProfileName}
-                  isSSL={sonarr.useSsl}
-                  isSonarr
-                  isDefault={sonarr.isDefault}
-                  is4k={sonarr.is4k}
-                  externalUrl={sonarr.externalUrl}
-                  onEdit={() => setEditSonarrModal({ open: true, sonarr })}
-                  onDelete={() =>
-                    setDeleteServerModal({
-                      open: true,
-                      serverId: sonarr.id,
-                      type: 'sonarr',
-                    })
-                  }
-                />
-              ))}
-              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
-                <div className="flex h-full w-full items-center justify-center">
-                  <Button
-                    buttonType="ghost"
-                    onClick={() =>
-                      setEditSonarrModal({ open: true, sonarr: null })
-                    }
-                  >
-                    <PlusIcon />
-                    <span>{intl.formatMessage(messages.addsonarr)}</span>
-                  </Button>
-                </div>
-              </li>
-            </ul>
-          </>
-        )}
-      </div>
       <div className="mb-6 mt-10">
         <h3 className="heading">
           {intl.formatMessage(messages.moviepilotsettings)}
@@ -612,17 +350,16 @@ const SettingsServices = () => {
         </h3>
         <p className="description">
           {intl.formatMessage(messages.overrideRulesDescription, {
-            serverType: 'Sonarr',
+            serverType: 'MoviePilot',
           })}
         </p>
       </div>
       <div className="section">
         <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {rules && radarrData && sonarrData && (
+          {rules && moviepilotData && (
             <OverrideRuleTiles
               rules={rules}
-              radarrServices={radarrData}
-              sonarrServices={sonarrData}
+              moviepilotServices={moviepilotData}
               setOverrideRuleModal={setOverrideRuleModal}
               revalidate={revalidate}
             />
@@ -631,7 +368,7 @@ const SettingsServices = () => {
             <div className="flex h-full w-full items-center justify-center">
               <Button
                 buttonType="ghost"
-                disabled={!radarrData?.length && !sonarrData?.length}
+                disabled={!moviepilotData?.length}
                 onClick={() =>
                   setOverrideRuleModal({
                     open: true,
@@ -646,7 +383,7 @@ const SettingsServices = () => {
           </li>
         </ul>
       </div>
-      {overrideRuleModal.open && radarrData && sonarrData && (
+      {overrideRuleModal.open && moviepilotData && (
         <OverrideRuleModal
           rule={overrideRuleModal.rule}
           onClose={() => {
@@ -656,8 +393,7 @@ const SettingsServices = () => {
             });
             revalidate();
           }}
-          radarrServices={radarrData}
-          sonarrServices={sonarrData}
+          moviepilotServices={moviepilotData}
         />
       )}
     </>

@@ -1,7 +1,7 @@
 ---
 title: "Sinerr v3.1.0: Critical Security Release"
 description: "Sinerr v3.1.0 addresses three CVEs, including a high-priority vulnerability affecting Plex-configured instances. Upgrade immediately."
-slug: seerr-3-1-0-security-release
+slug: sinerr-3-1-0-security-release
 authors: [fallenbagel]
 image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
@@ -17,15 +17,15 @@ This release also includes a number of bug fixes and marks the end of our post-m
 
 This release patches three newly identified CVEs. If you are running a Plex-configured instance of Sinerr, **one of these vulnerabilities is high priority and poses a significant risk**, please upgrade immediately.
 
-### [CVE-2026-27707](https://github.com/thelinyue/sinerr/security/advisories/GHSA-rc4w-7m3r-c2f7) â€” Unauthenticated Account Registration via Jellyfin Endpoint (High)
+### [CVE-2026-27707](https://github.com/thelinyue/sinerr/security/advisories/GHSA-rc4w-7m3r-c2f7) â€?Unauthenticated Account Registration via Jellyfin Endpoint (High)
 
 On instances configured to use Plex as the media server, an unauthenticated attacker could register an account by abusing the Jellyfin authentication endpoint. This could allow unauthorized users to gain access to your Sinerr instance without valid Plex credentials.
 
-### [CVE-2026-27793](https://github.com/thelinyue/sinerr/security/advisories/GHSA-f7xw-jcqr-57hp) â€” Broken Object-Level Authorization in User Profile Endpoint (Medium)
+### [CVE-2026-27793](https://github.com/thelinyue/sinerr/security/advisories/GHSA-f7xw-jcqr-57hp) â€?Broken Object-Level Authorization in User Profile Endpoint (Medium)
 
 A broken object-level authorization vulnerability in the user profile endpoint could allow an authenticated user to access another user's profile data, including third-party notification credentials such as webhook URLs, Telegram tokens, and similar sensitive configuration.
 
-### [CVE-2026-27792](https://github.com/thelinyue/sinerr/security/advisories/GHSA-gx3h-3jg5-q65f) â€” Missing Authentication on Push Subscription Endpoints (Medium)
+### [CVE-2026-27792](https://github.com/thelinyue/sinerr/security/advisories/GHSA-gx3h-3jg5-q65f) â€?Missing Authentication on Push Subscription Endpoints (Medium)
 
 The push subscription endpoints lacked proper authentication checks, allowing unauthenticated requests to interact with subscription management functionality.
 
@@ -69,4 +69,4 @@ Many thanks to those making their first contribution to Sinerr in this release:
 
 Now that the post-merger feature freeze has ended, the team is resuming active feature development. Stay tuned to our blog for upcoming releases and in-depth looks at what we're building next.
 
-In the meantime, please upgrade to **v3.1.0** right away, especially if you are using a Plex Media Server configuration. See our [migration guide](https://docs.seerr.dev/migration-guide) if you need help upgrading from Overseerr/Jellyseerr.
+In the meantime, please upgrade to **v3.1.0** right away, especially if you are using a Plex Media Server configuration. See our [migration guide](https://docs.sinerr.dev/migration-guide) if you need help upgrading from Overseerr/Jellysinerr.

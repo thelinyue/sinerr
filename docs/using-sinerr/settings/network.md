@@ -55,6 +55,6 @@ This setting is **disabled** by default.
 
 ## API Request Timeout
 
-The API Request Timeout setting defines the maximum time (in seconds) Sinerr will wait for a response from external services, such as Radarr or Sonarr. The default value is 10 seconds, though it can be entirely disabled by setting it to 0. Please note that any changes to this value require restarting Sinerr to take effect.
+The API Request Timeout setting defines the maximum time (in seconds) Sinerr will wait for a response from external services. The default value is 10 seconds, though it can be entirely disabled by setting it to 0. Please note that any changes to this value require restarting Sinerr to take effect.
 
 Enforcing a timeout ensures the Sinerr interface remains responsive and prevents infinite loading states when a connected service unexpectedly goes offline. Conversely, you may want to increase this value if you frequently experience failed requests due to your external services being slow to respond, which often happens when they are under heavy load or querying network-mounted storage.

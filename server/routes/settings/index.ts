@@ -38,14 +38,10 @@ import semver from 'semver';
 import metadataRoutes from './metadata';
 import moviepilotRoutes from './moviepilot';
 import notificationRoutes from './notifications';
-import radarrRoutes from './radarr';
-import sonarrRoutes from './sonarr';
 
 const settingsRoutes = Router();
 
 settingsRoutes.use('/notifications', notificationRoutes);
-settingsRoutes.use('/radarr', radarrRoutes);
-settingsRoutes.use('/sonarr', sonarrRoutes);
 settingsRoutes.use('/moviepilot', moviepilotRoutes);
 settingsRoutes.use('/discover', discoverSettingRoutes);
 settingsRoutes.use('/metadatas', metadataRoutes);

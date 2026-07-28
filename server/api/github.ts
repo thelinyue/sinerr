@@ -76,7 +76,7 @@ class GithubAPI extends ExternalAPI {
     );
   }
 
-  public async getSeerrReleases({
+  public async getSinerrReleases({
     take = 20,
   }: {
     take?: number;
@@ -101,7 +101,7 @@ class GithubAPI extends ExternalAPI {
     }
   }
 
-  public async getSeerrCommits({
+  public async getSinerrCommits({
     take = 20,
     branch = 'develop',
   }: {

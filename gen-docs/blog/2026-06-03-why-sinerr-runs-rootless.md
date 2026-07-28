@@ -1,13 +1,13 @@
 ---
 title: "Why Sinerr Doesn't Support PUID/PGID"
 description: "Sinerr runs rootless by design. Here's why we won't be adding PUID/PGID support, and why chown is the right approach."
-slug: why-seerr-doesnt-support-puid-pgid
+slug: why-sinerr-doesnt-support-puid-pgid
 authors: [fallenbagel]
 image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false
 ---
 
-A common question we get from users migrating from Overseerr or Jellyseerr is why Sinerr doesn't support `PUID`/`PGID` environment variables for setting the user the container runs as. This post explains the reasoning behind that decision and why using chown on the host is the correct approach.
+A common question we get from users migrating from Overseerr or Jellysinerr is why Sinerr doesn't support `PUID`/`PGID` environment variables for setting the user the container runs as. This post explains the reasoning behind that decision and why using chown on the host is the correct approach.
 
 <!--truncate-->
 
@@ -49,7 +49,7 @@ However, when you do switch users, it’s important to ensure that any mounted v
 
 A common question is whether the UID/GID needs to exist on the host machine to run the container. It doesn't; it only needs to exist inside the container. This means you can use any UID/GID, even one that doesn't correspond to a user on your host system.
 
-However, if a security vulnerability allows an attacker to escape the container, they inherit the permissions of that UID/GID on the host, if it exists. This is exactly the scenario we're avoiding by not running as root. If Sinerr (or any of its dependencies) ran as root, as Overseerr and Jellyseerr did, a container escape would hand an attacker root on your host. The same applies to the `PUID`/`PGID` pattern: since it requires the container to start as root before dropping privileges, a vulnerability triggered before that drop would have the same effect. To mitigate this, Docker offers [user namespace remapping](https://docs.docker.com/engine/security/userns-remap/), which lets you map container UIDs to different, non-conflicting UIDs on the host for stronger isolation.
+However, if a security vulnerability allows an attacker to escape the container, they inherit the permissions of that UID/GID on the host, if it exists. This is exactly the scenario we're avoiding by not running as root. If Sinerr (or any of its dependencies) ran as root, as Overseerr and Jellysinerr did, a container escape would hand an attacker root on your host. The same applies to the `PUID`/`PGID` pattern: since it requires the container to start as root before dropping privileges, a vulnerability triggered before that drop would have the same effect. To mitigate this, Docker offers [user namespace remapping](https://docs.docker.com/engine/security/userns-remap/), which lets you map container UIDs to different, non-conflicting UIDs on the host for stronger isolation.
 
 You might also wonder why `1000:1000` specifically. While `1000` is often the first non-root user created on many Linux systems, our reason is simpler: it's the default user created in the [base Node.js Docker image](https://github.com/nodejs/docker-node/blob/c94b4249a1a1bfb2ebb05fac9012cd34fecc2db7/22/alpine3.23/Dockerfile#L5).
 
@@ -60,7 +60,7 @@ As for why we don't go into more depth on this in our docs: we focus on the basi
 If you're mounting a data directory into the Sinerr container, that directory needs to be owned by UID `1000` (the `node` user) on the host. You do this once:
 
 ```bash
-chown -R 1000:1000 /your/seerr/data
+chown -R 1000:1000 /your/sinerr/data
 ```
 
 That's it. A common misconception we've encountered from users unfamiliar with this setup is that this is a "workaround" or a "hack", but it isn't. It is basic Linux file permissions and it works as intended. If you're unfamiliar with how Linux file ownership works, DigitalOcean has a solid primer: https://www.digitalocean.com/community/tutorials/how-to-set-permissions-linux.
@@ -81,4 +81,4 @@ For additional hardening, you can mount the container filesystem as [read-only](
 
 If you need the PUID/PGID pattern, third-party images that implement it already exist. But it is not something we will maintain here, because it would mean knowingly reintroducing a security regression we deliberately moved away from.
 
-**Sinerr's container setup is more secure than what Overseerr and Jellyseerr shipped, and we intend to keep it that way.**
+**Sinerr's container setup is more secure than what Overseerr and Jellysinerr shipped, and we intend to keep it that way.**

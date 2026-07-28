@@ -1427,7 +1427,7 @@
   "components.Settings.RadarrModal.server4kHelp": "",
   "components.Settings.RadarrModal.syncEnabledHelp": "",
   "components.Settings.SettingsAbout.contribute": "",
-  "components.Settings.SettingsAbout.supportseerr": "",
+  "components.Settings.SettingsAbout.supportsinerr": "",
   "components.Settings.SettingsJobsCache.dnsCache": "",
   "components.Settings.SettingsJobsCache.dnsCacheDescription": "",
   "components.Settings.SettingsJobsCache.dnsCacheGlobalStats": "",
@@ -1624,7 +1624,7 @@
   "components.Settings.manualscanJellyfin": "",
   "components.Layout.UserWarnings.emailInvalid": "",
   "components.Settings.metadataSettingsSaved": "",
-  "components.Settings.SettingsAbout.aboutseerr": "",
+  "components.Settings.SettingsAbout.aboutsinerr": "",
   "components.Login.tipEmailHasTrailingWhitespace": "",
   "components.Login.back": ""
 }

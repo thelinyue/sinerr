@@ -8,7 +8,6 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
-import type { DownloadingItem } from '@server/lib/downloadtracker';
 import { useIntl } from 'react-intl';
 
 const messages = defineMessages('components.StatusBadge', {
@@ -20,6 +19,20 @@ const messages = defineMessages('components.StatusBadge', {
   seasonnumber: 'S{seasonNumber}',
   seasonepisodenumber: 'S{seasonNumber}E{episodeNumber}',
 });
+
+interface DownloadingItem {
+  title: string;
+  status: string;
+  size: number;
+  sizeLeft: number;
+  estimatedCompletionTime: string;
+  downloadId: string;
+  externalId: string;
+  episode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+  };
+}
 
 interface StatusBadgeProps {
   status?: MediaStatus;
@@ -101,7 +114,7 @@ const StatusBadge = ({
     } else if (hasPermission(Permission.ADMIN) && serviceUrl) {
       mediaLink = serviceUrl;
       mediaLinkDescription = intl.formatMessage(messages.openinarr, {
-        arr: mediaType === 'movie' ? 'Radarr' : 'Sonarr',
+        arr: 'MoviePilot',
       });
     }
   }

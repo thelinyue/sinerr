@@ -8,7 +8,7 @@ sidebar_position: 1
 This is the recommended method for most users.
 Details on how to install Docker can be found on the [official Docker website](https://docs.docker.com/get-docker/).
 
-Refer to [Configuring Databases](/extending-seerr/database-config#postgresql-options) for details on how to configure your database.
+Refer to [Configuring Databases](/extending-sinerr/database-config#postgresql-options) for details on how to configure your database.
 :::
 
 :::info
@@ -26,7 +26,7 @@ Our Docker images are available with the following tags:
 :::info
 All official Sinerr images are cryptographically signed and include a verified [Software Bill of Materials (SBOM)](https://cyclonedx.org/).
 
-To confirm that the container image you are using is authentic and unmodified, please refer to the [Verifying Signed Artifacts](/using-seerr/advanced/verifying-signed-artifacts#verifying-signed-images) guide.
+To confirm that the container image you are using is authentic and unmodified, please refer to the [Verifying Signed Artifacts](/using-sinerr/advanced/verifying-signed-artifacts#verifying-signed-images) guide.
 :::
 
 ## Unix (Linux, macOS)
@@ -55,7 +55,7 @@ chown -R 1000:1000 /path/to/appdata/config
 
 ```bash
 docker run -d \
-  --name seerr \
+  --name sinerr \
   --init \
   -e LOG_LEVEL=debug \
   -e TZ=Asia/Tashkent \
@@ -79,7 +79,7 @@ To run the container as a specific user/group, you may optionally add `--user=[ 
 
 Stop and remove the existing container:
 ```bash
-docker stop seerr && docker rm seerr
+docker stop sinerr && docker rm sinerr
 ```
 Pull the latest image:
 ```bash
@@ -101,14 +101,14 @@ You could also use [diun](https://github.com/crazy-max/diun) to receive notifica
 For details on how to use Docker Compose, please [review the official Compose documentation](https://docs.docker.com/compose/reference/).
 
 #### Installation:
-Define the `seerr` service in your `compose.yaml` as follows:
+Define the `sinerr` service in your `compose.yaml` as follows:
 ```yaml
 ---
 services:
-  seerr:
+  sinerr:
     image: ghcr.io/thelinyue/sinerr:latest
     init: true
-    container_name: seerr
+    container_name: sinerr
     environment:
       - LOG_LEVEL=debug
       - TZ=Asia/Tashkent
@@ -141,7 +141,7 @@ docker compose up -d
 #### Updating:
 Pull the latest image:
 ```bash
-docker compose pull seerr
+docker compose pull sinerr
 ```
 Then, restart all services defined in the Compose file:
 ```bash
@@ -159,27 +159,27 @@ Please refer to the [Docker Desktop for Windows user manual](https://docs.docker
 
 First, create a volume to store the configuration data for Sinerr using using either the Docker CLI:
 ```bash
-docker volume create seerr-data
+docker volume create sinerr-data
 ```
 
 or the Docker Desktop app:
 1. Open the Docker Desktop app
 2. Head to the Volumes tab
 3. Click on the "Create a volume" in the center of the page. Or if you have other volumes already, click on the "Create" button on the top right of the page.
-4. Enter a name for the volume (example: `seerr-data`) and hit "Create"
+4. Enter a name for the volume (example: `sinerr-data`) and hit "Create"
 
 Then, create and start the Sinerr container:
 <Tabs groupId="docker-methods" queryString>
   <TabItem value="docker-cli" label="Docker CLI (PowerShell)">
 ```powershell
 docker run -d `
-  --name seerr `
+  --name sinerr `
   --init `
   -e LOG_LEVEL=debug `
   -e TZ=Asia/Tashkent `
   -e PORT=5055 `
   -p 5055:5055 `
-  -v seerr-data:/app/config `
+  -v sinerr-data:/app/config `
   --restart unless-stopped `
   --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1" `
   --health-start-period 20s `
@@ -195,7 +195,7 @@ The argument `-e PORT=5055` is optional.
 
 Stop and remove the existing container:
 ```powershell
-docker stop seerr; docker rm seerr
+docker stop sinerr; docker rm sinerr
 ```
 Pull the latest image:
 ```powershell
@@ -211,13 +211,13 @@ docker run -d ...
   <TabItem value="docker-cli-cmd" label="Docker CLI (CMD)">
 ```batch
 docker run -d ^
-  --name seerr ^
+  --name sinerr ^
   --init ^
   -e LOG_LEVEL=debug ^
   -e TZ=Asia/Tashkent ^
   -e PORT=5055 ^
   -p 5055:5055 ^
-  -v seerr-data:/app/config ^
+  -v sinerr-data:/app/config ^
   --restart unless-stopped ^
   --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1" ^
   --health-start-period 20s ^
@@ -233,7 +233,7 @@ The argument `-e PORT=5055` is optional.
 
 Stop and remove the existing container:
 ```batch
-docker stop seerr && docker rm seerr
+docker stop sinerr && docker rm sinerr
 ```
 Pull the latest image:
 ```batch
@@ -250,17 +250,17 @@ docker run -d ...
 ```yaml
 ---
 services:
-  seerr:
+  sinerr:
     image: ghcr.io/thelinyue/sinerr:latest
     init: true
-    container_name: seerr
+    container_name: sinerr
     environment:
       - LOG_LEVEL=debug
       - TZ=Asia/Tashkent
     ports:
       - 5055:5055
     volumes:
-      - seerr-data:/app/config
+      - sinerr-data:/app/config
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
       start_period: 20s
@@ -270,14 +270,14 @@ services:
     restart: unless-stopped
 
 volumes:
-  seerr-data:
+  sinerr-data:
     external: true
 ```
 
 #### Updating:
 Pull the latest image:
 ```bash
-docker compose pull seerr
+docker compose pull sinerr
 ```
 Then, restart all services defined in the Compose file:
 ```bash
@@ -286,7 +286,7 @@ docker compose up -d
   </TabItem>
 </Tabs>
 
-To access the files inside the volume created above, navigate to `\\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes\seerr-data\_data` using File Explorer.
+To access the files inside the volume created above, navigate to `\\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes\sinerr-data\_data` using File Explorer.
 
 :::info
 Docker on Windows works differently than it does on Linux; it runs Docker inside of a stripped-down Linux VM. Volume mounts are exposed to Docker inside this VM via SMB mounts. While this is fine for media, it is unacceptable for the `/app/config` directory because SMB does not support file locking. This will eventually corrupt your database, which can lead to slow behavior and crashes.

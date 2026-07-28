@@ -622,7 +622,7 @@ class BaseScanner<T> {
       this.log(
         `Declined orphaned ${
           media.mediaType === MediaType.MOVIE ? 'movie' : 'series'
-        } request ${request.id} for ${media.tmdbId} not found in any Sonarr/Radarr server.`,
+        } request ${request.id} for ${media.tmdbId} not found in any download client.`,
         'info'
       );
     }
@@ -641,18 +641,22 @@ class BaseScanner<T> {
 
     this.log('Scan starting', 'info', { sessionId });
 
-    this.enable4kMovie = settings.radarr.some((radarr) => radarr.is4k);
+    this.enable4kMovie = settings.moviepilot.some(
+      (moviepilot) => moviepilot.isDefault
+    );
     if (this.enable4kMovie) {
       this.log(
-        'At least one 4K Radarr server was detected. 4K movie detection is now enabled',
+        'At least one MoviePilot server was detected. 4K movie detection is now enabled',
         'info'
       );
     }
 
-    this.enable4kShow = settings.sonarr.some((sonarr) => sonarr.is4k);
+    this.enable4kShow = settings.moviepilot.some(
+      (moviepilot) => moviepilot.isDefault
+    );
     if (this.enable4kShow) {
       this.log(
-        'At least one 4K Sonarr server was detected. 4K series detection is now enabled',
+        'At least one MoviePilot server was detected. 4K series detection is now enabled',
         'info'
       );
     }

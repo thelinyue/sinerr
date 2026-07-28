@@ -8,8 +8,7 @@ import type { User } from '@server/entity/User';
 import type {
   DVRSettings,
   Language,
-  RadarrSettings,
-  SonarrSettings,
+  MoviePilotSettings,
 } from '@server/lib/settings';
 import type { Keyword } from '@server/models/common';
 import axios from 'axios';
@@ -39,16 +38,14 @@ interface OverrideRuleTilesProps {
     rule: OverrideRule | null;
   }) => void;
   revalidate: () => void;
-  radarrServices: RadarrSettings[];
-  sonarrServices: SonarrSettings[];
+  moviepilotServices: MoviePilotSettings[];
 }
 
 const OverrideRuleTiles = ({
   rules,
   setOverrideRuleModal,
   revalidate,
-  radarrServices,
-  sonarrServices,
+  moviepilotServices,
 }: OverrideRuleTilesProps) => {
   const intl = useIntl();
   const [users, setUsers] = useState<User[] | null>(null);
@@ -61,16 +58,12 @@ const OverrideRuleTiles = ({
 
   const getServiceInfos = useCallback(async () => {
     const results: (DVRTestResponse & { type: string; id: number })[] = [];
-    const services: DVRSettings[] = [...radarrServices, ...sonarrServices];
+    const services: MoviePilotSettings[] = moviepilotServices;
     for (const service of services) {
       const { hostname, port, apiKey, baseUrl, useSsl = false } = service;
       try {
         const response = await axios.post<DVRTestResponse>(
-          `/api/v1/settings/${
-            radarrServices.includes(service as RadarrSettings)
-              ? 'radarr'
-              : 'sonarr'
-          }/test`,
+          '/api/v1/settings/moviepilot/test',
           {
             hostname,
             apiKey,
@@ -80,17 +73,13 @@ const OverrideRuleTiles = ({
           }
         );
         results.push({
-          type: radarrServices.includes(service as RadarrSettings)
-            ? 'radarr'
-            : 'sonarr',
+          type: 'moviepilot',
           id: service.id,
           ...response.data,
         });
       } catch {
         results.push({
-          type: radarrServices.includes(service as RadarrSettings)
-            ? 'radarr'
-            : 'sonarr',
+          type: 'moviepilot',
           id: service.id,
           profiles: [],
           rootFolders: [],
@@ -99,7 +88,7 @@ const OverrideRuleTiles = ({
       }
     }
     setTestResponses(results);
-  }, [radarrServices, sonarrServices]);
+  }, [moviepilotServices]);
 
   useEffect(() => {
     getServiceInfos();
@@ -234,9 +223,7 @@ const OverrideRuleTiles = ({
                   {testResponses
                     .find(
                       (r) =>
-                        (r.id === rule.radarrServiceId &&
-                          r.type === 'radarr') ||
-                        (r.id === rule.sonarrServiceId && r.type === 'sonarr')
+                        r.id === rule.serviceId && r.type === 'moviepilot'
                     )
                     ?.profiles.find((profile) => rule.profileId === profile.id)
                     ?.name || rule.profileId}
@@ -261,10 +248,8 @@ const OverrideRuleTiles = ({
                         {testResponses
                           .find(
                             (r) =>
-                              (r.id === rule.radarrServiceId &&
-                                r.type === 'radarr') ||
-                              (r.id === rule.sonarrServiceId &&
-                                r.type === 'sonarr')
+                              r.id === rule.serviceId &&
+                              r.type === 'moviepilot'
                           )
                           ?.tags?.find((t) => t.id === Number(tag))?.label ||
                           tag}

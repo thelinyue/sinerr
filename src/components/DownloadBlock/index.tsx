@@ -1,13 +1,26 @@
 import Badge from '@app/components/Common/Badge';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
-import type { DownloadingItem } from '@server/lib/downloadtracker';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 
 const messages = defineMessages('components.DownloadBlock', {
   estimatedtime: 'Estimated {time}',
   formattedTitle: '{title}: Season {seasonNumber} Episode {episodeNumber}',
 });
+
+interface DownloadingItem {
+  title: string;
+  status: string;
+  size: number;
+  sizeLeft: number;
+  estimatedCompletionTime: string;
+  downloadId: string;
+  externalId: string;
+  episode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+  };
+}
 
 interface DownloadBlockProps {
   downloadItem: DownloadingItem;

@@ -175,10 +175,7 @@ class EmailAgent
             is4k ? messages.failedRequest4k : messages.failedRequest,
             {
               mediaType,
-              service:
-                payload.media?.mediaType === MediaType.MOVIE
-                  ? 'Radarr'
-                  : 'Sonarr',
+              service: 'the download client',
             }
           );
           break;

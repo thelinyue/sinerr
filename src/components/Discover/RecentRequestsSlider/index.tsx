@@ -34,8 +34,7 @@ const RecentRequestsSlider = () => {
 
   const hasServiceErrors =
     requests?.serviceErrors &&
-    (requests.serviceErrors.radarr.length > 0 ||
-      requests.serviceErrors.sonarr.length > 0);
+    (requests.serviceErrors.moviepilot?.length > 0);
 
   return (
     <>
@@ -54,8 +53,7 @@ const RecentRequestsSlider = () => {
             <span>
               {intl.formatMessage(messages.unableToConnect, {
                 services: [
-                  ...requests.serviceErrors.radarr.map((s) => s.name),
-                  ...requests.serviceErrors.sonarr.map((s) => s.name),
+                  ...(requests.serviceErrors.moviepilot?.map((s: { name: string }) => s.name) ?? []),
                 ].join(', '),
               })}
             </span>

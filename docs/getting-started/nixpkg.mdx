@@ -4,7 +4,7 @@ description: Install Sinerr using Nixpkgs
 sidebar_position: 4
 ---
 
-import { SeerrVersion, NixpkgVersion } from '@site/src/components/SeerrVersion';
+import { sinerrVersion, NixpkgVersion } from '@site/src/components/sinerrVersion';
 import Admonition from '@theme/Admonition';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -15,13 +15,13 @@ This method is not recommended for most users. It is intended for advanced users
 The Sinerr service and package are available as of the 26.05 release.
 :::
 
-Refer to [NixOS documentation](https://search.nixos.org/options?channel=26.05&query=seerr)
+Refer to [NixOS documentation](https://search.nixos.org/options?channel=26.05&query=sinerr)
 
 export const VersionMismatchWarning = () => {
-  let seerrVersion = null;
+  let sinerrVersion = null;
   let nixpkgVersions = null;
   try {
-    seerrVersion = SeerrVersion();
+    sinerrVersion = sinerrVersion();
     nixpkgVersions = NixpkgVersion();
   } catch (err) {
     return (
@@ -37,21 +37,21 @@ export const VersionMismatchWarning = () => {
       </Admonition>
     );
   }
-  const isUnstableUpToDate = seerrVersion === nixpkgVersions.unstable;
-  const isStableUpToDate = seerrVersion === nixpkgVersions.stable;
+  const isUnstableUpToDate = sinerrVersion === nixpkgVersions.unstable;
+  const isStableUpToDate = sinerrVersion === nixpkgVersions.stable;
   return (
      <>
       {!isStableUpToDate ? (
   <Admonition type="warning">
     The{' '}
-    <a href="https://github.com/NixOS/nixpkgs/blob/nixos-26.05/pkgs/by-name/se/seerr/package.nix#L23">
+    <a href="https://github.com/NixOS/nixpkgs/blob/nixos-26.05/pkgs/by-name/se/sinerr/package.nix#L23">
       upstream Sinerr Nix Stable Package (v{nixpkgVersions.stable})
     </a>{' '}
-    is not <b>up-to-date</b>. If you want to use <b>Sinerr v{seerrVersion}</b>,{' '}
+    is not <b>up-to-date</b>. If you want to use <b>Sinerr v{sinerrVersion}</b>,{' '}
     {isUnstableUpToDate ? (
       <>
         consider using the{' '}
-        <a href="https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/by-name/se/seerr/package.nix">
+        <a href="https://github.com/NixOS/nixpkgs/blob/nixos-unstable/pkgs/by-name/se/sinerr/package.nix">
           unstable package
         </a>{' '}
         instead.
@@ -70,21 +70,21 @@ export const VersionMismatchWarning = () => {
 <VersionMismatchWarning />
 
 ## Installation
-To get up and running with seerr using Nix, you can add the following to your `configuration.nix`:
+To get up and running with sinerr using Nix, you can add the following to your `configuration.nix`:
 ```nix
 { config, pkgs, ... }:
 {
-  services.seerr.enable = true;
+  services.sinerr.enable = true;
 }
 ```
 
-After adding the configuration to your `configuration.nix`, you can run the following command to install seerr:
+After adding the configuration to your `configuration.nix`, you can run the following command to install sinerr:
 ```bash
 nixos-rebuild switch
 ```
-After rebuild is complete seerr should be running, verify that it is with the following command.
+After rebuild is complete sinerr should be running, verify that it is with the following command.
 ```bash
-systemctl status seerr
+systemctl status sinerr
 ```
 :::info
 You can now access Sinerr by visiting `http://localhost:5055` in your web browser.

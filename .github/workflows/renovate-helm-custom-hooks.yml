@@ -34,7 +34,7 @@ jobs:
         id: app-token
         with:
           app-id: 2138788
-          private-key: ${{ secrets.APP_SEERR_HELM_PRIVATE_KEY }}
+          private-key: ${{ secrets.APP_SINERR_HELM_PRIVATE_KEY }}
 
       - name: Set up chart-testing
         uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0

@@ -1,7 +1,7 @@
 ---
 title: "Sinerr v3.2.0 and v3.3.0 Release Notes"
 description: "Sinerr v3.2.0 and v3.3.0"
-slug: seerr-3-2-0-and-3-3-0-release-notes
+slug: sinerr-3-2-0-and-3-3-0-release-notes
 authors: [gauthier-th]
 image: https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/gen-docs/static/img/logo_full.svg
 hide_table_of_contents: false

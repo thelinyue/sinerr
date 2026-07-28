@@ -10,7 +10,7 @@
 <a href="https://github.com/thelinyue/sinerr/blob/develop/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/thelinyue/sinerr"></a>
 </p>
 
-**Sinerr** 是一款免费开源的个人媒体库请求管理应用。支持对接 [Jellyfin](https://jellyfin.org)、[Emby](https://emby.media/) 媒体服务器，以及 **[Sonarr](https://sonarr.tv/)**、**[Radarr](https://radarr.video/)** 等下载管理工具。
+**Sinerr** 是一款免费开源的个人媒体库请求管理应用。支持对接 [Jellyfin](https://jellyfin.org)、[Emby](https://emby.media/) 媒体服务器，以及 [MoviePilot](https://github.com/jxxghp/MoviePilot) 等下载管理工具。
 
 ## Docker Compose 部署
 
@@ -42,7 +42,7 @@ docker compose up -d
 - 支持 **PostgreSQL** 和 **SQLite** 数据库
 - 支持电影、电视剧及混合媒体库
 - 可为 SMTP 邮件通知修改邮箱地址
-- 轻松对接 Sonarr、Radarr 等现有服务
+- 轻松对接 MoviePilot 等现有服务
 - Jellyfin/Emby 媒体库扫描，自动追踪已有内容
 - 可定制的请求系统，支持按季/按电影提交请求
 - 简洁的请求管理界面
