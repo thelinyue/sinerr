@@ -1,3 +1,23 @@
+## [1.1.0](https://github.com/thelinyue/sinerr/compare/v1.0.1...v1.1.0) (2026-07-28)
+
+
+### Features
+
+* **i18n:** reduce display languages to en, zh-CN, zh-TW only
+
+
+### Bug Fixes
+
+* **i18n:** strip UTF-8 BOM from locale JSON files causing build errors
+
+
+### Chores
+
+* **server:** remove unused GitHub API integration
+* **ui:** remove GitHub settings from About/Settings pages
+* remove unused imports and dead code
+
+
 ## [1.0.1](https://github.com/thelinyue/sinerr/compare/v1.0.0...v1.0.1) (2026-07-28)
 
 
