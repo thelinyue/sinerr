@@ -238,9 +238,6 @@ components:
         enableSpecialEpisodes:
           type: boolean
           example: false
-        versionCheck:
-          type: boolean
-          example: false
     NetworkSettings:
       type: object
       properties:
@@ -1727,18 +1724,10 @@ paths:
   /status:
     get:
       summary: Get Sinerr status
-      description: Returns the current Sinerr status in a JSON object. updateAvailable and commitsBehind are omitted when checkUpdateAvailable is false.
+      description: Returns the current Sinerr status in a JSON object.
       security: []
       tags:
         - public
-      parameters:
-        - in: query
-          name: checkUpdateAvailable
-          description: If false, updateAvailable and commitsBehind will be omitted from the response. Defaults to the versionCheck setting.
-          required: false
-          example: false
-          schema:
-            type: boolean
       responses:
         '200':
           description: Returned status
@@ -1752,10 +1741,6 @@ paths:
                     example: 1.0.0
                   commitTag:
                     type: string
-                  updateAvailable:
-                    type: boolean
-                  commitsBehind:
-                    type: number
                   restartRequired:
                     type: boolean
   /status/appdata:

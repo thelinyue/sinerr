@@ -30,7 +30,6 @@ const defaultSettings = {
   locale: 'zh-CN',
   emailEnabled: false,
   youtubeUrl: '',
-  versionCheck: true,
 };
 
 export const SettingsContext = React.createContext<SettingsContextProps>({

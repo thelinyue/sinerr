@@ -1,4 +1,3 @@
-import GithubAPI from '@server/api/github';
 import PushoverAPI from '@server/api/pushover';
 import TheMovieDb from '@server/api/themoviedb';
 import type {
@@ -47,56 +46,10 @@ const router = Router();
 
 router.use(checkUser);
 
-router.get<unknown, StatusResponse>('/status', async (req, res) => {
-  const settings = getSettings();
-  const currentVersion = getAppVersion();
-  const commitTag = getCommitTag();
-  const checkUpdate =
-    req.query.checkUpdateAvailable !== undefined
-      ? req.query.checkUpdateAvailable
-      : settings.fullPublicSettings.versionCheck;
-  let updateAvailable = false;
-  let commitsBehind = 0;
-
-  if (checkUpdate) {
-    const githubApi = new GithubAPI();
-
-    if (currentVersion.startsWith('develop-') && commitTag !== 'local') {
-      const commits = await githubApi.getSinerrCommits();
-
-      if (commits.length) {
-        const filteredCommits = commits.filter(
-          (commit) => !commit.commit.message.includes('[skip ci]')
-        );
-        if (filteredCommits[0].sha !== commitTag) {
-          updateAvailable = true;
-        }
-
-        const commitIndex = filteredCommits.findIndex(
-          (commit) => commit.sha === commitTag
-        );
-
-        if (updateAvailable) {
-          commitsBehind = commitIndex;
-        }
-      }
-    } else if (commitTag !== 'local') {
-      const releases = await githubApi.getSinerrReleases();
-
-      if (releases.length) {
-        const latestVersion = releases[0];
-
-        if (!latestVersion.name.includes(currentVersion)) {
-          updateAvailable = true;
-        }
-      }
-    }
-  }
-
+router.get<unknown, StatusResponse>('/status', async (_req, res) => {
   return res.status(200).json({
     version: getAppVersion(),
     commitTag: getCommitTag(),
-    ...(checkUpdate && { updateAvailable, commitsBehind }),
     restartRequired: restartFlag.isSet(),
   });
 });

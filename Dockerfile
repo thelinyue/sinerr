@@ -57,6 +57,7 @@ ENV NODE_ENV=production
 ENV COMMIT_TAG=${COMMIT_TAG}
 
 RUN apk add --no-cache tzdata
+ENV TZ=Asia/Shanghai
 
 USER node:node
 

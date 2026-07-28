@@ -174,6 +174,7 @@ class JellyfinAPI extends ExternalAPI {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
+        timeout: settings.network.apiRequestTimeout,
       }
     );
 

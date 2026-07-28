@@ -74,8 +74,6 @@ const messages = defineMessages('components.Settings.SettingsMain', {
   youtubeUrl: 'YouTube URL',
   youtubeUrlTip:
     'Base URL for YouTube videos if a self-hosted YouTube instance is used.',
-  versionCheck: 'Version Check',
-  versionCheckTip: 'Automatically check for new versions on GitHub.',
   validationUrl: 'You must provide a valid URL',
   validationUrlTrailingSlash: 'URL must not end in a trailing slash',
 });
@@ -185,7 +183,6 @@ const SettingsMain = () => {
             enableSpecialEpisodes: data?.enableSpecialEpisodes,
             cacheImages: data?.cacheImages,
             youtubeUrl: data?.youtubeUrl,
-            versionCheck: data?.versionCheck,
           }}
           enableReinitialize
           validationSchema={MainSettingsSchema}
@@ -208,10 +205,8 @@ const SettingsMain = () => {
                 enableSpecialEpisodes: values.enableSpecialEpisodes,
                 cacheImages: values.cacheImages,
                 youtubeUrl: values.youtubeUrl,
-                versionCheck: values?.versionCheck,
               });
               mutate('/api/v1/settings/public');
-              mutate('/api/v1/status');
 
               if (setLocale) {
                 setLocale(
@@ -609,24 +604,6 @@ const SettingsMain = () => {
                       typeof errors.youtubeUrl === 'string' && (
                         <div className="error">{errors.youtubeUrl}</div>
                       )}
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="versionCheck" className="text-label">
-                    {intl.formatMessage(messages.versionCheck)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.versionCheckTip)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <Field
-                      type="checkbox"
-                      id="versionCheck"
-                      name="versionCheck"
-                      onChange={() => {
-                        setFieldValue('versionCheck', !values.versionCheck);
-                      }}
-                    />
                   </div>
                 </div>
                 <div className="actions">

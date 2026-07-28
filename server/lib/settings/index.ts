@@ -141,7 +141,6 @@ export interface MainSettings {
   enableSpecialEpisodes: boolean;
   locale: string;
   youtubeUrl: string;
-  versionCheck: boolean;
 }
 
 export interface ProxySettings {
@@ -199,7 +198,6 @@ interface FullPublicSettings extends PublicSettings {
   emailEnabled: boolean;
   userEmailRequired: boolean;
   youtubeUrl: string;
-  versionCheck: boolean;
 }
 
 export interface NotificationAgentConfig {
@@ -404,7 +402,6 @@ class Settings {
         enableSpecialEpisodes: false,
         locale: 'zh-CN',
         youtubeUrl: '',
-        versionCheck: true,
       },
       jellyfin: {
         name: '',
@@ -664,7 +661,6 @@ class Settings {
       userEmailRequired:
         this.data.notifications.agents.email.options.userEmailRequired,
       youtubeUrl: this.data.main.youtubeUrl,
-      versionCheck: this.data.main.versionCheck,
     };
   }
 

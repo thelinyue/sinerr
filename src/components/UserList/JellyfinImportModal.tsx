@@ -64,7 +64,8 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     try {
       const { data: createdUsers } = await axios.post(
         '/api/v1/user/import-from-jellyfin',
-        { jellyfinUserIds: selectedUsers }
+        { jellyfinUserIds: selectedUsers },
+        { timeout: 30000 }
       );
 
       if (!createdUsers.length) {

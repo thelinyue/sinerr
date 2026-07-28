@@ -1,4 +1,4 @@
-{
+﻿{
   "components.Settings.metadataSettings": "",
   "components.Blocklist.blocklistNotFoundError": "",
   "components.CollectionDetails.overview": "",
@@ -77,7 +77,6 @@
   "components.Settings.SettingsAbout.Releases.viewchangelog": "",
   "components.Settings.SettingsAbout.contribute": "",
   "components.Settings.SettingsAbout.githubdiscussions": "",
-  "components.Settings.SettingsAbout.outofdate": "",
   "components.Settings.SettingsAbout.runningDevelop": "",
   "components.Settings.SettingsJobsCache.availability-sync": "",
   "components.Settings.SettingsJobsCache.cache": "",
@@ -586,7 +585,6 @@
   "components.Settings.SettingsAbout.timezone": "",
   "components.Settings.SettingsAbout.totalmedia": "",
   "components.Settings.SettingsAbout.totalrequests": "",
-  "components.Settings.SettingsAbout.uptodate": "",
   "components.Settings.SettingsJobsCache.jellyfin-full-scan": "",
   "components.Settings.SettingsMain.cacheImagesTip": "",
   "components.Settings.SettingsMain.hideAvailableTip": "",
@@ -871,7 +869,6 @@
   "components.Discover.CreateSlider.editsuccess": "",
   "components.Discover.CreateSlider.needresults": "",
   "components.Discover.CreateSlider.nooptions": "",
-  "components.Layout.VersionStatus.outofdate": "",
   "components.NotificationTypeSelector.adminissueresolvedDescription": "",
   "components.PermissionEdit.autoapproveMoviesDescription": "",
   "components.PermissionEdit.autoapproveSeries": "",
@@ -940,7 +937,6 @@
   "components.IssueDetails.toastissuedeletefailed": "",
   "components.IssueDetails.toaststatusupdated": "",
   "components.IssueDetails.toaststatusupdatefailed": "",
-  "components.Layout.VersionStatus.commitsbehind": "",
   "components.Layout.VersionStatus.streamstable": "",
   "components.Login.loginwithapp": "",
   "components.Login.saving": "",

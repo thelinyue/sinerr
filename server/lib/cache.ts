@@ -1,10 +1,6 @@
 import NodeCache from 'node-cache';
 
-export type AvailableCacheIds =
-  | 'tmdb'
-  | 'rt'
-  | 'github'
-  | 'tvdb';
+export type AvailableCacheIds = 'tmdb' | 'rt' | 'tvdb';
 
 const DEFAULT_TTL = 300;
 const DEFAULT_CHECK_PERIOD = 120;
@@ -44,10 +40,6 @@ class CacheManager {
     }),
     rt: new Cache('rt', 'Rotten Tomatoes API', {
       stdTtl: 43200,
-      checkPeriod: 60 * 30,
-    }),
-    github: new Cache('github', 'GitHub API', {
-      stdTtl: 21600,
       checkPeriod: 60 * 30,
     }),
     tvdb: new Cache('tvdb', 'The TVDB API', {

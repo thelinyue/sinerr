@@ -3,6 +3,16 @@ import path from 'path';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const localTimestamp = () => {
+  const now = new Date();
+  const off = -now.getTimezoneOffset();
+  const sign = off >= 0 ? '+' : '-';
+  const absOff = Math.abs(off);
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${String(now.getMilliseconds()).padStart(3, '0')}${sign}${pad(Math.floor(absOff / 60))}:${pad(absOff % 60)}`;
+};
+
 const hformat = winston.format.printf(
   ({ level, label, message, timestamp, ...metadata }) => {
     let msg = `${timestamp} [${level}]${
@@ -38,7 +48,7 @@ const machineLogFileTransport = new winston.transports.DailyRotateFile({
   symlinkName: '.machinelogs.json',
   format: winston.format.combine(
     winston.format.splat(),
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: localTimestamp }),
     winston.format.json()
   ),
 });
@@ -55,7 +65,7 @@ const logger = winston.createLogger({
   level: process.env.LOG_LEVEL?.toLowerCase() || 'debug',
   format: winston.format.combine(
     winston.format.splat(),
-    winston.format.timestamp(),
+    winston.format.timestamp({ format: localTimestamp }),
     hformat
   ),
   transports: [
@@ -63,7 +73,7 @@ const logger = winston.createLogger({
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.splat(),
-        winston.format.timestamp(),
+        winston.format.timestamp({ format: localTimestamp }),
         hformat
       ),
     }),
