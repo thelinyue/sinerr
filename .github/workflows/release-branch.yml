@@ -101,7 +101,6 @@ jobs:
             ${{ env.DOCKER_HUB }}
             ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=release
             type=raw,value=latest
           labels: |
             org.opencontainers.image.created=${{ steps.ts.outputs.TIMESTAMP }}
