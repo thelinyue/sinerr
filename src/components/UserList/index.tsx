@@ -9,7 +9,6 @@ import PageTitle from '@app/components/Common/PageTitle';
 import SensitiveInput from '@app/components/Common/SensitiveInput';
 import Table from '@app/components/Common/Table';
 import BulkEditModal from '@app/components/UserList/BulkEditModal';
-import PlexImportModal from '@app/components/UserList/PlexImportModal';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import { useUpdateQueryParams } from '@app/hooks/useUpdateQueryParams';
@@ -55,7 +54,6 @@ const messages = defineMessages('components.UserList', {
   bulkedit: 'Bulk Edit',
   owner: 'Owner',
   admin: 'Admin',
-  plexuser: 'Plex User',
   deleteuser: 'Delete User',
   userdeleted: 'User deleted successfully!',
   userdeleteerror: 'Something went wrong while deleting the user.',
@@ -70,7 +68,7 @@ const messages = defineMessages('components.UserList', {
     'Password is too short; should be a minimum of 8 characters',
   usercreatedfailed: 'Something went wrong while creating the user.',
   usercreatedfailedexisting:
-    'The provided email address is already in use by another user.',
+    'The provided username is already in use by another user.',
   usercreatedsuccess: 'User created successfully!',
   username: 'Username',
   email: 'Email Address',
@@ -311,13 +309,11 @@ const UserList = () => {
     username: Yup.string().required(
       intl.formatMessage(messages.validationUsername)
     ),
-    email: Yup.string()
-      .required()
-      .test(
-        'email',
-        intl.formatMessage(messages.validationEmail),
-        (value) => !value || validator.isEmail(value, { require_tld: false })
-      ),
+    email: Yup.string().test(
+      'email',
+      intl.formatMessage(messages.validationEmail),
+      (value) => !value || validator.isEmail(value, { require_tld: false })
+    ),
     password: Yup.lazy((value) =>
       !value
         ? Yup.string()
@@ -481,7 +477,6 @@ const UserList = () => {
                   <div className="form-row">
                     <label htmlFor="email" className="text-label">
                       {intl.formatMessage(messages.email)}
-                      <span className="label-required">*</span>
                     </label>
                     <div className="form-input-area">
                       <div className="form-input-field">
@@ -592,25 +587,15 @@ const UserList = () => {
         leaveTo="opacity-0"
         show={showImportModal}
       >
-        {settings.currentSettings.mediaServerType === MediaServerType.PLEX ? (
-          <PlexImportModal
-            onCancel={() => setShowImportModal(false)}
-            onComplete={() => {
-              setShowImportModal(false);
-              revalidate();
-            }}
-          />
-        ) : (
-          <JellyfinImportModal
-            onCancel={() => setShowImportModal(false)}
-            onComplete={() => {
-              setShowImportModal(false);
-              revalidate();
-            }}
-          >
-            {data.pageInfo.results}
-          </JellyfinImportModal>
-        )}
+        <JellyfinImportModal
+          onCancel={() => setShowImportModal(false)}
+          onComplete={() => {
+            setShowImportModal(false);
+            revalidate();
+          }}
+        >
+          {data.pageInfo.results}
+        </JellyfinImportModal>
       </Transition>
 
       <div className="flex flex-col justify-between lg:flex-row lg:items-end">
@@ -637,14 +622,9 @@ const UserList = () => {
                   ? intl.formatMessage(messages.importfrommediaserver, {
                       mediaServerName: 'Emby',
                     })
-                  : settings.currentSettings.mediaServerType ===
-                      MediaServerType.PLEX
-                    ? intl.formatMessage(messages.importfrommediaserver, {
-                        mediaServerName: 'Plex',
-                      })
-                    : intl.formatMessage(messages.importfrommediaserver, {
-                        mediaServerName: 'Jellyfin',
-                      })}
+                  : intl.formatMessage(messages.importfrommediaserver, {
+                      mediaServerName: 'Jellyfin',
+                    })}
               </span>
             </Button>
           </div>
@@ -804,16 +784,10 @@ const UserList = () => {
                       className="text-base font-bold leading-5 transition duration-300 hover:underline"
                       data-testid="user-list-username-link"
                     >
-                      {user.username ||
-                        user.jellyfinUsername ||
-                        user.plexUsername ||
-                        user.email}
+                      {user.username || user.jellyfinUsername || user.email}
                     </Link>
-                    {(
-                      user.username ||
-                      user.jellyfinUsername ||
-                      user.plexUsername
-                    )?.toLowerCase() !== user.email && (
+                    {(user.username || user.jellyfinUsername)?.toLowerCase() !==
+                      user.email && (
                       <div className="text-sm leading-5 text-gray-300">
                         {user.email}
                       </div>
@@ -838,11 +812,7 @@ const UserList = () => {
                 )}
               </Table.TD>
               <Table.TD>
-                {user.userType === UserType.PLEX ? (
-                  <Badge badgeType="warning">
-                    {intl.formatMessage(messages.plexuser)}
-                  </Badge>
-                ) : user.userType === UserType.LOCAL ? (
+                {user.userType === UserType.LOCAL ? (
                   <Badge badgeType="default">
                     {intl.formatMessage(messages.localuser)}
                   </Badge>

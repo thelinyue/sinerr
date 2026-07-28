@@ -100,10 +100,10 @@ describe('POST /issue', () => {
     const userRepo = getRepository(User);
     const media = await seedMedia();
     const friend = await userRepo.findOneOrFail({
-      where: { email: 'friend@seerr.dev' },
+      where: { email: 'friend@sinerr.dev' },
     });
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.VIDEO,
       message: 'Playback stutters near the end.',
@@ -114,8 +114,8 @@ describe('POST /issue', () => {
     });
 
     assert.strictEqual(res.status, 201);
-    assert.strictEqual(res.body.createdBy.email, 'friend@seerr.dev');
-    assert.strictEqual(res.body.comments[0].user.email, 'friend@seerr.dev');
+    assert.strictEqual(res.body.createdBy.email, 'friend@sinerr.dev');
+    assert.strictEqual(res.body.comments[0].user.email, 'friend@sinerr.dev');
 
     const persisted = await issueRepo.findOneOrFail({
       where: { id: res.body.id },
@@ -128,7 +128,7 @@ describe('POST /issue', () => {
   it('defaults to the authenticated user when userId is omitted', async () => {
     const media = await seedMedia();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.AUDIO,
       message: 'Audio is out of sync.',
@@ -136,21 +136,21 @@ describe('POST /issue', () => {
     });
 
     assert.strictEqual(res.status, 201);
-    assert.strictEqual(res.body.createdBy.email, 'admin@seerr.dev');
-    assert.strictEqual(res.body.comments[0].user.email, 'admin@seerr.dev');
+    assert.strictEqual(res.body.createdBy.email, 'admin@sinerr.dev');
+    assert.strictEqual(res.body.comments[0].user.email, 'admin@sinerr.dev');
   });
 
   it('allows creators to supply their own userId', async () => {
     const userRepo = getRepository(User);
     const media = await seedMedia();
     const friend = await userRepo.findOneOrFail({
-      where: { email: 'friend@seerr.dev' },
+      where: { email: 'friend@sinerr.dev' },
     });
 
     friend.permissions = Permission.CREATE_ISSUES;
     await userRepo.save(friend);
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.SUBTITLES,
       message: 'Subtitles are missing.',
@@ -159,24 +159,24 @@ describe('POST /issue', () => {
     });
 
     assert.strictEqual(res.status, 201);
-    assert.strictEqual(res.body.createdBy.email, 'friend@seerr.dev');
-    assert.strictEqual(res.body.comments[0].user.email, 'friend@seerr.dev');
+    assert.strictEqual(res.body.createdBy.email, 'friend@sinerr.dev');
+    assert.strictEqual(res.body.comments[0].user.email, 'friend@sinerr.dev');
   });
 
   it('prevents non-managers from supplying another userId', async () => {
     const userRepo = getRepository(User);
     const media = await seedMedia();
     const friend = await userRepo.findOneOrFail({
-      where: { email: 'friend@seerr.dev' },
+      where: { email: 'friend@sinerr.dev' },
     });
     const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@seerr.dev' },
+      where: { email: 'admin@sinerr.dev' },
     });
 
     friend.permissions = Permission.CREATE_ISSUES;
     await userRepo.save(friend);
 
-    const agent = await loginAs('friend@seerr.dev', 'test1234');
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.OTHER,
       message: 'Something else is wrong.',
@@ -194,7 +194,7 @@ describe('POST /issue', () => {
   it('returns 404 when the supplied userId does not exist', async () => {
     const media = await seedMedia();
 
-    const agent = await loginAs('admin@seerr.dev', 'test1234');
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.OTHER,
       message: 'Something else is wrong.',

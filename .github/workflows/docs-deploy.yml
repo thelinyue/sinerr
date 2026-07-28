@@ -10,7 +10,7 @@ on:
     paths:
       - 'docs/**'
       - 'gen-docs/**'
-      - 'seerr-api.yml'
+      - 'sinerr-api.yml'
 
 permissions:
   contents: read

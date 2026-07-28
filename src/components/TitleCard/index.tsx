@@ -9,7 +9,7 @@ import ErrorCard from '@app/components/TitleCard/ErrorCard';
 import Placeholder from '@app/components/TitleCard/Placeholder';
 import { useIsTouch } from '@app/hooks/useIsTouch';
 import useToasts from '@app/hooks/useToasts';
-import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { withProperties } from '@app/utils/typeHelpers';
@@ -380,7 +380,7 @@ const TitleCard = ({
             src={
               image
                 ? `https://image.tmdb.org/t/p/w300_and_h450_face${image}`
-                : `/images/seerr_poster_not_found_logo_top.png`
+                : `/images/sinerr_poster_not_found_logo_top.png`
             }
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             fill
@@ -403,25 +403,24 @@ const TitleCard = ({
             </div>
             {showDetail && currentStatus !== MediaStatus.BLOCKLISTED && (
               <div className="flex flex-col gap-1">
-                {user?.userType !== UserType.PLEX &&
-                  (toggleWatchlist ? (
-                    <Button
-                      buttonType={'ghost'}
-                      className="z-40"
-                      buttonSize={'sm'}
-                      onClick={onClickWatchlistBtn}
-                    >
-                      <StarIcon className={'h-3 text-amber-300'} />
-                    </Button>
-                  ) : (
-                    <Button
-                      className="z-40"
-                      buttonSize={'sm'}
-                      onClick={onClickDeleteWatchlistBtn}
-                    >
-                      <MinusCircleIcon className={'h-3'} />
-                    </Button>
-                  ))}
+                {toggleWatchlist ? (
+                  <Button
+                    buttonType={'ghost'}
+                    className="z-40"
+                    buttonSize={'sm'}
+                    onClick={onClickWatchlistBtn}
+                  >
+                    <StarIcon className={'h-3 text-amber-300'} />
+                  </Button>
+                ) : (
+                  <Button
+                    className="z-40"
+                    buttonSize={'sm'}
+                    onClick={onClickDeleteWatchlistBtn}
+                  >
+                    <MinusCircleIcon className={'h-3'} />
+                  </Button>
+                )}
                 {showHideButton &&
                   currentStatus !== MediaStatus.PROCESSING &&
                   currentStatus !== MediaStatus.AVAILABLE &&

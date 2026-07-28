@@ -34,16 +34,6 @@ export interface Language {
   name: string;
 }
 
-export interface PlexSettings {
-  name: string;
-  machineId?: string;
-  ip: string;
-  port: number;
-  useSsl?: boolean;
-  libraries: Library[];
-  webAppUrl?: string;
-}
-
 export interface JellyfinSettings {
   name: string;
   ip: string;
@@ -86,21 +76,17 @@ export interface DVRSettings {
   overrideRule: number[];
 }
 
-export interface RadarrSettings extends DVRSettings {
-  minimumAvailability: string;
-}
-
-export interface SonarrSettings extends DVRSettings {
-  seriesType: 'standard' | 'daily' | 'anime';
-  animeSeriesType: 'standard' | 'daily' | 'anime';
-  activeAnimeProfileId?: number;
-  activeAnimeProfileName?: string;
-  activeAnimeDirectory?: string;
-  activeAnimeLanguageProfileId?: number;
-  activeLanguageProfileId?: number;
-  animeTags?: number[];
-  enableSeasonFolders: boolean;
-  monitorNewItems: 'all' | 'none';
+export interface MoviePilotSettings {
+  id: number;
+  name: string;
+  hostname: string;
+  port: number;
+  apiKey: string;
+  useSsl: boolean;
+  baseUrl?: string;
+  isDefault: boolean;
+  externalUrl?: string;
+  syncEnabled: boolean;
 }
 
 interface Quota {
@@ -143,7 +129,6 @@ export interface MainSettings {
   hideBlocklisted: boolean;
   localLogin: boolean;
   mediaServerLogin: boolean;
-  newPlexLogin: boolean;
   discoverRegion: string;
   streamingRegion: string;
   originalLanguage: string;
@@ -213,10 +198,8 @@ interface FullPublicSettings extends PublicSettings {
   locale: string;
   emailEnabled: boolean;
   userEmailRequired: boolean;
-  newPlexLogin: boolean;
   youtubeUrl: string;
   versionCheck: boolean;
-  plexClientIdentifier: string;
 }
 
 export interface NotificationAgentConfig {
@@ -357,14 +340,7 @@ interface JobSettings {
 }
 
 export type JobId =
-  | 'plex-recently-added-scan'
-  | 'plex-full-scan'
-  | 'plex-watchlist-sync'
-  | 'plex-refresh-token'
-  | 'radarr-scan'
-  | 'sonarr-scan'
-  | 'download-sync'
-  | 'download-sync-reset'
+  | 'moviepilot-scan'
   | 'jellyfin-recently-added-scan'
   | 'jellyfin-full-scan'
   | 'image-cache-cleanup'
@@ -377,11 +353,9 @@ export interface AllSettings {
   vapidPublic: string;
   vapidPrivate: string;
   main: MainSettings;
-  plex: PlexSettings;
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
-  radarr: RadarrSettings[];
-  sonarr: SonarrSettings[];
+  moviepilot: MoviePilotSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
   jobs: Record<JobId, JobSettings>;
@@ -406,7 +380,7 @@ class Settings {
       vapidPublic: '',
       main: {
         apiKey: '',
-        applicationTitle: 'Seerr',
+        applicationTitle: 'Sinerr',
         applicationUrl: '',
         cacheImages: false,
         defaultPermissions: Permission.REQUEST,
@@ -418,7 +392,6 @@ class Settings {
         hideBlocklisted: false,
         localLogin: true,
         mediaServerLogin: true,
-        newPlexLogin: true,
         discoverRegion: '',
         streamingRegion: '',
         originalLanguage: '',
@@ -429,16 +402,9 @@ class Settings {
         mediaServerType: MediaServerType.NOT_CONFIGURED,
         partialRequestsEnabled: true,
         enableSpecialEpisodes: false,
-        locale: 'en',
+        locale: 'zh-CN',
         youtubeUrl: '',
         versionCheck: true,
-      },
-      plex: {
-        name: '',
-        ip: '',
-        port: 32400,
-        useSsl: false,
-        libraries: [],
       },
       jellyfin: {
         name: '',
@@ -457,8 +423,7 @@ class Settings {
         tv: MetadataProviderType.TMDB,
         anime: MetadataProviderType.TMDB,
       },
-      radarr: [],
-      sonarr: [],
+      moviepilot: [],
       public: {
         initialized: false,
       },
@@ -476,7 +441,7 @@ class Settings {
               ignoreTls: false,
               requireTls: false,
               allowSelfSigned: false,
-              senderName: 'Seerr',
+              senderName: 'Sinerr',
               usePublicLogo: false,
             },
           },
@@ -570,38 +535,17 @@ class Settings {
         },
       },
       jobs: {
-        'plex-recently-added-scan': {
-          schedule: '0 */5 * * * *',
-        },
-        'plex-full-scan': {
-          schedule: '0 0 3 * * *',
-        },
-        'plex-watchlist-sync': {
-          schedule: '0 */3 * * * *',
-        },
-        'plex-refresh-token': {
-          schedule: '0 0 5 * * *',
-        },
-        'radarr-scan': {
-          schedule: '0 0 4 * * *',
-        },
-        'sonarr-scan': {
-          schedule: '0 30 4 * * *',
-        },
         'availability-sync': {
           schedule: '0 0 5 * * *',
-        },
-        'download-sync': {
-          schedule: '0 * * * * *',
-        },
-        'download-sync-reset': {
-          schedule: '0 0 1 * * *',
         },
         'jellyfin-recently-added-scan': {
           schedule: '0 */5 * * * *',
         },
         'jellyfin-full-scan': {
           schedule: '0 0 3 * * *',
+        },
+        'moviepilot-scan': {
+          schedule: '0 30 4 * * *',
         },
         'image-cache-cleanup': {
           schedule: '0 0 5 * * *',
@@ -646,14 +590,6 @@ class Settings {
     this.data.main = mergeSettings(this.data.main, data);
   }
 
-  get plex(): PlexSettings {
-    return this.data.plex;
-  }
-
-  set plex(data: PlexSettings) {
-    this.data.plex = mergeSettings(this.data.plex, data);
-  }
-
   get jellyfin(): JellyfinSettings {
     return this.data.jellyfin;
   }
@@ -681,20 +617,12 @@ class Settings {
     );
   }
 
-  get radarr(): RadarrSettings[] {
-    return this.data.radarr;
+  get moviepilot(): MoviePilotSettings[] {
+    return this.data.moviepilot;
   }
 
-  set radarr(data: RadarrSettings[]) {
-    this.data.radarr = data;
-  }
-
-  get sonarr(): SonarrSettings[] {
-    return this.data.sonarr;
-  }
-
-  set sonarr(data: SonarrSettings[]) {
-    this.data.sonarr = data;
+  set moviepilot(data: MoviePilotSettings[]) {
+    this.data.moviepilot = data;
   }
 
   get public(): PublicSettings {
@@ -716,11 +644,11 @@ class Settings {
       mediaServerLogin: this.data.main.mediaServerLogin,
       jellyfinExternalHost: this.data.jellyfin.externalHostname,
       jellyfinForgotPasswordUrl: this.data.jellyfin.jellyfinForgotPasswordUrl,
-      movie4kEnabled: this.data.radarr.some(
-        (radarr) => radarr.is4k && radarr.isDefault
+      movie4kEnabled: this.data.moviepilot.some(
+        (moviepilot) => moviepilot.isDefault
       ),
-      series4kEnabled: this.data.sonarr.some(
-        (sonarr) => sonarr.is4k && sonarr.isDefault
+      series4kEnabled: this.data.moviepilot.some(
+        (moviepilot) => moviepilot.isDefault
       ),
       discoverRegion: this.data.main.discoverRegion,
       streamingRegion: this.data.main.streamingRegion,
@@ -735,10 +663,8 @@ class Settings {
       emailEnabled: this.data.notifications.agents.email.enabled,
       userEmailRequired:
         this.data.notifications.agents.email.options.userEmailRequired,
-      newPlexLogin: this.data.main.newPlexLogin,
       youtubeUrl: this.data.main.youtubeUrl,
       versionCheck: this.data.main.versionCheck,
-      plexClientIdentifier: this.data.clientId,
     };
   }
 

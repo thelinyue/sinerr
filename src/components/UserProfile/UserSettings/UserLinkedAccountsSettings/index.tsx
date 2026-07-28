@@ -1,6 +1,5 @@
 import EmbyLogo from '@app/assets/services/emby-icon-only.svg';
 import JellyfinLogo from '@app/assets/services/jellyfin-icon.svg';
-import PlexLogo from '@app/assets/services/plex.svg';
 import Alert from '@app/components/Common/Alert';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
 import Dropdown from '@app/components/Common/Dropdown';
@@ -10,7 +9,6 @@ import useSettings from '@app/hooks/useSettings';
 import { Permission, UserType, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
-import PlexOAuth from '@app/utils/plex';
 import { TrashIcon } from '@heroicons/react/24/solid';
 import { MediaServerType } from '@server/constants/server';
 import axios from 'axios';
@@ -30,17 +28,12 @@ const messages = defineMessages(
       'You do not have any external accounts linked to your account.',
     noPermissionDescription:
       "You do not have permission to modify this user's linked accounts.",
-    plexErrorUnauthorized: 'Unable to connect to Plex using your credentials',
-    plexErrorExists: 'This account is already linked to a Plex user',
     errorUnknown: 'An unknown error occurred',
     deleteFailed: 'Unable to delete linked account.',
   }
 );
 
-const plexOAuth = new PlexOAuth();
-
 enum LinkedAccountType {
-  Plex = 'Plex',
   Jellyfin = 'Jellyfin',
   Emby = 'Emby',
 }
@@ -73,11 +66,6 @@ const UserLinkedAccountsSettings = () => {
   const accounts: LinkedAccount[] = useMemo(() => {
     const accounts: LinkedAccount[] = [];
     if (!user) return accounts;
-    if (user.userType === UserType.PLEX && user.plexUsername)
-      accounts.push({
-        type: LinkedAccountType.Plex,
-        username: user.plexUsername,
-      });
     if (user.userType === UserType.EMBY && user.jellyfinUsername)
       accounts.push({
         type: LinkedAccountType.Emby,
@@ -91,44 +79,7 @@ const UserLinkedAccountsSettings = () => {
     return accounts;
   }, [user]);
 
-  const linkPlexAccount = async () => {
-    setError(null);
-    try {
-      const authToken = await plexOAuth.login(
-        settings.currentSettings.plexClientIdentifier
-      );
-      await axios.post(
-        `/api/v1/user/${user?.id}/settings/linked-accounts/plex`,
-        {
-          authToken,
-        }
-      );
-      await revalidateUser();
-    } catch (e) {
-      switch (e?.response?.status) {
-        case 401:
-          setError(intl.formatMessage(messages.plexErrorUnauthorized));
-          break;
-        case 422:
-          setError(intl.formatMessage(messages.plexErrorExists));
-          break;
-        default:
-          setError(intl.formatMessage(messages.errorUnknown));
-      }
-    }
-  };
-
   const linkable = [
-    {
-      name: 'Plex',
-      action: () => {
-        plexOAuth.preparePopup();
-        setTimeout(() => linkPlexAccount(), 1500);
-      },
-      hide:
-        settings.currentSettings.mediaServerType !== MediaServerType.PLEX ||
-        accounts.some((a) => a.type === LinkedAccountType.Plex),
-    },
     {
       name: 'Jellyfin',
       action: () => setShowJellyfinModal(true),
@@ -220,11 +171,7 @@ const UserLinkedAccountsSettings = () => {
               className="flex items-center gap-4 overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6"
             >
               <div className="w-12">
-                {acct.type === LinkedAccountType.Plex ? (
-                  <div className="flex aspect-square h-full items-center justify-center rounded-full bg-neutral-800">
-                    <PlexLogo className="w-9" />
-                  </div>
-                ) : acct.type === LinkedAccountType.Emby ? (
+                {acct.type === LinkedAccountType.Emby ? (
                   <EmbyLogo />
                 ) : (
                   <JellyfinLogo />
@@ -242,9 +189,7 @@ const UserLinkedAccountsSettings = () => {
               {enableMediaServerUnlink && (
                 <ConfirmButton
                   onClick={() => {
-                    deleteRequest(
-                      acct.type === LinkedAccountType.Plex ? 'plex' : 'jellyfin'
-                    );
+                    deleteRequest('jellyfin');
                   }}
                   confirmText={intl.formatMessage(globalMessages.areyousure)}
                 >

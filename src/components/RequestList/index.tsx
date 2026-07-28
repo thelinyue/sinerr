@@ -293,8 +293,7 @@ const RequestList = () => {
       </div>
 
       {data.serviceErrors &&
-        (data.serviceErrors.radarr.length > 0 ||
-          data.serviceErrors.sonarr.length > 0) &&
+        (data.serviceErrors.moviepilot?.length > 0) &&
         (hasPermission(Permission.MANAGE_REQUESTS) ||
           hasPermission(Permission.REQUEST_ADVANCED)) && (
           <div className="service-error-banner">
@@ -302,8 +301,7 @@ const RequestList = () => {
             <span>
               {intl.formatMessage(messages.unableToConnect, {
                 services: [
-                  ...data.serviceErrors.radarr.map((s) => s.name),
-                  ...data.serviceErrors.sonarr.map((s) => s.name),
+                  ...(data.serviceErrors.moviepilot?.map((s: { name: string }) => s.name) ?? []),
                 ].join(', '),
               })}
             </span>

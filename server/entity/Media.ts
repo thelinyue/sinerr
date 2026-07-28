@@ -1,13 +1,9 @@
-import RadarrAPI from '@server/api/servarr/radarr';
-import SonarrAPI from '@server/api/servarr/sonarr';
 import { MediaStatus, MediaType } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import { getRepository } from '@server/datasource';
 import { Blocklist } from '@server/entity/Blocklist';
 import type { User } from '@server/entity/User';
 import { Watchlist } from '@server/entity/Watchlist';
-import type { DownloadingItem } from '@server/lib/downloadtracker';
-import downloadTracker from '@server/lib/downloadtracker';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { DbAwareColumn, resolveDbType } from '@server/utils/DbColumnHelper';
@@ -25,6 +21,22 @@ import {
 import Issue from './Issue';
 import { MediaRequest } from './MediaRequest';
 import Season from './Season';
+
+export interface DownloadingItem {
+  downloadId: string;
+  title: string;
+  size: number;
+  sizeleft: number;
+  sizeLeft: number;
+  timeleft: string;
+  status: string;
+  externalId: string;
+  estimatedCompletionTime: string;
+  episode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+  };
+}
 
 @Entity()
 @Index(['tmdbId', 'mediaType'])
@@ -174,12 +186,6 @@ class Media {
   public externalServiceSlug4k?: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
-  public ratingKey?: string | null;
-
-  @Column({ nullable: true, type: 'varchar' })
-  public ratingKey4k?: string | null;
-
-  @Column({ nullable: true, type: 'varchar' })
   public jellyfinMediaId?: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
@@ -192,9 +198,6 @@ class Media {
 
   public mediaUrl?: string;
   public mediaUrl4k?: string;
-
-  public iOSPlexUrl?: string;
-  public iOSPlexUrl4k?: string;
 
   public tautulliUrl?: string;
   public tautulliUrl4k?: string;
@@ -210,183 +213,32 @@ class Media {
     this.externalServiceId4k = null;
     this.externalServiceSlug = null;
     this.externalServiceSlug4k = null;
-    this.ratingKey = null;
-    this.ratingKey4k = null;
     this.jellyfinMediaId = null;
     this.jellyfinMediaId4k = null;
   }
 
   @AfterLoad()
-  public setPlexUrls(): void {
-    const { machineId, webAppUrl } = getSettings().plex;
-    const { externalUrl: tautulliUrl } = getSettings().tautulli;
+  public setMediaUrls(): void {
+    const pageName =
+      getSettings().main.mediaServerType == MediaServerType.EMBY
+        ? 'item'
+        : 'details';
+    const { serverId, externalHostname } = getSettings().jellyfin;
+    const jellyfinHost =
+      externalHostname && externalHostname.length > 0
+        ? externalHostname
+        : getHostname();
 
-    if (getSettings().main.mediaServerType == MediaServerType.PLEX) {
-      if (this.ratingKey) {
-        this.mediaUrl = `${
-          webAppUrl ? webAppUrl : 'https://app.plex.tv/desktop'
-        }#!/server/${machineId}/details?key=%2Flibrary%2Fmetadata%2F${
-          this.ratingKey
-        }`;
-
-        this.iOSPlexUrl = `plex://preplay/?metadataKey=%2Flibrary%2Fmetadata%2F${this.ratingKey}&server=${machineId}`;
-
-        if (tautulliUrl) {
-          this.tautulliUrl = `${tautulliUrl}/info?rating_key=${this.ratingKey}`;
-        }
-      }
-
-      if (this.ratingKey4k) {
-        this.mediaUrl4k = `${
-          webAppUrl ? webAppUrl : 'https://app.plex.tv/desktop'
-        }#!/server/${machineId}/details?key=%2Flibrary%2Fmetadata%2F${
-          this.ratingKey4k
-        }`;
-
-        this.iOSPlexUrl4k = `plex://preplay/?metadataKey=%2Flibrary%2Fmetadata%2F${this.ratingKey4k}&server=${machineId}`;
-
-        if (tautulliUrl) {
-          this.tautulliUrl4k = `${tautulliUrl}/info?rating_key=${this.ratingKey4k}`;
-        }
-      }
-    } else {
-      const pageName =
-        getSettings().main.mediaServerType == MediaServerType.EMBY
-          ? 'item'
-          : 'details';
-      const { serverId, externalHostname } = getSettings().jellyfin;
-      const jellyfinHost =
-        externalHostname && externalHostname.length > 0
-          ? externalHostname
-          : getHostname();
-
-      if (this.jellyfinMediaId) {
-        this.mediaUrl = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId}&context=home&serverId=${serverId}`;
-      }
-      if (this.jellyfinMediaId4k) {
-        this.mediaUrl4k = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId4k}&context=home&serverId=${serverId}`;
-      }
+    if (this.jellyfinMediaId) {
+      this.mediaUrl = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId}&context=home&serverId=${serverId}`;
+    }
+    if (this.jellyfinMediaId4k) {
+      this.mediaUrl4k = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId4k}&context=home&serverId=${serverId}`;
     }
   }
 
   @AfterLoad()
   public setServiceUrl(): void {
-    if (this.mediaType === MediaType.MOVIE) {
-      if (this.serviceId !== null && this.externalServiceSlug !== null) {
-        const settings = getSettings();
-        const server = settings.radarr.find(
-          (radarr) => radarr.id === this.serviceId
-        );
-
-        if (server) {
-          this.serviceUrl = server.externalUrl
-            ? `${server.externalUrl}/movie/${this.externalServiceSlug}`
-            : RadarrAPI.buildUrl(server, `/movie/${this.externalServiceSlug}`);
-        }
-      }
-
-      if (this.serviceId4k !== null && this.externalServiceSlug4k !== null) {
-        const settings = getSettings();
-        const server = settings.radarr.find(
-          (radarr) => radarr.id === this.serviceId4k
-        );
-
-        if (server) {
-          this.serviceUrl4k = server.externalUrl
-            ? `${server.externalUrl}/movie/${this.externalServiceSlug4k}`
-            : RadarrAPI.buildUrl(
-                server,
-                `/movie/${this.externalServiceSlug4k}`
-              );
-        }
-      }
-    }
-
-    if (this.mediaType === MediaType.TV) {
-      if (this.serviceId !== null && this.externalServiceSlug !== null) {
-        const settings = getSettings();
-        const server = settings.sonarr.find(
-          (sonarr) => sonarr.id === this.serviceId
-        );
-
-        if (server) {
-          this.serviceUrl = server.externalUrl
-            ? `${server.externalUrl}/series/${this.externalServiceSlug}`
-            : SonarrAPI.buildUrl(server, `/series/${this.externalServiceSlug}`);
-        }
-      }
-
-      if (this.serviceId4k !== null && this.externalServiceSlug4k !== null) {
-        const settings = getSettings();
-        const server = settings.sonarr.find(
-          (sonarr) => sonarr.id === this.serviceId4k
-        );
-
-        if (server) {
-          this.serviceUrl4k = server.externalUrl
-            ? `${server.externalUrl}/series/${this.externalServiceSlug4k}`
-            : SonarrAPI.buildUrl(
-                server,
-                `/series/${this.externalServiceSlug4k}`
-              );
-        }
-      }
-    }
-  }
-
-  @AfterLoad()
-  public getDownloadingItem(): void {
-    if (this.mediaType === MediaType.MOVIE) {
-      if (
-        this.externalServiceId !== undefined &&
-        this.externalServiceId !== null &&
-        this.serviceId !== undefined &&
-        this.serviceId !== null
-      ) {
-        this.downloadStatus = downloadTracker.getMovieProgress(
-          this.serviceId,
-          this.externalServiceId
-        );
-      }
-
-      if (
-        this.externalServiceId4k !== undefined &&
-        this.externalServiceId4k !== null &&
-        this.serviceId4k !== undefined &&
-        this.serviceId4k !== null
-      ) {
-        this.downloadStatus4k = downloadTracker.getMovieProgress(
-          this.serviceId4k,
-          this.externalServiceId4k
-        );
-      }
-    }
-
-    if (this.mediaType === MediaType.TV) {
-      if (
-        this.externalServiceId !== undefined &&
-        this.externalServiceId !== null &&
-        this.serviceId !== undefined &&
-        this.serviceId !== null
-      ) {
-        this.downloadStatus = downloadTracker.getSeriesProgress(
-          this.serviceId,
-          this.externalServiceId
-        );
-      }
-
-      if (
-        this.externalServiceId4k !== undefined &&
-        this.externalServiceId4k !== null &&
-        this.serviceId4k !== undefined &&
-        this.serviceId4k !== null
-      ) {
-        this.downloadStatus4k = downloadTracker.getSeriesProgress(
-          this.serviceId4k,
-          this.externalServiceId4k
-        );
-      }
-    }
   }
 }
 

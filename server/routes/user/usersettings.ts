@@ -1,5 +1,4 @@
 import JellyfinAPI from '@server/api/jellyfin';
-import PlexTvAPI from '@server/api/plextv';
 import { ApiErrorCode } from '@server/constants/error';
 import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
@@ -48,7 +47,7 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
 
       return res.status(200).json({
         username: user.username,
-        email: user.email,
+        email: user.email ?? undefined,
         locale: user.settings?.locale,
         discoverRegion: user.settings?.discoverRegion,
         streamingRegion: user.settings?.streamingRegion,
@@ -96,16 +95,16 @@ userSettingsRoutes.post<
 
     const oldEmail = user.email;
     user.username = req.body.username;
-    if (user.userType !== UserType.PLEX) {
-      user.email = req.body.email || user.jellyfinUsername || user.email;
-    }
+    user.email = req.body.email || null;
 
-    const existingUser = await userRepository.findOne({
-      where: { email: user.email, id: Not(user.id) },
-    });
+    if (user.email) {
+      const existingUser = await userRepository.findOne({
+        where: { email: user.email, id: Not(user.id) },
+      });
 
-    if (oldEmail !== user.email && existingUser) {
-      throw new ApiError(400, ApiErrorCode.InvalidEmail);
+      if (oldEmail !== user.email && existingUser) {
+        throw new ApiError(400, ApiErrorCode.InvalidEmail);
+      }
     }
 
     // Update quota values only if the user has the correct permissions
@@ -148,7 +147,7 @@ userSettingsRoutes.post<
       originalLanguage: savedUser.settings?.originalLanguage,
       watchlistSyncMovies: savedUser.settings?.watchlistSyncMovies,
       watchlistSyncTv: savedUser.settings?.watchlistSyncTv,
-      email: savedUser.email,
+      email: savedUser.email ?? undefined,
     });
   } catch (e) {
     if (e.errorCode) {
@@ -235,7 +234,7 @@ userSettingsRoutes.post<
       logger.debug('Password overriden by user.', {
         label: 'User Settings',
         userEmail: user.email,
-        changingUser: req.user.email,
+        changingUser: req.user.username,
       });
       return res.status(204).send();
     }
@@ -261,104 +260,6 @@ userSettingsRoutes.post<
     next({ status: 500, message: e.message });
   }
 });
-
-userSettingsRoutes.post<{ authToken: string }>(
-  '/linked-accounts/plex',
-  isOwnProfile(),
-  async (req, res) => {
-    const settings = getSettings();
-    const userRepository = getRepository(User);
-
-    if (!req.user) {
-      return res.status(404).json({ code: ApiErrorCode.Unauthorized });
-    }
-    // Make sure Plex login is enabled
-    if (settings.main.mediaServerType !== MediaServerType.PLEX) {
-      return res.status(500).json({ message: 'Plex login is disabled' });
-    }
-
-    // First we need to use this auth token to get the user's email from plex.tv
-    const plextv = new PlexTvAPI(req.body.authToken);
-    const account = await plextv.getUser();
-
-    // Do not allow linking of an already linked account
-    if (await userRepository.exist({ where: { plexId: account.id } })) {
-      return res.status(422).json({
-        message: 'This Plex account is already linked to a Seerr user',
-      });
-    }
-
-    const user = req.user;
-
-    // Emails do not match
-    if (user.email !== account.email) {
-      return res.status(422).json({
-        message:
-          'This Plex account is registered under a different email address.',
-      });
-    }
-
-    // valid plex user found, link to current user
-    user.userType = UserType.PLEX;
-    user.plexId = account.id;
-    user.plexUsername = account.username;
-    user.plexToken = account.authToken;
-    await userRepository.save(user);
-
-    return res.status(204).send();
-  }
-);
-
-userSettingsRoutes.delete<{ id: string }>(
-  '/linked-accounts/plex',
-  isOwnProfileOrAdmin(),
-  async (req, res) => {
-    const settings = getSettings();
-    const userRepository = getRepository(User);
-
-    // Make sure Plex login is enabled
-    if (settings.main.mediaServerType !== MediaServerType.PLEX) {
-      return res.status(500).json({ message: 'Plex login is disabled' });
-    }
-
-    try {
-      const user = await userRepository
-        .createQueryBuilder('user')
-        .addSelect('user.password')
-        .where({
-          id: Number(req.params.id),
-        })
-        .getOne();
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-
-      if (user.id === 1) {
-        return res.status(400).json({
-          message:
-            'Cannot unlink media server accounts for the primary administrator.',
-        });
-      }
-
-      if (!user.email || !user.password) {
-        return res.status(400).json({
-          message: 'User does not have a local email or password set.',
-        });
-      }
-
-      user.userType = UserType.LOCAL;
-      user.plexId = null;
-      user.plexUsername = null;
-      user.plexToken = null;
-      await userRepository.save(user);
-
-      return res.status(204).send();
-    } catch (e) {
-      return res.status(500).json({ message: e.message });
-    }
-  }
-);
 
 userSettingsRoutes.post<{ username: string; password: string }>(
   '/linked-accounts/jellyfin',
@@ -387,13 +288,15 @@ userSettingsRoutes.post<{ username: string; password: string }>(
       })
     ) {
       return res.status(422).json({
-        message: 'The specified account is already linked to a Seerr user',
+        message: 'The specified account is already linked to a Sinerr user',
       });
     }
 
     const hostname = getHostname();
     const deviceId = Buffer.from(
-      req.user?.id === 1 ? 'BOT_seerr' : `BOT_seerr_${req.user.username ?? ''}`
+      req.user?.id === 1
+        ? 'BOT_sinerr'
+        : `BOT_sinerr_${req.user.username ?? ''}`
     ).toString('base64');
 
     const jellyfinserver = new JellyfinAPI(hostname, undefined, deviceId);
@@ -422,7 +325,7 @@ userSettingsRoutes.post<{ username: string; password: string }>(
         })
       ) {
         return res.status(422).json({
-          message: 'The specified account is already linked to a Seerr user',
+          message: 'The specified account is already linked to a Sinerr user',
         });
       }
 
@@ -495,9 +398,9 @@ userSettingsRoutes.delete<{ id: string }>(
         });
       }
 
-      if (!user.email || !user.password) {
+      if (!user.password) {
         return res.status(400).json({
-          message: 'User does not have a local email or password set.',
+          message: 'User does not have a local password set.',
         });
       }
 
@@ -554,13 +457,13 @@ userSettingsRoutes.post<{ secret: string }>(
         })
       ) {
         return res.status(422).json({
-          message: 'The specified account is already linked to a Seerr user',
+          message: 'The specified account is already linked to a Sinerr user',
         });
       }
 
       const user = req.user;
       const deviceId = Buffer.from(
-        user.id === 1 ? 'BOT_seerr' : `BOT_seerr_${user.username ?? ''}`
+        user.id === 1 ? 'BOT_sinerr' : `BOT_sinerr_${user.username ?? ''}`
       ).toString('base64');
 
       user.userType =

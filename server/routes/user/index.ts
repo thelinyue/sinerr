@@ -1,21 +1,14 @@
 import JellyfinAPI from '@server/api/jellyfin';
-import PlexTvAPI from '@server/api/plextv';
-import TautulliAPI from '@server/api/tautulli';
-import { MediaType } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
 import dataSource, { getRepository } from '@server/datasource';
-import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import { User } from '@server/entity/User';
 import { UserPushSubscription } from '@server/entity/UserPushSubscription';
-import { Watchlist } from '@server/entity/Watchlist';
-import type { WatchlistResponse } from '@server/interfaces/api/discoverInterfaces';
 import type {
   QuotaResponse,
   UserRequestsResponse,
   UserResultsResponse,
-  UserWatchDataResponse,
 } from '@server/interfaces/api/userInterfaces';
 import { Permission, hasPermission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
@@ -26,7 +19,7 @@ import { normalizeJellyfinGuid } from '@server/utils/jellyfin';
 import { isOwnProfileOrAdmin } from '@server/utils/profileMiddleware';
 import { Router } from 'express';
 import gravatarUrl from 'gravatar-url';
-import { findIndex, sortBy } from 'lodash';
+
 import type { EntityManager } from 'typeorm';
 import { In, Not } from 'typeorm';
 import userSettingsRoutes from './usersettings';
@@ -78,7 +71,7 @@ router.get('/', async (req, res, next) => {
 
     if (q) {
       query = query.where(
-        'LOWER(user.username) LIKE :q OR LOWER(user.email) LIKE :q OR LOWER(user.plexUsername) LIKE :q OR LOWER(user.jellyfinUsername) LIKE :q',
+        'LOWER(user.username) LIKE :q OR LOWER(user.email) LIKE :q OR LOWER(user.jellyfinUsername) LIKE :q',
         { q: `%${q}%` }
       );
     }
@@ -98,14 +91,10 @@ router.get('/', async (req, res, next) => {
         query = query
           .addSelect(
             `CASE WHEN (user.username IS NULL OR user.username = '') THEN (
-                CASE WHEN (user.plexUsername IS NULL OR user.plexUsername = '') THEN (
-                  CASE WHEN (user.jellyfinUsername IS NULL OR user.jellyfinUsername = '') THEN
-                    "user"."email"
-                  ELSE
-                    LOWER(user.jellyfinUsername)
-                  END)
+                CASE WHEN (user.jellyfinUsername IS NULL OR user.jellyfinUsername = '') THEN
+                  COALESCE("user"."email", '')
                 ELSE
-                  LOWER(user.plexUsername)
+                  LOWER(user.jellyfinUsername)
                 END)
               ELSE
                 LOWER(user.username)
@@ -175,26 +164,34 @@ router.post(
       const settings = getSettings();
 
       const body = req.body;
-      const email = body.email || body.username;
+      const username = body.username;
       const userRepository = getRepository(User);
+
+      if (!username) {
+        return next({
+          status: 400,
+          message: 'Username is required.',
+        });
+      }
 
       const existingUser = await userRepository
         .createQueryBuilder('user')
-        .where('user.email = :email', {
-          email: email.toLowerCase(),
+        .where('user.username = :username', {
+          username,
         })
         .getOne();
 
       if (existingUser) {
         return next({
           status: 409,
-          message: 'User already exists with submitted email.',
+          message: 'User already exists with submitted username.',
           errors: ['USER_EXISTS'],
         });
       }
 
       const passedExplicitPassword = body.password && body.password.length > 0;
-      const avatar = gravatarUrl(email, { default: 'mm', size: 200 });
+      const avatar =
+        body.avatar ?? gravatarUrl(username, { default: 'mm', size: 200 });
 
       if (
         !passedExplicitPassword &&
@@ -204,12 +201,11 @@ router.post(
       }
 
       const user = new User({
-        email,
-        avatar: body.avatar ?? avatar,
-        username: body.username,
+        email: body.email || null,
+        avatar,
+        username,
         password: body.password,
         permissions: settings.main.defaultPermissions,
-        plexToken: '',
         userType: UserType.LOCAL,
       });
 
@@ -655,78 +651,6 @@ router.delete<{ id: string }>(
 );
 
 router.post(
-  '/import-from-plex',
-  isAuthenticated(Permission.MANAGE_USERS),
-  async (req, res, next) => {
-    try {
-      const settings = getSettings();
-      const userRepository = getRepository(User);
-      const body = req.body as { plexIds: string[] } | undefined;
-
-      // taken from auth.ts
-      const mainUser = await userRepository.findOneOrFail({
-        select: { id: true, plexToken: true },
-        where: { id: 1 },
-      });
-      const mainPlexTv = new PlexTvAPI(mainUser.plexToken ?? '');
-
-      const plexUsersResponse = await mainPlexTv.getUsers();
-      const createdUsers: User[] = [];
-      let refreshedUsers = 0;
-      for (const rawUser of plexUsersResponse.MediaContainer.User) {
-        const account = rawUser.$;
-
-        if (account.email) {
-          const user = await userRepository
-            .createQueryBuilder('user')
-            .where('user.plexId = :id', { id: account.id })
-            .orWhere('user.email = :email', {
-              email: account.email.toLowerCase(),
-            })
-            .getOne();
-
-          if (user) {
-            // Update the user's avatar with their Plex thumbnail, in case it changed
-            user.avatar = account.thumb;
-            user.email = account.email;
-            user.plexUsername = account.username;
-
-            // In case the user was previously a local account
-            if (user.userType === UserType.LOCAL) {
-              user.userType = UserType.PLEX;
-              user.plexId = parseInt(account.id);
-            }
-            await userRepository.save(user);
-            refreshedUsers += 1;
-          } else if (!body || body.plexIds.includes(account.id)) {
-            if (await mainPlexTv.checkUserAccess(parseInt(account.id))) {
-              const newUser = new User({
-                plexUsername: account.username,
-                email: account.email,
-                permissions: settings.main.defaultPermissions,
-                plexId: parseInt(account.id),
-                plexToken: '',
-                avatar: account.thumb,
-                userType: UserType.PLEX,
-              });
-              await userRepository.save(newUser);
-              createdUsers.push(newUser);
-            }
-          }
-        }
-      }
-
-      return res.status(201).json({
-        createdUsers: User.filterMany(createdUsers),
-        refreshedUsers,
-      });
-    } catch (e) {
-      next({ status: 500, message: e.message });
-    }
-  }
-);
-
-router.post(
   '/import-from-jellyfin',
   isAuthenticated(Permission.MANAGE_USERS),
   async (req, res, next) => {
@@ -781,9 +705,9 @@ router.post(
             jellyfinUsername: jellyfinUser?.Name,
             jellyfinUserId: jellyfinUser?.Id,
             jellyfinDeviceId: Buffer.from(
-              `BOT_seerr_${jellyfinUser?.Name ?? ''}`
+              `BOT_sinerr_${jellyfinUser?.Name ?? ''}`
             ).toString('base64'),
-            email: jellyfinUser?.Name,
+            username: jellyfinUser?.Name,
             permissions: settings.main.defaultPermissions,
             avatar: `/avatarproxy/${jellyfinUser?.Id}`,
             userType:
@@ -833,180 +757,6 @@ router.get<{ id: string }, QuotaResponse>(
     } catch (e) {
       next({ status: 404, message: e.message });
     }
-  }
-);
-
-router.get<{ id: string }, UserWatchDataResponse>(
-  '/:id/watch_data',
-  isOwnProfileOrAdmin(),
-  async (req, res, next) => {
-    const settings = getSettings().tautulli;
-
-    if (!settings.hostname || !settings.port || !settings.apiKey) {
-      return next({
-        status: 404,
-        message: 'Tautulli API not configured.',
-      });
-    }
-
-    try {
-      const user = await getRepository(User).findOneOrFail({
-        where: { id: Number(req.params.id) },
-        select: { id: true, plexId: true },
-      });
-
-      const tautulli = new TautulliAPI(settings);
-
-      const watchStats = await tautulli.getUserWatchStats(user);
-      const watchHistory = await tautulli.getUserWatchHistory(user);
-
-      const recentlyWatched = sortBy(
-        await getRepository(Media).find({
-          where: [
-            {
-              mediaType: MediaType.MOVIE,
-              ratingKey: In(
-                watchHistory
-                  .filter((record) => record.media_type === 'movie')
-                  .map((record) => record.rating_key)
-              ),
-            },
-            {
-              mediaType: MediaType.MOVIE,
-              ratingKey4k: In(
-                watchHistory
-                  .filter((record) => record.media_type === 'movie')
-                  .map((record) => record.rating_key)
-              ),
-            },
-            {
-              mediaType: MediaType.TV,
-              ratingKey: In(
-                watchHistory
-                  .filter((record) => record.media_type === 'episode')
-                  .map((record) => record.grandparent_rating_key)
-              ),
-            },
-            {
-              mediaType: MediaType.TV,
-              ratingKey4k: In(
-                watchHistory
-                  .filter((record) => record.media_type === 'episode')
-                  .map((record) => record.grandparent_rating_key)
-              ),
-            },
-          ],
-        }),
-        [
-          (media) =>
-            findIndex(
-              watchHistory,
-              (record) =>
-                (!!media.ratingKey &&
-                  parseInt(media.ratingKey) ===
-                    (record.media_type === 'movie'
-                      ? record.rating_key
-                      : record.grandparent_rating_key)) ||
-                (!!media.ratingKey4k &&
-                  parseInt(media.ratingKey4k) ===
-                    (record.media_type === 'movie'
-                      ? record.rating_key
-                      : record.grandparent_rating_key))
-            ),
-        ]
-      );
-
-      return res.status(200).json({
-        recentlyWatched,
-        playCount: watchStats.total_plays,
-      });
-    } catch (e) {
-      logger.error('Something went wrong fetching user watch data', {
-        label: 'API',
-        errorMessage: e.message,
-        userId: req.params.id,
-      });
-      next({
-        status: 500,
-        message: 'Failed to fetch user watch data.',
-      });
-    }
-  }
-);
-
-router.get<{ id: string }, WatchlistResponse>(
-  '/:id/watchlist',
-  async (req, res, next) => {
-    if (
-      Number(req.params.id) !== req.user?.id &&
-      !req.user?.hasPermission(
-        [Permission.MANAGE_REQUESTS, Permission.WATCHLIST_VIEW],
-        {
-          type: 'or',
-        }
-      )
-    ) {
-      return next({
-        status: 403,
-        message: "You do not have permission to view this user's Watchlist.",
-      });
-    }
-
-    const itemsPerPage = 20;
-    const page = req.query.page ? Number(req.query.page) : 1;
-    const offset = (page - 1) * itemsPerPage;
-
-    const user = await getRepository(User).findOneOrFail({
-      where: { id: Number(req.params.id) },
-      select: ['id', 'plexToken'],
-    });
-
-    if (user) {
-      const [result, total] = await getRepository(Watchlist).findAndCount({
-        where: { requestedBy: { id: user?.id } },
-        relations: {
-          /*requestedBy: true,media:true*/
-        },
-        // loadRelationIds: true,
-        take: itemsPerPage,
-        skip: offset,
-      });
-      if (total) {
-        return res.json({
-          page: page,
-          totalPages: Math.ceil(total / itemsPerPage),
-          totalResults: total,
-          results: result,
-        });
-      }
-    }
-
-    // We will just return an empty array if the user has no Plex token
-    if (!user.plexToken) {
-      return res.json({
-        page: 1,
-        totalPages: 1,
-        totalResults: 0,
-        results: [],
-      });
-    }
-
-    const plexTV = new PlexTvAPI(user.plexToken);
-
-    const watchlist = await plexTV.getWatchlist({ offset });
-
-    return res.json({
-      page,
-      totalPages: Math.ceil(watchlist.totalSize / itemsPerPage),
-      totalResults: watchlist.totalSize,
-      results: watchlist.items.map((item) => ({
-        id: item.tmdbId,
-        ratingKey: item.ratingKey,
-        title: item.title,
-        mediaType: item.type === 'show' ? 'tv' : 'movie',
-        tmdbId: item.tmdbId,
-      })),
-    });
   }
 );
 

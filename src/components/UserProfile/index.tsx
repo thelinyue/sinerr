@@ -6,7 +6,7 @@ import RequestCard from '@app/components/RequestCard';
 import Slider from '@app/components/Slider';
 import TmdbTitleCard from '@app/components/TitleCard/TmdbTitleCard';
 import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
-import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
 import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
@@ -34,10 +34,8 @@ const messages = defineMessages('components.UserProfile', {
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
   recentlywatched: 'Recently Watched',
-  plexwatchlist: 'Plex Watchlist',
-  localWatchlist: "{username}'s Watchlist",
-  emptywatchlist:
-    'Media added to your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink> will appear here.',
+  watchlist: "{username}'s Watchlist",
+  emptywatchlist: 'Media added to your watchlist will appear here.',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -75,21 +73,17 @@ const UserProfile = () => {
   );
   const { data: watchData, error: watchDataError } =
     useSWR<UserWatchDataResponse>(
-      user?.userType === UserType.PLEX &&
-        (user.id === currentUser?.id || currentHasPermission(Permission.ADMIN))
-        ? `/api/v1/user/${user.id}/watch_data`
+      user?.id === currentUser?.id || currentHasPermission(Permission.ADMIN)
+        ? `/api/v1/user/${user?.id}/watch_data`
         : null
     );
 
   const { data: watchlistItems, error: watchlistError } =
     useSWR<WatchlistResponse>(
       user?.id === currentUser?.id ||
-        currentHasPermission(
-          [Permission.MANAGE_REQUESTS, Permission.WATCHLIST_VIEW],
-          {
-            type: 'or',
-          }
-        )
+        currentHasPermission(Permission.MANAGE_REQUESTS, {
+          type: 'or',
+        })
         ? `/api/v1/user/${user?.id}/watchlist`
         : null,
       {
@@ -119,12 +113,9 @@ const UserProfile = () => {
     return <ErrorPage statusCode={404} />;
   }
 
-  const watchlistSliderTitle = intl.formatMessage(
-    user.userType === UserType.PLEX
-      ? messages.plexwatchlist
-      : messages.localWatchlist,
-    { username: user.displayName }
-  );
+  const watchlistSliderTitle = intl.formatMessage(messages.watchlist, {
+    username: user.displayName,
+  });
 
   return (
     <>
@@ -324,10 +315,7 @@ const UserProfile = () => {
           </>
         )}
       {(user.id === currentUser?.id ||
-        currentHasPermission(
-          [Permission.MANAGE_REQUESTS, Permission.WATCHLIST_VIEW],
-          { type: 'or' }
-        )) &&
+        currentHasPermission(Permission.MANAGE_REQUESTS, { type: 'or' })) &&
         (!watchlistItems ||
           !!watchlistItems.results.length ||
           (user.id === currentUser?.id &&
@@ -352,18 +340,7 @@ const UserProfile = () => {
               sliderKey="watchlist"
               isLoading={!watchlistItems}
               isEmpty={!!watchlistItems && watchlistItems.results.length === 0}
-              emptyMessage={intl.formatMessage(messages.emptywatchlist, {
-                PlexWatchlistSupportLink: (msg: React.ReactNode) => (
-                  <a
-                    href="https://support.plex.tv/articles/universal-watchlist/"
-                    className="text-white transition duration-300 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {msg}
-                  </a>
-                ),
-              })}
+              emptyMessage={intl.formatMessage(messages.emptywatchlist)}
               items={watchlistItems?.results.map((item) => (
                 <TmdbTitleCard
                   id={item.tmdbId}
@@ -375,9 +352,8 @@ const UserProfile = () => {
             />
           </>
         )}
-      {user.userType === UserType.PLEX &&
-        (user.id === currentUser?.id ||
-          currentHasPermission(Permission.ADMIN)) &&
+      {(user.id === currentUser?.id ||
+        currentHasPermission(Permission.ADMIN)) &&
         (!watchData || !!watchData.recentlyWatched?.length) &&
         !watchDataError && (
           <>

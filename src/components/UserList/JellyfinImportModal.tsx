@@ -162,21 +162,16 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     >
       {data?.length ? (
         <>
-          {settings.currentSettings.newPlexLogin && (
-            <Alert
-              title={intl.formatMessage(messages.newJellyfinsigninenabled, {
-                mediaServerName:
-                  settings.currentSettings.mediaServerType ===
-                  MediaServerType.EMBY
-                    ? 'Emby'
-                    : 'Jellyfin',
-                strong: (msg: React.ReactNode) => (
-                  <strong className="font-semibold text-white">{msg}</strong>
-                ),
-              })}
-              type="info"
-            />
-          )}
+          <Alert
+            title={intl.formatMessage(messages.newJellyfinsigninenabled, {
+              mediaServerName:
+                settings.currentSettings.mediaServerType ===
+                MediaServerType.EMBY
+                  ? 'Emby'
+                  : 'Jellyfin',
+            })}
+            type="info"
+          />
           <div className="flex flex-col">
             <div className="-mx-4 sm:mx-0">
               <div className="inline-block min-w-full py-2 align-middle">

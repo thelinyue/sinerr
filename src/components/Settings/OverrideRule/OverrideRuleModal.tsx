@@ -12,7 +12,7 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
 import type OverrideRule from '@server/entity/OverrideRule';
-import type { RadarrSettings, SonarrSettings } from '@server/lib/settings';
+import type { MoviePilotSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Field, Formik } from 'formik';
 import { useCallback, useEffect, useState } from 'react';
@@ -55,15 +55,13 @@ type OptionType = {
 interface OverrideRuleModalProps {
   rule: OverrideRule | null;
   onClose: () => void;
-  radarrServices: RadarrSettings[];
-  sonarrServices: SonarrSettings[];
+  moviepilotServices: MoviePilotSettings[];
 }
 
 const OverrideRuleModal = ({
   onClose,
   rule,
-  radarrServices,
-  sonarrServices,
+  moviepilotServices,
 }: OverrideRuleModalProps) => {
   const intl = useIntl();
   const { addToast } = useToasts();
@@ -91,7 +89,7 @@ const OverrideRuleModal = ({
         baseUrl?: string;
         useSsl?: boolean;
       },
-      type: 'radarr' | 'sonarr'
+      type: 'moviepilot'
     ) => {
       setIsTesting(true);
       try {
@@ -118,21 +116,14 @@ const OverrideRuleModal = ({
   );
 
   useEffect(() => {
-    const radarrMatch = radarrServices.find(
-      (s) => s.id === rule?.radarrServiceId
+    const match = moviepilotServices.find(
+      (s) => s.id === rule?.serviceId
     );
-    if (radarrMatch) getServiceInfos(radarrMatch, 'radarr');
-
-    const sonarrMatch = sonarrServices.find(
-      (s) => s.id === rule?.sonarrServiceId
-    );
-    if (sonarrMatch) getServiceInfos(sonarrMatch, 'sonarr');
+    if (match) getServiceInfos(match, 'moviepilot');
   }, [
     getServiceInfos,
-    radarrServices,
-    rule?.radarrServiceId,
-    rule?.sonarrServiceId,
-    sonarrServices,
+    moviepilotServices,
+    rule?.serviceId,
   ]);
 
   return (
@@ -149,8 +140,7 @@ const OverrideRuleModal = ({
     >
       <Formik
         initialValues={{
-          radarrServiceId: rule?.radarrServiceId,
-          sonarrServiceId: rule?.sonarrServiceId,
+          serviceId: rule?.serviceId,
           users: rule?.users,
           genre: rule?.genre,
           language: rule?.language,
@@ -169,8 +159,7 @@ const OverrideRuleModal = ({
               profileId: Number(values.profileId) || null,
               rootFolder: values.rootFolder || null,
               tags: values.tags || null,
-              radarrServiceId: values.radarrServiceId,
-              sonarrServiceId: values.sonarrServiceId,
+              serviceId: values.serviceId,
             };
             if (!rule) {
               await axios.post('/api/v1/overrideRule', submission);
@@ -243,34 +232,18 @@ const OverrideRuleModal = ({
                       <select
                         id="service"
                         name="service"
-                        defaultValue={
-                          values.radarrServiceId !== null
-                            ? `radarr-${values.radarrServiceId}`
-                            : `sonarr-${values.sonarrServiceId}`
-                        }
+                        value={values.serviceId ?? ''}
                         onChange={(e) => {
-                          const id = Number(e.target.value.split('-')[1]);
-                          if (e.target.value.startsWith('radarr-')) {
-                            setFieldValue('radarrServiceId', id);
-                            setFieldValue('sonarrServiceId', null);
-                            const match = radarrServices.find(
+                          const id = Number(e.target.value);
+                          setFieldValue('serviceId', id || null);
+                          if (id) {
+                            const match = moviepilotServices.find(
                               (s) => s.id === id
                             );
                             if (match) {
-                              getServiceInfos(match, 'radarr');
-                            }
-                          } else if (e.target.value.startsWith('sonarr-')) {
-                            setFieldValue('radarrServiceId', null);
-                            setFieldValue('sonarrServiceId', id);
-                            const match = sonarrServices.find(
-                              (s) => s.id === id
-                            );
-                            if (match) {
-                              getServiceInfos(match, 'sonarr');
+                              getServiceInfos(match, 'moviepilot');
                             }
                           } else {
-                            setFieldValue('radarrServiceId', null);
-                            setFieldValue('sonarrServiceId', null);
                             setIsValidated(false);
                           }
                         }}
@@ -278,20 +251,12 @@ const OverrideRuleModal = ({
                         <option value="">
                           {intl.formatMessage(messages.selectService)}
                         </option>
-                        {radarrServices.map((radarr) => (
+                        {moviepilotServices.map((mp) => (
                           <option
-                            key={`radarr-${radarr.id}`}
-                            value={`radarr-${radarr.id}`}
+                            key={`moviepilot-${mp.id}`}
+                            value={mp.id}
                           >
-                            {radarr.name}
-                          </option>
-                        ))}
-                        {sonarrServices.map((sonarr) => (
-                          <option
-                            key={`sonarr-${sonarr.id}`}
-                            value={`sonarr-${sonarr.id}`}
-                          >
-                            {sonarr.name}
+                            {mp.name}
                           </option>
                         ))}
                       </select>
@@ -342,11 +307,9 @@ const OverrideRuleModal = ({
                     <div className="form-input-field">
                       <GenreSelector
                         type={
-                          values.radarrServiceId != null
+                          values.serviceId != null
                             ? 'movie'
-                            : values.sonarrServiceId != null
-                              ? 'tv'
-                              : 'tv'
+                            : 'tv'
                         }
                         defaultValue={values.genre}
                         isMulti

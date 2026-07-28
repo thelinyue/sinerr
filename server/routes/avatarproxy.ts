@@ -23,11 +23,11 @@ async function initAvatarImageProxy() {
       select: ['id', 'jellyfinUserId', 'jellyfinDeviceId'],
       order: { id: 'ASC' },
     });
-    const deviceId = admin?.jellyfinDeviceId || 'BOT_seerr';
+    const deviceId = admin?.jellyfinDeviceId || 'BOT_sinerr';
     const authToken = getSettings().jellyfin.apiKey;
     _avatarImageProxy = new ImageProxy('avatar', '', {
       headers: {
-        'X-Emby-Authorization': `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="${deviceId}", Version="${
+        'X-Emby-Authorization': `MediaBrowser Client="Sinerr", Device="Sinerr", DeviceId="${deviceId}", Version="${
           getSettings().main.mediaServerType === MediaServerType.EMBY
             ? '1.0.0'
             : getAppVersion()

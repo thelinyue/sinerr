@@ -3,7 +3,6 @@ import SensitiveInput from '@app/components/Common/SensitiveInput';
 import useSettings from '@app/hooks/useSettings';
 import defineMessages from '@app/utils/defineMessages';
 import { ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { MediaServerType } from '@server/constants/server';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
@@ -15,15 +14,13 @@ import * as Yup from 'yup';
 const messages = defineMessages('components.Login', {
   loginwithapp: 'Login with {appName}',
   username: 'Username',
-  email: 'Email Address',
   password: 'Password',
-  validationemailrequired: 'You must provide a valid email address',
+  validationusernamerequired: 'You must provide a username',
   validationpasswordrequired: 'You must provide a password',
   jellyfinLocalLoginHint:
-    "If you haven't set an email address in your profile, use your {mediaServerName} username instead.",
+    "If you haven't set a username in your profile, use your {mediaServerName} username instead.",
   loginerror: 'Something went wrong while trying to sign in.',
-  credentialerror: 'The email address or password is incorrect.',
-  tipEmailHasTrailingWhitespace: 'The email ends with whitespace',
+  credentialerror: 'The username or password is incorrect.',
   signingin: 'Signing In…',
   signin: 'Sign In',
   forgotpassword: 'Forgot Password?',
@@ -39,8 +36,8 @@ const LocalLogin = ({ revalidate }: LocalLoginProps) => {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const LoginSchema = Yup.object().shape({
-    email: Yup.string().required(
-      intl.formatMessage(messages.validationemailrequired)
+    username: Yup.string().required(
+      intl.formatMessage(messages.validationusernamerequired)
     ),
     password: Yup.string().required(
       intl.formatMessage(messages.validationpasswordrequired)
@@ -54,7 +51,7 @@ const LocalLogin = ({ revalidate }: LocalLoginProps) => {
   return (
     <Formik
       initialValues={{
-        email: '',
+        username: '',
         password: '',
       }}
       validationSchema={LoginSchema}
@@ -62,7 +59,7 @@ const LocalLogin = ({ revalidate }: LocalLoginProps) => {
       onSubmit={async (values) => {
         try {
           await axios.post('/api/v1/auth/local', {
-            email: values.email,
+            username: values.username,
             password: values.password,
           });
         } catch (e) {
@@ -78,7 +75,7 @@ const LocalLogin = ({ revalidate }: LocalLoginProps) => {
         }
       }}
     >
-      {({ errors, touched, values, isSubmitting, isValid }) => {
+      {({ errors, touched, isSubmitting, isValid }) => {
         return (
           <>
             <Form data-form-type="login">
@@ -92,28 +89,19 @@ const LocalLogin = ({ revalidate }: LocalLoginProps) => {
                 <div className="mb-4 mt-1">
                   <div className="form-input-field">
                     <Field
-                      id="email"
-                      name="email"
-                      placeholder={intl.formatMessage(messages.email)}
+                      id="username"
+                      name="username"
+                      placeholder={intl.formatMessage(messages.username)}
                       type="text"
-                      inputMode="email"
-                      data-testid="email"
-                      data-form-type="username,email"
+                      data-testid="username"
+                      data-form-type="username"
                       className="!bg-gray-700/80 placeholder:text-gray-400"
                     />
                   </div>
-                  {touched.email && values.email.match(/\s$/) && (
-                    <div className="warning label-tip flex items-center">
-                      <ExclamationTriangleIcon className="mr-1 h-4 w-4" />
-                      {intl.formatMessage(
-                        messages.tipEmailHasTrailingWhitespace
-                      )}
-                    </div>
-                  )}
-                  {errors.email &&
-                    touched.email &&
-                    typeof errors.email === 'string' && (
-                      <div className="error">{errors.email}</div>
+                  {errors.username &&
+                    touched.username &&
+                    typeof errors.username === 'string' && (
+                      <div className="error">{errors.username}</div>
                     )}
                   {(settings.currentSettings.mediaServerType ===
                     MediaServerType.JELLYFIN ||

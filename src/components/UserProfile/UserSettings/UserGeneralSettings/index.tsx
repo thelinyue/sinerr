@@ -37,7 +37,6 @@ const messages = defineMessages(
     saving: 'Saving…',
     mediaServerUser: '{mediaServerName} User',
     accounttype: 'Account Type',
-    plexuser: 'Plex User',
     localuser: 'Local User',
     role: 'Role',
     owner: 'Owner',
@@ -63,12 +62,10 @@ const messages = defineMessages(
     languageDefault: 'Default ({language})',
     validationemailrequired: 'Email required',
     validationemailformat: 'Valid email required',
-    plexwatchlistsyncmovies: 'Auto-Request Movies',
-    plexwatchlistsyncmoviestip:
-      'Automatically request movies on your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink>',
-    plexwatchlistsyncseries: 'Auto-Request Series',
-    plexwatchlistsyncseriestip:
-      'Automatically request series on your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink>',
+    watchlistsyncmovies: 'Auto-Request Movies',
+    watchlistsyncmoviestip: 'Automatically request movies on your watchlist',
+    watchlistsyncseries: 'Auto-Request Series',
+    watchlistsyncseriestip: 'Automatically request series on your watchlist',
   }
 );
 
@@ -97,24 +94,11 @@ const UserGeneralSettings = () => {
   );
 
   const UserGeneralSettingsSchema = Yup.object().shape({
-    email:
-      // email is required for everybody except non-admin jellyfin users
-      user?.id === 1 ||
-      (user?.userType !== UserType.JELLYFIN && user?.userType !== UserType.EMBY)
-        ? Yup.string()
-            .test(
-              'email',
-              intl.formatMessage(messages.validationemailformat),
-              (value) =>
-                !value || validator.isEmail(value, { require_tld: false })
-            )
-            .required(intl.formatMessage(messages.validationemailrequired))
-        : Yup.string().test(
-            'email',
-            intl.formatMessage(messages.validationemailformat),
-            (value) =>
-              !value || validator.isEmail(value, { require_tld: false })
-          ),
+    email: Yup.string().test(
+      'email',
+      intl.formatMessage(messages.validationemailformat),
+      (value) => !value || validator.isEmail(value, { require_tld: false })
+    ),
   });
 
   useEffect(() => {
@@ -168,8 +152,7 @@ const UserGeneralSettings = () => {
           try {
             await axios.post(`/api/v1/user/${user?.id}/settings/main`, {
               username: values.displayName,
-              email:
-                values.email || user?.jellyfinUsername || user?.plexUsername,
+              email: values.email || user?.jellyfinUsername,
               locale: values.locale,
               discoverRegion: values.discoverRegion,
               streamingRegion: values.streamingRegion,
@@ -243,11 +226,7 @@ const UserGeneralSettings = () => {
                 </label>
                 <div className="mb-1 text-sm font-medium leading-5 text-gray-400 sm:mt-2">
                   <div className="flex max-w-lg items-center">
-                    {user?.userType === UserType.PLEX ? (
-                      <Badge badgeType="warning">
-                        {intl.formatMessage(messages.plexuser)}
-                      </Badge>
-                    ) : user?.userType === UserType.LOCAL ? (
+                    {user?.userType === UserType.LOCAL ? (
                       <Badge badgeType="default">
                         {intl.formatMessage(messages.localuser)}
                       </Badge>
@@ -291,11 +270,7 @@ const UserGeneralSettings = () => {
                       id="displayName"
                       name="displayName"
                       type="text"
-                      placeholder={
-                        user?.jellyfinUsername ||
-                        user?.plexUsername ||
-                        user?.email
-                      }
+                      placeholder={user?.jellyfinUsername || user?.email}
                     />
                   </div>
                   {errors.displayName &&
@@ -319,7 +294,7 @@ const UserGeneralSettings = () => {
                       name="email"
                       type="text"
                       placeholder="example@domain.com"
-                      disabled={user?.plexUsername}
+                      disabled={false}
                       className={
                         user?.warnings.find((w) => w === 'userEmailRequired')
                           ? 'border-2 border-red-400 focus:border-blue-600'
@@ -506,96 +481,62 @@ const UserGeneralSettings = () => {
               {hasPermission(
                 [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_MOVIE],
                 { type: 'or' }
-              ) &&
-                user?.userType === UserType.PLEX && (
-                  <div className="form-row">
-                    <label
-                      htmlFor="watchlistSyncMovies"
-                      className="checkbox-label"
-                    >
-                      <span>
-                        {intl.formatMessage(messages.plexwatchlistsyncmovies)}
-                      </span>
-                      <span className="label-tip">
-                        {intl.formatMessage(
-                          messages.plexwatchlistsyncmoviestip,
-                          {
-                            PlexWatchlistSupportLink: (
-                              msg: React.ReactNode
-                            ) => (
-                              <a
-                                href="https://support.plex.tv/articles/universal-watchlist/"
-                                className="text-white transition duration-300 hover:underline"
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {msg}
-                              </a>
-                            ),
-                          }
-                        )}
-                      </span>
-                    </label>
-                    <div className="form-input-area">
-                      <Field
-                        type="checkbox"
-                        id="watchlistSyncMovies"
-                        name="watchlistSyncMovies"
-                        onChange={() => {
-                          setFieldValue(
-                            'watchlistSyncMovies',
-                            !values.watchlistSyncMovies
-                          );
-                        }}
-                      />
-                    </div>
+              ) && (
+                <div className="form-row">
+                  <label
+                    htmlFor="watchlistSyncMovies"
+                    className="checkbox-label"
+                  >
+                    <span>
+                      {intl.formatMessage(messages.watchlistsyncmovies)}
+                    </span>
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.watchlistsyncmoviestip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field
+                      type="checkbox"
+                      id="watchlistSyncMovies"
+                      name="watchlistSyncMovies"
+                      onChange={() => {
+                        setFieldValue(
+                          'watchlistSyncMovies',
+                          !values.watchlistSyncMovies
+                        );
+                      }}
+                    />
                   </div>
-                )}
+                </div>
+              )}
               {hasPermission(
                 [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_TV],
                 { type: 'or' }
-              ) &&
-                user?.userType === UserType.PLEX && (
-                  <div className="form-row">
-                    <label htmlFor="watchlistSyncTv" className="checkbox-label">
-                      <span>
-                        {intl.formatMessage(messages.plexwatchlistsyncseries)}
-                      </span>
-                      <span className="label-tip">
-                        {intl.formatMessage(
-                          messages.plexwatchlistsyncseriestip,
-                          {
-                            PlexWatchlistSupportLink: (
-                              msg: React.ReactNode
-                            ) => (
-                              <a
-                                href="https://support.plex.tv/articles/universal-watchlist/"
-                                className="text-white transition duration-300 hover:underline"
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {msg}
-                              </a>
-                            ),
-                          }
-                        )}
-                      </span>
-                    </label>
-                    <div className="form-input-area">
-                      <Field
-                        type="checkbox"
-                        id="watchlistSyncTv"
-                        name="watchlistSyncTv"
-                        onChange={() => {
-                          setFieldValue(
-                            'watchlistSyncTv',
-                            !values.watchlistSyncTv
-                          );
-                        }}
-                      />
-                    </div>
+              ) && (
+                <div className="form-row">
+                  <label htmlFor="watchlistSyncTv" className="checkbox-label">
+                    <span>
+                      {intl.formatMessage(messages.watchlistsyncseries)}
+                    </span>
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.watchlistsyncseriestip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field
+                      type="checkbox"
+                      id="watchlistSyncTv"
+                      name="watchlistSyncTv"
+                      onChange={() => {
+                        setFieldValue(
+                          'watchlistSyncTv',
+                          !values.watchlistSyncTv
+                        );
+                      }}
+                    />
                   </div>
-                )}
+                </div>
+              )}
               <div className="actions">
                 <div className="flex justify-end">
                   <span className="ml-3 inline-flex rounded-md shadow-sm">

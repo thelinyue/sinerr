@@ -4,11 +4,11 @@ import type * as OpenApiPlugin from 'docusaurus-plugin-openapi-docs';
 import { themes as prismThemes } from 'prism-react-renderer';
 
 const config: Config = {
-  title: 'Seerr',
+  title: 'Sinerr',
   tagline: 'One Stop Solution for all your media request needs',
   favicon: 'img/favicon.ico',
 
-  url: 'https://docs.seerr.dev',
+  url: 'https://docs.sinerr.dev',
   baseUrl: '/',
   trailingSlash: true,
 
@@ -18,8 +18,8 @@ const config: Config = {
     },
   },
 
-  organizationName: 'seerr-team',
-  projectName: 'seerr',
+  organizationName: 'thelinyue',
+  projectName: 'sinerr',
   deploymentBranch: 'gh-pages',
 
   onBrokenLinks: 'throw',
@@ -43,7 +43,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
           path: '../docs',
-          editUrl: 'https://github.com/seerr-team/seerr/edit/develop/docs/',
+          editUrl: 'https://github.com/thelinyue/sinerr/edit/develop/docs/',
           docItemComponent: '@theme/ApiItem',
           async sidebarItemsGenerator({
             defaultSidebarItemsGenerator,
@@ -74,14 +74,14 @@ const config: Config = {
         id: 'api',
         docsPluginId: 'classic',
         config: {
-          seerr: {
-            specPath: '../seerr-api.yml',
+          sinerr: {
+            specPath: '../sinerr-api.yml',
             outputDir: '../docs/api',
             sidebarOptions: {
               groupPathsBy: 'tag',
             },
             downloadUrl:
-              'https://raw.githubusercontent.com/seerr-team/seerr/refs/heads/develop/seerr-api.yml',
+              'https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/sinerr-api.yml',
             hideSendButton: true,
           } satisfies OpenApiPlugin.Options,
         },
@@ -112,12 +112,12 @@ const config: Config = {
     },
     navbar: {
       logo: {
-        alt: 'Seerr',
+        alt: 'Sinerr',
         src: 'img/logo_full.svg',
       },
       items: [
         {
-          to: '/api/seerr-api',
+          to: '/api/sinerr-api',
           label: 'REST API',
           position: 'right',
         },
@@ -127,12 +127,12 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://discord.gg/seerr',
+          href: 'https://discord.gg/sinerr',
           label: 'Discord',
           position: 'right',
         },
         {
-          href: 'https://github.com/seerr-team/seerr',
+          href: 'https://github.com/thelinyue/sinerr',
           label: 'GitHub',
           position: 'right',
         },
@@ -150,7 +150,7 @@ const config: Config = {
             },
             {
               label: 'REST API',
-              to: '/api/seerr-api',
+              to: '/api/sinerr-api',
             },
           ],
         },
@@ -163,7 +163,7 @@ const config: Config = {
             },
             {
               label: 'GitHub',
-              href: 'https://github.com/seerr-team/seerr',
+              href: 'https://github.com/thelinyue/sinerr',
             },
           ],
         },
@@ -172,16 +172,16 @@ const config: Config = {
           items: [
             {
               label: 'Discord',
-              href: 'https://discord.gg/seerr',
+              href: 'https://discord.gg/sinerr',
             },
             {
               label: 'Github Discussions',
-              href: 'https://github.com/seerr-team/seerr/discussions',
+              href: 'https://github.com/thelinyue/sinerr/discussions',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Seerr. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Sinerr. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.shadesOfPurple,

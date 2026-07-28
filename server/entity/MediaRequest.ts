@@ -1,13 +1,10 @@
 import TheMovieDb from '@server/api/themoviedb';
-import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
-import type { TmdbKeyword } from '@server/api/themoviedb/interfaces';
 import {
   MediaRequestStatus,
   MediaStatus,
   MediaType,
 } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
-import OverrideRule from '@server/entity/OverrideRule';
 import type { MediaRequestBody } from '@server/interfaces/api/requestInterfaces';
 import notificationManager, { Notification } from '@server/lib/notifications';
 import { Permission } from '@server/lib/permissions';
@@ -235,133 +232,9 @@ export class MediaRequest {
       }
     }
 
-    // Apply overrides if the user is not an admin or has the "advanced request" permission
-    const useOverrides = !user.hasPermission([Permission.MANAGE_REQUESTS], {
-      type: 'or',
-    });
-
     let rootFolder = requestBody.rootFolder;
     let profileId = requestBody.profileId;
     let tags = requestBody.tags;
-
-    if (useOverrides) {
-      const defaultRadarrId = requestBody.is4k
-        ? settings.radarr.findIndex((r) => r.is4k && r.isDefault)
-        : settings.radarr.findIndex((r) => !r.is4k && r.isDefault);
-      const defaultSonarrId = requestBody.is4k
-        ? settings.sonarr.findIndex((s) => s.is4k && s.isDefault)
-        : settings.sonarr.findIndex((s) => !s.is4k && s.isDefault);
-
-      const overrideRuleRepository = getRepository(OverrideRule);
-      const overrideRules = await overrideRuleRepository.find({
-        where:
-          requestBody.mediaType === MediaType.MOVIE
-            ? { radarrServiceId: defaultRadarrId }
-            : { sonarrServiceId: defaultSonarrId },
-      });
-
-      const appliedOverrideRules = overrideRules.filter((rule) => {
-        const hasAnimeKeyword =
-          'results' in tmdbMedia.keywords &&
-          tmdbMedia.keywords.results.some(
-            (keyword: TmdbKeyword) => keyword.id === ANIME_KEYWORD_ID
-          );
-
-        // Skip override rules if the media is an anime TV show as anime TV
-        // is handled by default and override rules do not explicitly include
-        // the anime keyword
-        if (
-          requestBody.mediaType === MediaType.TV &&
-          hasAnimeKeyword &&
-          (!rule.keywords ||
-            !rule.keywords.split(',').map(Number).includes(ANIME_KEYWORD_ID))
-        ) {
-          return false;
-        }
-
-        if (
-          rule.users &&
-          !rule.users
-            .split(',')
-            .some((userId) => Number(userId) === requestUser.id)
-        ) {
-          return false;
-        }
-        if (
-          rule.genre &&
-          !rule.genre
-            .split(',')
-            .some((genreId) =>
-              tmdbMedia.genres
-                .map((genre) => genre.id)
-                .includes(Number(genreId))
-            )
-        ) {
-          return false;
-        }
-        if (
-          rule.language &&
-          !rule.language
-            .split('|')
-            .some((languageId) => languageId === tmdbMedia.original_language)
-        ) {
-          return false;
-        }
-        if (
-          rule.keywords &&
-          !rule.keywords.split(',').some((keywordId) => {
-            let keywordList: TmdbKeyword[] = [];
-
-            if ('keywords' in tmdbMedia.keywords) {
-              keywordList = tmdbMedia.keywords.keywords;
-            } else if ('results' in tmdbMedia.keywords) {
-              keywordList = tmdbMedia.keywords.results;
-            }
-
-            return keywordList
-              .map((keyword: TmdbKeyword) => keyword.id)
-              .includes(Number(keywordId));
-          })
-        ) {
-          return false;
-        }
-        return true;
-      });
-
-      // hacky way to prioritize rules
-      // TODO: make this better
-      const prioritizedRule = appliedOverrideRules.sort((a, b) => {
-        const keys: (keyof OverrideRule)[] = ['genre', 'language', 'keywords'];
-
-        const aSpecificity = keys.filter((key) => a[key] !== null).length;
-        const bSpecificity = keys.filter((key) => b[key] !== null).length;
-
-        // Take the rule with the most specific condition first
-        return bSpecificity - aSpecificity;
-      })[0];
-
-      if (prioritizedRule) {
-        if (prioritizedRule.rootFolder) {
-          rootFolder = prioritizedRule.rootFolder;
-        }
-        if (prioritizedRule.profileId) {
-          profileId = prioritizedRule.profileId;
-        }
-        if (prioritizedRule.tags) {
-          tags = [
-            ...new Set([
-              ...(tags || []),
-              ...prioritizedRule.tags.split(',').map((tag) => Number(tag)),
-            ]),
-          ];
-        }
-
-        logger.debug('Override rule applied.', {
-          label: 'Media Request',
-          overrides: prioritizedRule,
-        });
-      }
-    }
 
     if (requestBody.mediaType === MediaType.MOVIE) {
       await mediaRepository.save(media);

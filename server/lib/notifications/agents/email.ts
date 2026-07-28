@@ -17,7 +17,7 @@ import type { NotificationAgent, NotificationPayload } from './agent';
 import { BaseAgent } from './agent';
 
 const PUBLIC_LOGO_URL =
-  'https://raw.githubusercontent.com/seerr-team/seerr/refs/heads/develop/public/logo_full.svg';
+  'https://raw.githubusercontent.com/thelinyue/sinerr/refs/heads/develop/public/logo_full.svg';
 
 const messages = defineMessages('notifications.agents.email', {
   issueType: '{type} issue',
@@ -175,10 +175,7 @@ class EmailAgent
             is4k ? messages.failedRequest4k : messages.failedRequest,
             {
               mediaType,
-              service:
-                payload.media?.mediaType === MediaType.MOVIE
-                  ? 'Radarr'
-                  : 'Sonarr',
+              service: 'the download client',
             }
           );
           break;
@@ -310,6 +307,7 @@ class EmailAgent
             payload.notifyUser.settings?.pgpKey
           );
           if (
+            payload.notifyUser.email &&
             validator.isEmail(payload.notifyUser.email, { require_tld: false })
           ) {
             await email.send(
@@ -372,7 +370,10 @@ class EmailAgent
                 this.getSettings(),
                 user.settings?.pgpKey
               );
-              if (validator.isEmail(user.email, { require_tld: false })) {
+              if (
+                user.email &&
+                validator.isEmail(user.email, { require_tld: false })
+              ) {
                 await email.send(
                   this.buildMessage(
                     type,

@@ -46,8 +46,8 @@ const messages = defineMessages('components.IssueDetails', {
   reopenissue: 'Reopen Issue',
   reopenissueandcomment: 'Reopen with Comment',
   issuepagetitle: 'Issue',
-  playonplex: 'Play on {mediaServerName}',
-  play4konplex: 'Play in 4K on {mediaServerName}',
+  playonmediaserver: 'Play on {mediaServerName}',
+  play4konserver: 'Play in 4K on {mediaServerName}',
   openinarr: 'Open in {arr}',
   openin4karr: 'Open in 4K {arr}',
   toasteditdescriptionsuccess: 'Issue description edited successfully!',
@@ -95,8 +95,6 @@ const IssueDetails = () => {
   const { mediaUrl, mediaUrl4k } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
     mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
-    iOSPlexUrl: data?.mediaInfo?.iOSPlexUrl,
-    iOSPlexUrl4k: data?.mediaInfo?.iOSPlexUrl4k,
   });
 
   const CommentSchema = Yup.object().shape({
@@ -232,7 +230,7 @@ const IssueDetails = () => {
             src={
               data.posterPath
                 ? `https://image.tmdb.org/t/p/w600_and_h900_bestv2${data.posterPath}`
-                : '/images/seerr_poster_not_found.png'
+                : '/images/sinerr_poster_not_found.png'
             }
             alt=""
             sizes="100vw"
@@ -384,17 +382,12 @@ const IssueDetails = () => {
                   <span>
                     {settings.currentSettings.mediaServerType ===
                     MediaServerType.EMBY
-                      ? intl.formatMessage(messages.playonplex, {
+                      ? intl.formatMessage(messages.playonmediaserver, {
                           mediaServerName: 'Emby',
                         })
-                      : settings.currentSettings.mediaServerType ===
-                          MediaServerType.PLEX
-                        ? intl.formatMessage(messages.playonplex, {
-                            mediaServerName: 'Plex',
-                          })
-                        : intl.formatMessage(messages.playonplex, {
-                            mediaServerName: 'Jellyfin',
-                          })}
+                      : intl.formatMessage(messages.playonmediaserver, {
+                          mediaServerName: 'Jellyfin',
+                        })}
                   </span>
                 </Button>
               )}
@@ -410,12 +403,9 @@ const IssueDetails = () => {
                   >
                     <ServerIcon />
                     <span>
-                      {intl.formatMessage(messages.openinarr, {
-                        arr:
-                          issueData.media.mediaType === MediaType.MOVIE
-                            ? 'Radarr'
-                            : 'Sonarr',
-                      })}
+                    {intl.formatMessage(messages.openinarr, {
+                      arr: 'MoviePilot',
+                    })}
                     </span>
                   </Button>
                 )}
@@ -432,17 +422,12 @@ const IssueDetails = () => {
                   <span>
                     {settings.currentSettings.mediaServerType ===
                     MediaServerType.EMBY
-                      ? intl.formatMessage(messages.play4konplex, {
+                      ? intl.formatMessage(messages.play4konserver, {
                           mediaServerName: 'Emby',
                         })
-                      : settings.currentSettings.mediaServerType ===
-                          MediaServerType.PLEX
-                        ? intl.formatMessage(messages.play4konplex, {
-                            mediaServerName: 'Plex',
-                          })
-                        : intl.formatMessage(messages.play4konplex, {
-                            mediaServerName: 'Jellyfin',
-                          })}
+                      : intl.formatMessage(messages.play4konserver, {
+                          mediaServerName: 'Jellyfin',
+                        })}
                   </span>
                 </Button>
               )}
@@ -458,12 +443,9 @@ const IssueDetails = () => {
                   >
                     <ServerIcon />
                     <span>
-                      {intl.formatMessage(messages.openin4karr, {
-                        arr:
-                          issueData.media.mediaType === MediaType.MOVIE
-                            ? 'Radarr'
-                            : 'Sonarr',
-                      })}
+                {intl.formatMessage(messages.openin4karr, {
+                  arr: 'MoviePilot',
+                })}
                     </span>
                   </Button>
                 )}
@@ -650,17 +632,12 @@ const IssueDetails = () => {
                 <span>
                   {settings.currentSettings.mediaServerType ===
                   MediaServerType.EMBY
-                    ? intl.formatMessage(messages.playonplex, {
+                    ? intl.formatMessage(messages.playonmediaserver, {
                         mediaServerName: 'Emby',
                       })
-                    : settings.currentSettings.mediaServerType ===
-                        MediaServerType.PLEX
-                      ? intl.formatMessage(messages.playonplex, {
-                          mediaServerName: 'Plex',
-                        })
-                      : intl.formatMessage(messages.playonplex, {
-                          mediaServerName: 'Jellyfin',
-                        })}
+                    : intl.formatMessage(messages.playonmediaserver, {
+                        mediaServerName: 'Jellyfin',
+                      })}
                 </span>
               </Button>
             )}
@@ -675,12 +652,9 @@ const IssueDetails = () => {
               >
                 <ServerIcon />
                 <span>
-                  {intl.formatMessage(messages.openinarr, {
-                    arr:
-                      issueData.media.mediaType === MediaType.MOVIE
-                        ? 'Radarr'
-                        : 'Sonarr',
-                  })}
+                {intl.formatMessage(messages.openinarr, {
+                  arr: 'MoviePilot',
+                })}
                 </span>
               </Button>
             )}
@@ -697,17 +671,12 @@ const IssueDetails = () => {
                 <span>
                   {settings.currentSettings.mediaServerType ===
                   MediaServerType.EMBY
-                    ? intl.formatMessage(messages.play4konplex, {
+                    ? intl.formatMessage(messages.play4konserver, {
                         mediaServerName: 'Emby',
                       })
-                    : settings.currentSettings.mediaServerType ===
-                        MediaServerType.PLEX
-                      ? intl.formatMessage(messages.play4konplex, {
-                          mediaServerName: 'Plex',
-                        })
-                      : intl.formatMessage(messages.play4konplex, {
-                          mediaServerName: 'Jellyfin',
-                        })}
+                    : intl.formatMessage(messages.play4konserver, {
+                        mediaServerName: 'Jellyfin',
+                      })}
                 </span>
               </Button>
             )}
@@ -723,12 +692,9 @@ const IssueDetails = () => {
                 >
                   <ServerIcon />
                   <span>
-                    {intl.formatMessage(messages.openin4karr, {
-                      arr:
-                        issueData.media.mediaType === MediaType.MOVIE
-                          ? 'Radarr'
-                          : 'Sonarr',
-                    })}
+                  {intl.formatMessage(messages.openin4karr, {
+                    arr: 'MoviePilot',
+                  })}
                   </span>
                 </Button>
               )}

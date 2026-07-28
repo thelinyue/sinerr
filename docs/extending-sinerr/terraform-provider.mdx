@@ -1,0 +1,61 @@
+---
+title: Terraform/OpenTofu Provider (Advanced)
+description: Manage Sinerr settings and integrations with the community Terraform/OpenTofu provider.
+sidebar_position: 4
+---
+
+# Terraform/OpenTofu Provider (Advanced)
+
+:::warning
+This provider is maintained by the community, not by the Sinerr team. Please report bugs or feature requests in the [provider repository](https://github.com/Josh-Archer/terraform-provider-sinerr).
+:::
+
+The community-maintained [Sinerr Terraform/OpenTofu provider](https://search.opentofu.org/provider/josh-archer/sinerr/latest) can manage Sinerr settings and integrations from infrastructure-as-code workflows.
+
+## Basic Example
+
+Configure the provider with your Sinerr URL and API key, then manage Sinerr resources in the same configuration as the rest of your infrastructure.
+
+```hcl
+terraform {
+  required_providers {
+    sinerr = {
+      source = "registry.opentofu.org/josh-archer/sinerr"
+    }
+  }
+}
+
+variable "sinerr_api_key" {
+  type      = string
+  sensitive = true
+}
+
+provider "sinerr" {
+  url                  = "https://sinerr.example.com"
+  api_key              = var.sinerr_api_key
+  insecure_skip_verify = false # Set to true for self-signed certificates.
+}
+
+resource "sinerr_main_settings" "main" {
+  app_title               = "Sinerr"
+  application_url         = "https://sinerr.example.com"
+  locale                  = "en"
+  movie_requests_enabled  = true
+  series_requests_enabled = true
+}
+```
+
+The provider also includes resources and data sources for common Sinerr integrations:
+
+- Plex
+- Jellyfin
+- Emby
+- MoviePilot
+- Tautulli
+- Notifications
+- Users
+- Permissions
+- Requests
+- Issues
+- Background job schedules
+- And many more.

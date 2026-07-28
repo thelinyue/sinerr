@@ -1,5 +1,4 @@
 import csurf from '@dr.pogodin/csurf';
-import PlexAPI from '@server/api/plexapi';
 import dataSource, { getRepository, isPgsql } from '@server/datasource';
 import DiscoverSlider from '@server/entity/DiscoverSlider';
 import { Session } from '@server/entity/Session';
@@ -45,23 +44,23 @@ import next from 'next';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 
-const API_SPEC_PATH = path.join(__dirname, '../seerr-api.yml');
+const API_SPEC_PATH = path.join(__dirname, '../sinerr-api.yml');
 
-logger.info(`Starting Seerr version ${getAppVersion()}`);
+logger.info(`Starting Sinerr version ${getAppVersion()}`);
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 if (!appDataPermissions()) {
   logger.error(
-    'Something went wrong while checking config folder! Please ensure the config folder is set up properly.\nhttps://docs.seerr.dev/getting-started'
+    'Something went wrong while checking config folder! Please ensure the config folder is set up properly.\nhttps://docs.sinerr.dev/getting-started'
   );
 }
 
 app
   .prepare()
   .then(async () => {
-    // Run Overseerr to Seerr migration
+    // Run Overseerr to Sinerr migration
     await checkOverseerrMerge();
 
     const dbConnection = dataSource.isInitialized
@@ -103,27 +102,6 @@ app
       );
     }
 
-    // Migrate library types
-    if (
-      settings.plex.libraries.length > 1 &&
-      !settings.plex.libraries[0].type
-    ) {
-      const userRepository = getRepository(User);
-      const admin = await userRepository.findOne({
-        select: { id: true, plexToken: true },
-        where: { id: 1 },
-      });
-
-      if (admin) {
-        logger.info('Migrating Plex libraries to include media type', {
-          label: 'Settings',
-        });
-
-        const plexapi = new PlexAPI({ plexToken: admin.plexToken });
-        await plexapi.syncLibraries();
-      }
-    }
-
     // Register Notification Agents
     notificationManager.registerAgents([
       new DiscordAgent(),
@@ -144,7 +122,7 @@ app
       startJobs();
     } else {
       logger.info(
-        `Skipping starting the scheduled jobs as we have no Plex/Jellyfin/Emby servers setup yet`,
+        `Skipping starting the scheduled jobs as we have no Jellyfin/Emby servers setup yet`,
         {
           label: 'Server',
         }

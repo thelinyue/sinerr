@@ -1,10 +1,8 @@
-import type { User } from '@server/entity/User';
 import type { TautulliSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { proxyRequestInterceptor } from '@server/utils/customProxyAgent';
 import type { AxiosInstance } from 'axios';
 import axios from 'axios';
-import { uniqWith } from 'lodash';
 
 export interface TautulliHistoryRecord {
   date: number;
@@ -45,21 +43,6 @@ export interface TautulliHistoryRecord {
   user_id: number;
   watched_status: number;
   year: number;
-}
-
-interface TautulliHistoryResponse {
-  response: {
-    result: string;
-    message?: string;
-    data: {
-      draw: number;
-      recordsTotal: number;
-      recordsFiltered: number;
-      total_duration: string;
-      filter_duration: string;
-      data: TautulliHistoryRecord[];
-    };
-  };
 }
 
 interface TautulliWatchStats {
@@ -199,99 +182,6 @@ class TautulliAPI {
       );
       throw new Error(
         `[Tautulli] Failed to fetch media watch users: ${e.message}`,
-        { cause: e }
-      );
-    }
-  }
-
-  public async getUserWatchStats(user: User): Promise<TautulliWatchStats> {
-    try {
-      if (!user.plexId) {
-        throw new Error('User does not have an associated Plex ID');
-      }
-
-      return (
-        await this.axios.get<TautulliWatchStatsResponse>('/api/v2', {
-          params: {
-            cmd: 'get_user_watch_time_stats',
-            user_id: user.plexId,
-            query_days: 0,
-            grouping: 1,
-          },
-        })
-      ).data.response.data[0];
-    } catch (e) {
-      logger.error(
-        'Something went wrong fetching user watch stats from Tautulli',
-        {
-          label: 'Tautulli API',
-          errorMessage: e.message,
-          user: user.displayName,
-        }
-      );
-      throw new Error(
-        `[Tautulli] Failed to fetch user watch stats: ${e.message}`,
-        { cause: e }
-      );
-    }
-  }
-
-  public async getUserWatchHistory(
-    user: User
-  ): Promise<TautulliHistoryRecord[]> {
-    let results: TautulliHistoryRecord[] = [];
-
-    try {
-      if (!user.plexId) {
-        throw new Error('User does not have an associated Plex ID');
-      }
-
-      const take = 100;
-      let start = 0;
-
-      while (results.length < 20) {
-        const tautulliData = (
-          await this.axios.get<TautulliHistoryResponse>('/api/v2', {
-            params: {
-              cmd: 'get_history',
-              grouping: 1,
-              order_column: 'date',
-              order_dir: 'desc',
-              user_id: user.plexId,
-              media_type: 'movie,episode',
-              length: take,
-              start,
-            },
-          })
-        ).data.response.data.data;
-
-        if (!tautulliData.length) {
-          return results;
-        }
-
-        results = uniqWith(results.concat(tautulliData), (recordA, recordB) =>
-          recordA.grandparent_rating_key && recordB.grandparent_rating_key
-            ? recordA.grandparent_rating_key === recordB.grandparent_rating_key
-            : recordA.parent_rating_key && recordB.parent_rating_key
-              ? recordA.parent_rating_key === recordB.parent_rating_key
-              : recordA.rating_key === recordB.rating_key
-        );
-
-        start += take;
-      }
-
-      return results.slice(0, 20);
-    } catch (e) {
-      logger.error(
-        'Something went wrong fetching user watch history from Tautulli',
-        {
-          label: 'Tautulli API',
-          errorMessage: e.message,
-          user: user.displayName,
-        }
-      );
-      throw new Error(
-        `[Tautulli] Failed to fetch user watch history: ${e.message}`,
         { cause: e }
       );
     }

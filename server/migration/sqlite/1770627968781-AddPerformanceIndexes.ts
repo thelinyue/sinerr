@@ -52,10 +52,10 @@ export class AddPerformanceIndexes1770627968781 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "issue"`);
     await queryRunner.query(`ALTER TABLE "temporary_issue" RENAME TO "issue"`);
     await queryRunner.query(
-      `CREATE TABLE "temporary_override_rule" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "radarrServiceId" integer, "sonarrServiceId" integer, "users" varchar, "genre" varchar, "language" varchar, "keywords" varchar, "profileId" integer, "rootFolder" varchar, "tags" varchar, "createdAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), "updatedAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP))`
+      `CREATE TABLE "temporary_override_rule" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "users" varchar, "genre" varchar, "language" varchar, "keywords" varchar, "profileId" integer, "rootFolder" varchar, "tags" varchar, "createdAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), "updatedAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP))`
     );
     await queryRunner.query(
-      `INSERT INTO "temporary_override_rule"("id", "radarrServiceId", "sonarrServiceId", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt") SELECT "id", "radarrServiceId", "sonarrServiceId", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt" FROM "override_rule"`
+      `INSERT INTO "temporary_override_rule"("id", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt") SELECT "id", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt" FROM "override_rule"`
     );
     await queryRunner.query(`DROP TABLE "override_rule"`);
     await queryRunner.query(
@@ -312,10 +312,10 @@ export class AddPerformanceIndexes1770627968781 implements MigrationInterface {
       `ALTER TABLE "override_rule" RENAME TO "temporary_override_rule"`
     );
     await queryRunner.query(
-      `CREATE TABLE "override_rule" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "radarrServiceId" integer, "sonarrServiceId" integer, "users" varchar, "genre" varchar, "language" varchar, "keywords" varchar, "profileId" integer, "rootFolder" varchar, "tags" varchar, "createdAt" datetime NOT NULL DEFAULT (datetime('now')), "updatedAt" datetime NOT NULL DEFAULT (datetime('now')))`
+      `CREATE TABLE "override_rule" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "users" varchar, "genre" varchar, "language" varchar, "keywords" varchar, "profileId" integer, "rootFolder" varchar, "tags" varchar, "createdAt" datetime NOT NULL DEFAULT (datetime('now')), "updatedAt" datetime NOT NULL DEFAULT (datetime('now')))`
     );
     await queryRunner.query(
-      `INSERT INTO "override_rule"("id", "radarrServiceId", "sonarrServiceId", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt") SELECT "id", "radarrServiceId", "sonarrServiceId", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt" FROM "temporary_override_rule"`
+      `INSERT INTO "override_rule"("id", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt") SELECT "id", "users", "genre", "language", "keywords", "profileId", "rootFolder", "tags", "createdAt", "updatedAt" FROM "temporary_override_rule"`
     );
     await queryRunner.query(`DROP TABLE "temporary_override_rule"`);
     await queryRunner.query(`ALTER TABLE "issue" RENAME TO "temporary_issue"`);

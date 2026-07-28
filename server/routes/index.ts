@@ -62,7 +62,7 @@ router.get<unknown, StatusResponse>('/status', async (req, res) => {
     const githubApi = new GithubAPI();
 
     if (currentVersion.startsWith('develop-') && commitTag !== 'local') {
-      const commits = await githubApi.getSeerrCommits();
+      const commits = await githubApi.getSinerrCommits();
 
       if (commits.length) {
         const filteredCommits = commits.filter(
@@ -81,7 +81,7 @@ router.get<unknown, StatusResponse>('/status', async (req, res) => {
         }
       }
     } else if (commitTag !== 'local') {
-      const releases = await githubApi.getSeerrReleases();
+      const releases = await githubApi.getSinerrReleases();
 
       if (releases.length) {
         const latestVersion = releases[0];
@@ -462,7 +462,7 @@ router.get('/certifications/tv', isAuthenticated(), async (req, res, next) => {
 
 router.get('/', (_req, res) => {
   return res.status(200).json({
-    api: 'Seerr API',
+    api: 'Sinerr API',
     version: '1.0',
   });
 });

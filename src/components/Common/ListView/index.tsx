@@ -16,7 +16,7 @@ import { useIntl } from 'react-intl';
 
 type ListViewProps = {
   items?: (TvResult | MovieResult | PersonResult | CollectionResult)[];
-  plexItems?: WatchlistItem[];
+  watchlistItems?: WatchlistItem[];
   isEmpty?: boolean;
   isLoading?: boolean;
   isReachingEnd?: boolean;
@@ -30,7 +30,7 @@ const ListView = ({
   isLoading,
   onScrollBottom,
   isReachingEnd,
-  plexItems,
+  watchlistItems,
   mutateParent,
 }: ListViewProps) => {
   const intl = useIntl();
@@ -50,7 +50,7 @@ const ListView = ({
         </div>
       )}
       <ul className="cards-vertical">
-        {plexItems?.map((title, index) => {
+        {watchlistItems?.map((title, index) => {
           return (
             <li key={`${title.ratingKey}-${index}`}>
               <TmdbTitleCard

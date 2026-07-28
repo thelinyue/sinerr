@@ -34,8 +34,6 @@ overrideRuleRoutes.post<
     profileId?: number;
     rootFolder?: string;
     tags?: string;
-    radarrServiceId?: number;
-    sonarrServiceId?: number;
   }
 >('/', isAuthenticated(Permission.ADMIN), async (req, res, next) => {
   const overrideRuleRepository = getRepository(OverrideRule);
@@ -49,8 +47,6 @@ overrideRuleRoutes.post<
       profileId: req.body.profileId,
       rootFolder: req.body.rootFolder,
       tags: req.body.tags,
-      radarrServiceId: req.body.radarrServiceId,
-      sonarrServiceId: req.body.sonarrServiceId,
     });
 
     const newRule = await overrideRuleRepository.save(rule);
@@ -72,8 +68,6 @@ overrideRuleRoutes.put<
     profileId?: number;
     rootFolder?: string;
     tags?: string;
-    radarrServiceId?: number;
-    sonarrServiceId?: number;
   }
 >('/:ruleId', isAuthenticated(Permission.ADMIN), async (req, res, next) => {
   const overrideRuleRepository = getRepository(OverrideRule);
@@ -96,8 +90,6 @@ overrideRuleRoutes.put<
     rule.profileId = req.body.profileId;
     rule.rootFolder = req.body.rootFolder;
     rule.tags = req.body.tags;
-    rule.radarrServiceId = req.body.radarrServiceId;
-    rule.sonarrServiceId = req.body.sonarrServiceId;
 
     const newRule = await overrideRuleRepository.save(rule);
 

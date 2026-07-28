@@ -1,10 +1,9 @@
 import type { PermissionItem } from '@app/components/PermissionOption';
 import PermissionOption from '@app/components/PermissionOption';
-import useSettings from '@app/hooks/useSettings';
 import type { User } from '@app/hooks/useUser';
 import { Permission } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
-import { MediaServerType } from '@server/constants/server';
+
 import { useIntl } from 'react-intl';
 
 export const messages = defineMessages('components.PermissionEdit', {
@@ -55,13 +54,13 @@ export const messages = defineMessages('components.PermissionEdit', {
     'Grant permission to modify advanced media request options.',
   autorequest: 'Auto-Request',
   autorequestDescription:
-    'Grant permission to automatically submit requests for non-4K media via Plex Watchlist.',
+    'Grant permission to automatically submit requests for non-4K media via watchlist.',
   autorequestMovies: 'Auto-Request Movies',
   autorequestMoviesDescription:
-    'Grant permission to automatically submit requests for non-4K movies via Plex Watchlist.',
+    'Grant permission to automatically submit requests for non-4K movies via watchlist.',
   autorequestSeries: 'Auto-Request Series',
   autorequestSeriesDescription:
-    'Grant permission to automatically submit requests for non-4K series via Plex Watchlist.',
+    'Grant permission to automatically submit requests for non-4K series via watchlist.',
   viewrequests: 'View Requests',
   viewrequestsDescription:
     'Grant permission to view media requests submitted by other users.',
@@ -75,9 +74,6 @@ export const messages = defineMessages('components.PermissionEdit', {
   viewrecent: 'View Recently Added',
   viewrecentDescription:
     'Grant permission to view the list of recently added media.',
-  viewwatchlists: 'View {mediaServerName} Watchlists',
-  viewwatchlistsDescription:
-    "Grant permission to view other users' {mediaServerName} Watchlists.",
   manageblocklist: 'Manage Blocklist',
   manageblocklistDescription: 'Grant permission to manage blocklisted media.',
   blocklistedItems: 'Blocklist media.',
@@ -101,7 +97,6 @@ export const PermissionEdit = ({
   onUpdate,
 }: PermissionEditProps) => {
   const intl = useIntl();
-  const settings = useSettings();
 
   const permissionList: PermissionItem[] = [
     {
@@ -139,28 +134,6 @@ export const PermissionEdit = ({
           name: intl.formatMessage(messages.viewrecent),
           description: intl.formatMessage(messages.viewrecentDescription),
           permission: Permission.RECENT_VIEW,
-        },
-        {
-          id: 'viewwatchlists',
-          name: intl.formatMessage(messages.viewwatchlists, {
-            mediaServerName:
-              settings.currentSettings.mediaServerType === MediaServerType.PLEX
-                ? 'Plex'
-                : settings.currentSettings.mediaServerType ===
-                    MediaServerType.JELLYFIN
-                  ? 'Jellyfin'
-                  : 'Emby',
-          }),
-          description: intl.formatMessage(messages.viewwatchlistsDescription, {
-            mediaServerName:
-              settings.currentSettings.mediaServerType === MediaServerType.PLEX
-                ? 'Plex'
-                : settings.currentSettings.mediaServerType ===
-                    MediaServerType.JELLYFIN
-                  ? 'Jellyfin'
-                  : 'Emby',
-          }),
-          permission: Permission.WATCHLIST_VIEW,
         },
       ],
     },

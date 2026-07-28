@@ -18,12 +18,11 @@ const messages = defineMessages('components.Login', {
   port: 'Port',
   enablessl: 'Use SSL',
   urlBase: 'URL Base',
-  email: 'Email Address',
+  email: 'Email Address (Optional)',
   emailtooltip:
     'Address does not need to be associated with your {mediaServerName} instance.',
   validationhostrequired: '{mediaServerName} URL required',
   validationhostformat: 'Valid URL required',
-  validationemailrequired: 'You must provide a valid email address',
   validationemailformat: 'Valid email required',
   validationusernamerequired: 'Username required',
   validationpasswordrequired: 'You must provide a password',
@@ -92,13 +91,11 @@ function JellyfinSetup({
         intl.formatMessage(messages.validationUrlBaseTrailingSlash),
         (value) => !value || !value.endsWith('/')
       ),
-    email: Yup.string()
-      .test(
-        'email',
-        intl.formatMessage(messages.validationemailformat),
-        (value) => !value || validator.isEmail(value, { require_tld: false })
-      )
-      .required(intl.formatMessage(messages.validationemailrequired)),
+    email: Yup.string().test(
+      'email',
+      intl.formatMessage(messages.validationemailformat),
+      (value) => !value || validator.isEmail(value, { require_tld: false })
+    ),
     username: Yup.string().required(
       intl.formatMessage(messages.validationusernamerequired)
     ),

@@ -46,10 +46,8 @@ export interface PublicSettingsResponse {
   enablePushRegistration: boolean;
   locale: string;
   emailEnabled: boolean;
-  newPlexLogin: boolean;
   youtubeUrl: string;
   versionCheck: boolean;
-  plexClientIdentifier: string;
 }
 
 export interface CacheItem {

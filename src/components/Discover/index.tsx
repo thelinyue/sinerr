@@ -7,7 +7,6 @@ import CreateSlider from '@app/components/Discover/CreateSlider';
 import DiscoverSliderEdit from '@app/components/Discover/DiscoverSliderEdit';
 import MovieGenreSlider from '@app/components/Discover/MovieGenreSlider';
 import NetworkSlider from '@app/components/Discover/NetworkSlider';
-import PlexWatchlistSlider from '@app/components/Discover/PlexWatchlistSlider';
 import RecentRequestsSlider from '@app/components/Discover/RecentRequestsSlider';
 import RecentlyAddedSlider from '@app/components/Discover/RecentlyAddedSlider';
 import StudioSlider from '@app/components/Discover/StudioSlider';
@@ -36,8 +35,7 @@ import useSWR from 'swr';
 
 const messages = defineMessages('components.Discover', {
   discover: 'Discover',
-  emptywatchlist:
-    'Media added to your <PlexWatchlistSupportLink>Plex Watchlist</PlexWatchlistSupportLink> will appear here.',
+  emptywatchlist: 'Media added to your watchlist will appear here.',
   resettodefault: 'Reset to Default',
   resetwarning:
     'Reset all sliders to default. This will also delete any custom sliders!',
@@ -215,9 +213,6 @@ const Discover = () => {
             break;
           case DiscoverSliderType.RECENT_REQUESTS:
             sliderComponent = <RecentRequestsSlider />;
-            break;
-          case DiscoverSliderType.PLEX_WATCHLIST:
-            sliderComponent = <PlexWatchlistSlider />;
             break;
           case DiscoverSliderType.TRENDING:
             sliderComponent = (

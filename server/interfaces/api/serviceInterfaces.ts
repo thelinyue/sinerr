@@ -1,5 +1,3 @@
-import type { QualityProfile, RootFolder, Tag } from '@server/api/servarr/base';
-import type { LanguageProfile } from '@server/api/servarr/sonarr';
 
 export interface ServiceCommonServer {
   id: number;
@@ -18,8 +16,8 @@ export interface ServiceCommonServer {
 
 export interface ServiceCommonServerWithDetails {
   server: ServiceCommonServer;
-  profiles: QualityProfile[];
-  rootFolders: Partial<RootFolder>[];
-  languageProfiles?: LanguageProfile[];
-  tags: Tag[];
+  profiles: { id: number; name: string }[];
+  rootFolders: { id: number; freeSpace?: number; path: string; totalSpace?: number }[];
+  languageProfiles?: any[];
+  tags: { id: number; label: string }[];
 }

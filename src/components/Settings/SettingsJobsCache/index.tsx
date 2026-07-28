@@ -35,7 +35,7 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     jobsandcache: 'Jobs & Cache',
     jobs: 'Jobs',
     jobsDescription:
-      'Seerr performs certain maintenance tasks as regularly-scheduled jobs, but they can also be manually triggered below. Manually running a job will not alter its schedule.',
+      'Sinerr performs certain maintenance tasks as regularly-scheduled jobs, but they can also be manually triggered below. Manually running a job will not alter its schedule.',
     jobname: 'Job Name',
     jobtype: 'Type',
     nextexecution: 'Next Execution',
@@ -47,7 +47,7 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     command: 'Command',
     cache: 'Cache',
     cacheDescription:
-      'Seerr caches requests to external API endpoints to optimize performance and avoid making unnecessary API calls.',
+      'Sinerr caches requests to external API endpoints to optimize performance and avoid making unnecessary API calls.',
     cacheflushed: '{cachename} cache flushed.',
     cachename: 'Cache Name',
     cachehits: 'Hits',
@@ -58,7 +58,7 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     flushcache: 'Flush Cache',
     dnsCache: 'DNS Cache',
     dnsCacheDescription:
-      'Seerr caches DNS lookups to optimize performance and avoid making unnecessary API calls.',
+      'Sinerr caches DNS lookups to optimize performance and avoid making unnecessary API calls.',
     dnscacheflushed: '{hostname} dns cache flushed.',
     dnscachename: 'Hostname',
     dnscacheactiveaddress: 'Active Address',
@@ -77,15 +77,9 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     ipv4Fallbacks: 'IPv4 Fallbacks',
     hitRate: 'Hit Rate',
     unknownJob: 'Unknown Job',
-    'plex-recently-added-scan': 'Plex Recently Added Scan',
-    'plex-full-scan': 'Plex Full Library Scan',
-    'plex-watchlist-sync': 'Plex Watchlist Sync',
-    'plex-refresh-token': 'Plex Refresh Token',
     'jellyfin-full-scan': 'Jellyfin Full Library Scan',
     'jellyfin-recently-added-scan': 'Jellyfin Recently Added Scan',
     'availability-sync': 'Media Availability Sync',
-    'radarr-scan': 'Radarr Scan',
-    'sonarr-scan': 'Sonarr Scan',
     'download-sync': 'Download Sync',
     'download-sync-reset': 'Download Sync Reset',
     'image-cache-cleanup': 'Image Cache Cleanup',
@@ -105,7 +99,7 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
       'Every {jobScheduleSeconds, plural, one {second} other {{jobScheduleSeconds} seconds}}',
     imagecache: 'Image Cache',
     imagecacheDescription:
-      'When enabled in settings, Seerr will proxy and cache images from pre-configured external sources. Cached images are saved into your config folder. You can find the files in <code>{appDataPath}/cache/images</code>.',
+      'When enabled in settings, Sinerr will proxy and cache images from pre-configured external sources. Cached images are saved into your config folder. You can find the files in <code>{appDataPath}/cache/images</code>.',
     imagecachecount: 'Images Cached',
     imagecachesize: 'Total Cache Size',
     usersavatars: "Users' Avatars",
@@ -579,13 +573,7 @@ const SettingsJobs = () => {
           </thead>
           <Table.TBody>
             {cacheData?.apiCaches
-              ?.filter(
-                (cache) =>
-                  !(
-                    settings.currentSettings.mediaServerType !==
-                      MediaServerType.PLEX && cache.id === 'plexguid'
-                  )
-              )
+              ?.filter((cache) => cache.id !== 'plexguid')
               .map((cache) => (
                 <tr key={`cache-list-${cache.id}`}>
                   <Table.TD>{cache.name}</Table.TD>

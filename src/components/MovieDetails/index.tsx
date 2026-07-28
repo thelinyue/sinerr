@@ -26,7 +26,7 @@ import useDeepLinks from '@app/hooks/useDeepLinks';
 import useLocale from '@app/hooks/useLocale';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
-import { Permission, UserType, useUser } from '@app/hooks/useUser';
+import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import ErrorPage from '@app/pages/_error';
 import { sortCrewPriority } from '@app/utils/creditHelpers';
@@ -79,8 +79,6 @@ const messages = defineMessages('components.MovieDetails', {
   overviewunavailable: 'Overview unavailable.',
   studio: '{studioCount, plural, one {Studio} other {Studios}}',
   viewfullcrew: 'View Full Crew',
-  openradarr: 'Open Movie in Radarr',
-  openradarr4k: 'Open Movie in 4K Radarr',
   downloadstatus: 'Download Status',
   play: 'Play on {mediaServerName}',
   play4k: 'Play 4K on {mediaServerName}',
@@ -170,11 +168,9 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     []
   );
 
-  const { mediaUrl: plexUrl, mediaUrl4k: plexUrl4k } = useDeepLinks({
+  const { mediaUrl, mediaUrl4k } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
     mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
-    iOSPlexUrl: data?.mediaInfo?.iOSPlexUrl,
-    iOSPlexUrl4k: data?.mediaInfo?.iOSPlexUrl4k,
   });
 
   if (!data && !error) {
@@ -189,28 +185,28 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
   const mediaLinks: PlayButtonLink[] = [];
 
   if (
-    plexUrl &&
+    mediaUrl &&
     hasPermission([Permission.REQUEST, Permission.REQUEST_MOVIE], {
       type: 'or',
     })
   ) {
     mediaLinks.push({
       text: getAvailableMediaServerName(),
-      url: plexUrl,
+      url: mediaUrl,
       svg: <PlayIcon />,
     });
   }
 
   if (
     settings.currentSettings.movie4kEnabled &&
-    plexUrl4k &&
+    mediaUrl4k &&
     hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE], {
       type: 'or',
     })
   ) {
     mediaLinks.push({
       text: getAvailable4kMediaServerName(),
-      url: plexUrl4k,
+      url: mediaUrl4k,
       svg: <PlayIcon />,
     });
   }
@@ -308,20 +304,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
       return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
     }
 
-    if (settings.currentSettings.mediaServerType === MediaServerType.PLEX) {
-      return intl.formatMessage(messages.play, { mediaServerName: 'Plex' });
-    }
-
     return intl.formatMessage(messages.play, { mediaServerName: 'Jellyfin' });
   }
 
   function getAvailable4kMediaServerName() {
     if (settings.currentSettings.mediaServerType === MediaServerType.EMBY) {
       return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
-    }
-
-    if (settings.currentSettings.mediaServerType === MediaServerType.PLEX) {
-      return intl.formatMessage(messages.play4k, { mediaServerName: 'Plex' });
     }
 
     return intl.formatMessage(messages.play4k, { mediaServerName: 'Jellyfin' });
@@ -496,7 +484,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
             src={
               data.posterPath
                 ? `https://image.tmdb.org/t/p/w600_and_h900_bestv2${data.posterPath}`
-                : '/images/seerr_poster_not_found.png'
+                : '/images/sinerr_poster_not_found.png'
             }
             alt=""
             sizes="100vw"
@@ -515,7 +503,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
               inProgress={(data.mediaInfo?.downloadStatus ?? []).length > 0}
               tmdbId={data.mediaInfo?.tmdbId}
               mediaType="movie"
-              plexUrl={plexUrl}
+              mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
             {settings.currentSettings.movie4kEnabled &&
@@ -539,7 +527,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                   }
                   tmdbId={data.mediaInfo?.tmdbId}
                   mediaType="movie"
-                  plexUrl={plexUrl4k}
+                  mediaUrl={mediaUrl4k}
                   serviceUrl={data.mediaInfo?.serviceUrl4k}
                 />
               )}
@@ -585,41 +573,38 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                 </Button>
               </Tooltip>
             )}
-          {data?.mediaInfo?.status !== MediaStatus.BLOCKLISTED &&
-            user?.userType !== UserType.PLEX && (
-              <>
-                {toggleWatchlist ? (
-                  <Tooltip
-                    content={intl.formatMessage(messages.addtowatchlist)}
+          {data?.mediaInfo?.status !== MediaStatus.BLOCKLISTED && (
+            <>
+              {toggleWatchlist ? (
+                <Tooltip content={intl.formatMessage(messages.addtowatchlist)}>
+                  <Button
+                    buttonType={'ghost'}
+                    className="z-40 mr-2"
+                    buttonSize={'md'}
+                    onClick={onClickWatchlistBtn}
                   >
-                    <Button
-                      buttonType={'ghost'}
-                      className="z-40 mr-2"
-                      buttonSize={'md'}
-                      onClick={onClickWatchlistBtn}
-                    >
-                      {isUpdating ? (
-                        <Spinner />
-                      ) : (
-                        <StarIcon className={'text-amber-300'} />
-                      )}
-                    </Button>
-                  </Tooltip>
-                ) : (
-                  <Tooltip
-                    content={intl.formatMessage(messages.removefromwatchlist)}
+                    {isUpdating ? (
+                      <Spinner />
+                    ) : (
+                      <StarIcon className={'text-amber-300'} />
+                    )}
+                  </Button>
+                </Tooltip>
+              ) : (
+                <Tooltip
+                  content={intl.formatMessage(messages.removefromwatchlist)}
+                >
+                  <Button
+                    className="z-40 mr-2"
+                    buttonSize={'md'}
+                    onClick={onClickDeleteWatchlistBtn}
                   >
-                    <Button
-                      className="z-40 mr-2"
-                      buttonSize={'md'}
-                      onClick={onClickDeleteWatchlistBtn}
-                    >
-                      {isUpdating ? <Spinner /> : <MinusCircleIcon />}
-                    </Button>
-                  </Tooltip>
-                )}
-              </>
-            )}
+                    {isUpdating ? <Spinner /> : <MinusCircleIcon />}
+                  </Button>
+                </Tooltip>
+              )}
+            </>
+          )}
           <div className="z-20">
             <PlayButton links={mediaLinks} />
           </div>

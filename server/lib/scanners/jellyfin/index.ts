@@ -153,7 +153,6 @@ class JellyfinScanner
           mediaAddedAt,
           jellyfinMediaId: metadata.Id,
           imdbId,
-          title: metadata.Name,
         });
       }
 
@@ -163,7 +162,6 @@ class JellyfinScanner
           mediaAddedAt,
           jellyfinMediaId: metadata.Id,
           imdbId,
-          title: metadata.Name,
         });
       }
     } catch (e) {
@@ -368,12 +366,11 @@ class JellyfinScanner
 
                 // Count in both if episode has both versions
                 // TODO: Make this more robust in the future
-                // Currently, this detection is based solely on file resolution, not which
-                // Radarr/Sonarr instance the file came from. If a 4K request results in
-                // 1080p files (no 4K release available yet), those files will be counted
-                // as "standard" even though they're in the 4K library. This can cause
-                // non-4K users to see content as "available" when they can't access it.
-                // See issue https://github.com/seerr-team/seerr/issues/1744 for details.
+                // Currently, this detection is based solely on file resolution. If a 4K
+                // request results in 1080p files (no 4K release available yet), those files
+                // will be counted as "standard" even though they're in the 4K library. This
+                // can cause non-4K users to see content as "available" when they can't access
+                // it. See issue https://github.com/thelinyue/sinerr/issues/1744 for details.
                 if (hasStandard) totalStandard += episodeCount;
                 if (has4k) total4k += episodeCount;
               }
@@ -420,7 +417,6 @@ class JellyfinScanner
               ? new Date(metadata.DateCreated)
               : undefined,
             jellyfinMediaId: Id,
-            title: tvShow.name,
           }
         );
       } else {

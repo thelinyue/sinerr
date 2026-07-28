@@ -1,5 +1,4 @@
 import JellyfinAPI from '@server/api/jellyfin';
-import PlexTvAPI from '@server/api/plextv';
 import { ApiErrorCode } from '@server/constants/error';
 import { MediaServerType, ServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
@@ -17,7 +16,6 @@ import { getHostname } from '@server/utils/getHostname';
 import axios from 'axios';
 import { Router } from 'express';
 import net from 'net';
-import validator from 'validator';
 import { z } from 'zod';
 
 const authRoutes = Router();
@@ -42,190 +40,7 @@ authRoutes.get('/me', isAuthenticated(), async (req, res) => {
     where: { id: req.user.id },
   });
 
-  // check if email is required in settings and if user has an valid email
-  const settings = await getSettings();
-  if (
-    settings.notifications.agents.email.options.userEmailRequired &&
-    !validator.isEmail(user.email, { require_tld: false })
-  ) {
-    user.warnings.push('userEmailRequired');
-    logger.warn(`User ${user.username} has no valid email address`);
-  }
-
   return res.status(200).json(user);
-});
-
-authRoutes.post('/plex', async (req, res, next) => {
-  const settings = getSettings();
-  const userRepository = getRepository(User);
-  const body = req.body as { authToken?: string };
-
-  if (!body.authToken) {
-    return next({
-      status: 500,
-      message: 'Authentication token required.',
-    });
-  }
-
-  if (
-    settings.main.mediaServerType != MediaServerType.NOT_CONFIGURED &&
-    (settings.main.mediaServerLogin === false ||
-      settings.main.mediaServerType != MediaServerType.PLEX)
-  ) {
-    return res.status(500).json({ error: 'Plex login is disabled' });
-  }
-  try {
-    // First we need to use this auth token to get the user's email from plex.tv
-    const plextv = new PlexTvAPI(body.authToken);
-    const account = await plextv.getUser();
-
-    // Next let's see if the user already exists
-    let user = await userRepository
-      .createQueryBuilder('user')
-      .where('user.plexId = :id', { id: account.id })
-      .orWhere('user.email = :email', {
-        email: account.email.toLowerCase(),
-      })
-      .getOne();
-
-    if (!user && !(await userRepository.count())) {
-      user = new User({
-        email: account.email,
-        plexUsername: account.username,
-        plexId: account.id,
-        plexToken: account.authToken,
-        permissions: Permission.ADMIN,
-        avatar: account.thumb,
-        userType: UserType.PLEX,
-      });
-
-      settings.main.mediaServerType = MediaServerType.PLEX;
-      await settings.save();
-      startJobs();
-
-      await userRepository.save(user);
-    } else {
-      const mainUser = await userRepository.findOneOrFail({
-        select: { id: true, plexToken: true, plexId: true, email: true },
-        where: { id: 1 },
-      });
-      const mainPlexTv = new PlexTvAPI(mainUser.plexToken ?? '');
-
-      if (!account.id) {
-        logger.error('Plex ID was missing from Plex.tv response', {
-          label: 'API',
-          ip: req.ip,
-          email: account.email,
-          plexUsername: account.username,
-        });
-
-        return next({
-          status: 500,
-          message: 'Something went wrong. Try again.',
-        });
-      }
-
-      if (
-        account.id === mainUser.plexId ||
-        (account.email === mainUser.email && !mainUser.plexId) ||
-        (await mainPlexTv.checkUserAccess(account.id))
-      ) {
-        if (user) {
-          if (!user.plexId) {
-            logger.info(
-              'Found matching Plex user; updating user with Plex data',
-              {
-                label: 'API',
-                ip: req.ip,
-                email: user.email,
-                userId: user.id,
-                plexId: account.id,
-                plexUsername: account.username,
-              }
-            );
-          }
-
-          user.plexToken = body.authToken;
-          user.plexId = account.id;
-          user.avatar = account.thumb;
-          user.email = account.email;
-          user.plexUsername = account.username;
-          user.userType = UserType.PLEX;
-
-          await userRepository.save(user);
-        } else if (!settings.main.newPlexLogin) {
-          logger.warn(
-            'Failed sign-in attempt by unimported Plex user with access to the media server',
-            {
-              label: 'API',
-              ip: req.ip,
-              email: account.email,
-              plexId: account.id,
-              plexUsername: account.username,
-            }
-          );
-          return next({
-            status: 403,
-            message: 'Access denied.',
-          });
-        } else {
-          logger.info(
-            'Sign-in attempt from Plex user with access to the media server; creating new Seerr user',
-            {
-              label: 'API',
-              ip: req.ip,
-              email: account.email,
-              plexId: account.id,
-              plexUsername: account.username,
-            }
-          );
-          user = new User({
-            email: account.email,
-            plexUsername: account.username,
-            plexId: account.id,
-            plexToken: account.authToken,
-            permissions: settings.main.defaultPermissions,
-            avatar: account.thumb,
-            userType: UserType.PLEX,
-          });
-
-          await userRepository.save(user);
-        }
-      } else {
-        logger.warn(
-          'Failed sign-in attempt by Plex user without access to the media server',
-          {
-            label: 'API',
-            ip: req.ip,
-            email: account.email,
-            plexId: account.id,
-            plexUsername: account.username,
-          }
-        );
-        return next({
-          status: 403,
-          message: 'Access denied.',
-        });
-      }
-    }
-
-    // Set logged in session
-    if (req.session) {
-      req.session.userId = user.id;
-    }
-
-    return res.status(200).json(user?.filter() ?? {});
-  } catch (e) {
-    logger.error('Something went wrong authenticating with Plex account', {
-      label: 'API',
-      errorMessage: e.message,
-      ip: req.ip,
-    });
-    return next({
-      status: 500,
-      message: 'Unable to authenticate.',
-    });
-  }
 });
 
 function getUserAvatarUrl(user: User): string {
@@ -285,18 +100,23 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
       select: { id: true, jellyfinDeviceId: true },
     });
 
-    let deviceId = 'BOT_seerr';
+    let deviceId = 'BOT_sinerr';
     if (user && user.id === 1) {
-      // Admin is always BOT_seerr
-      deviceId = 'BOT_seerr';
+      // Admin is always BOT_sinerr
+      deviceId = 'BOT_sinerr';
     } else if (user && user.jellyfinDeviceId) {
       deviceId = user.jellyfinDeviceId;
     } else if (body.username) {
-      deviceId = Buffer.from(`BOT_seerr_${body.username}`).toString('base64');
+      deviceId = Buffer.from(`BOT_sinerr_${body.username}`).toString('base64');
     }
 
     // First we need to attempt to log the user in to jellyfin
-    const jellyfinserver = new JellyfinAPI(hostname ?? '', undefined, deviceId);
+    const jellyfinserver = new JellyfinAPI(
+      hostname ?? '',
+      undefined,
+      deviceId,
+      body.serverType
+    );
 
     const ip = req.ip;
     let clientIp;
@@ -340,7 +160,7 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
 
       if (missingAdminUser) {
         logger.info(
-          'Sign-in attempt from Jellyfin user with access to the media server; creating initial admin user for Seerr',
+          'Sign-in attempt from Jellyfin user with access to the media server; creating initial admin user for Sinerr',
           {
             label: 'API',
             ip: req.ip,
@@ -353,7 +173,8 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
 
         user = new User({
           id: 1,
-          email: body.email || account.User.Name,
+          email: body.email || null,
+          username: account.User.Name,
           jellyfinUsername: account.User.Name,
           jellyfinUserId: account.User.Id,
           jellyfinDeviceId: deviceId,
@@ -369,7 +190,7 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
         await userRepository.save(user);
       } else {
         logger.info(
-          'Sign-in attempt from Jellyfin user with access to the media server; editing admin user for Seerr',
+          'Sign-in attempt from Jellyfin user with access to the media server; editing admin user for Sinerr',
           {
             label: 'API',
             ip: req.ip,
@@ -385,7 +206,8 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
         if (!user) {
           throw new Error('Unable to find admin user to edit');
         }
-        user.email = body.email || account.User.Name;
+        user.email = body.email || null;
+        user.username = account.User.Name;
         user.jellyfinUsername = account.User.Name;
         user.jellyfinUserId = account.User.Id;
         user.jellyfinDeviceId = deviceId;
@@ -404,9 +226,10 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
       const jellyfinClient = new JellyfinAPI(
         hostname,
         account.AccessToken,
-        deviceId
+        deviceId,
+        body.serverType
       );
-      const apiKey = await jellyfinClient.createApiToken('Seerr');
+      const apiKey = await jellyfinClient.createApiToken('Sinerr');
 
       const serverName = await jellyfinserver.getServerName();
 
@@ -446,23 +269,9 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
       }
 
       await userRepository.save(user);
-    } else if (!settings.main.newPlexLogin) {
-      logger.warn(
-        'Failed sign-in attempt by unimported Jellyfin user with access to the media server',
-        {
-          label: 'API',
-          ip: req.ip,
-          jellyfinUserId: account.User.Id,
-          jellyfinUsername: account.User.Name,
-        }
-      );
-      return next({
-        status: 403,
-        message: 'Access denied.',
-      });
     } else if (!user) {
       logger.info(
-        'Sign-in attempt from Jellyfin user with access to the media server; creating new Seerr user',
+        'Sign-in attempt from Jellyfin user with access to the media server; creating new Sinerr user',
         {
           label: 'API',
           ip: req.ip,
@@ -471,7 +280,8 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
       );
 
       user = new User({
-        email: body.email,
+        email: body.email || null,
+        username: account.User.Name,
         jellyfinUsername: account.User.Name,
         jellyfinUserId: account.User.Id,
         jellyfinDeviceId: deviceId,
@@ -699,7 +509,7 @@ authRoutes.post(
       });
 
       const deviceId = Buffer.from(
-        `BOT_seerr_${account.User.Name ?? ''}`
+        `BOT_sinerr_${account.User.Name ?? ''}`
       ).toString('base64');
 
       if (user) {
@@ -714,23 +524,9 @@ authRoutes.post(
         user.jellyfinDeviceId = deviceId;
         user.avatar = getUserAvatarUrl(user);
         await userRepository.save(user);
-      } else if (!settings.main.newPlexLogin) {
-        logger.warn(
-          'Failed Quick Connect sign-in attempt by unimported Jellyfin user',
-          {
-            label: 'API',
-            ip: req.ip,
-            jellyfinUserId: account.User.Id,
-            jellyfinUsername: account.User.Name,
-          }
-        );
-        return next({
-          status: 403,
-          message: 'Access denied.',
-        });
       } else {
         logger.info(
-          'Quick Connect sign-in from new Jellyfin user; creating new Seerr user',
+          'Quick Connect sign-in from new Jellyfin user; creating new Sinerr user',
           {
             label: 'API',
             ip: req.ip,
@@ -739,7 +535,7 @@ authRoutes.post(
         );
 
         user = new User({
-          email: account.User.Name,
+          username: account.User.Name,
           jellyfinUsername: account.User.Name,
           jellyfinUserId: account.User.Id,
           jellyfinDeviceId: deviceId,
@@ -776,27 +572,27 @@ authRoutes.post(
 authRoutes.post('/local', async (req, res, next) => {
   const settings = getSettings();
   const userRepository = getRepository(User);
-  const body = req.body as { email?: string; password?: string };
+  const body = req.body as { username?: string; password?: string };
 
   if (!settings.main.localLogin) {
     return res.status(500).json({ error: 'Password sign-in is disabled.' });
-  } else if (!body.email || !body.password) {
+  } else if (!body.username || !body.password) {
     return res.status(500).json({
-      error: 'You must provide both an email address and a password.',
+      error: 'You must provide both a username and a password.',
     });
   }
   try {
     const user = await userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.email', 'user.password', 'user.plexId'])
-      .where('user.email = :email', { email: body.email.toLowerCase() })
+      .select(['user.id', 'user.username', 'user.password'])
+      .where('user.username = :username', { username: body.username })
       .getOne();
 
     if (!user || !(await user.passwordMatch(body.password))) {
-      logger.warn('Failed sign-in attempt using invalid Seerr password', {
+      logger.warn('Failed sign-in attempt using invalid Sinerr password', {
         label: 'API',
         ip: req.ip,
-        email: body.email,
+        username: body.username,
         userId: user?.id,
       });
       return next({
@@ -812,11 +608,11 @@ authRoutes.post('/local', async (req, res, next) => {
 
     return res.status(200).json(user?.filter() ?? {});
   } catch (e) {
-    logger.error('Something went wrong authenticating with Seerr password', {
+    logger.error('Something went wrong authenticating with Sinerr password', {
       label: 'API',
       errorMessage: e.message,
       ip: req.ip,
-      email: body.email,
+      username: body.username,
     });
     return next({
       status: 500,
@@ -851,7 +647,7 @@ authRoutes.post('/logout', async (req, res, next) => {
             await axios.delete(`${baseUrl}/Devices`, {
               params: { Id: user.jellyfinDeviceId },
               headers: {
-                'X-Emby-Authorization': `MediaBrowser Client="Seerr", Device="Seerr", DeviceId="seerr", Version="${
+                'X-Emby-Authorization': `MediaBrowser Client="Sinerr", Device="Sinerr", DeviceId="sinerr", Version="${
                   settings.main.mediaServerType === MediaServerType.EMBY
                     ? '1.0.0'
                     : getAppVersion()
@@ -904,18 +700,18 @@ authRoutes.post('/logout', async (req, res, next) => {
 
 authRoutes.post('/reset-password', async (req, res, next) => {
   const userRepository = getRepository(User);
-  const body = req.body as { email?: string };
+  const body = req.body as { username?: string };
 
-  if (!body.email) {
+  if (!body.username) {
     return next({
       status: 500,
-      message: 'Email address required.',
+      message: 'Username required.',
     });
   }
 
   const user = await userRepository
     .createQueryBuilder('user')
-    .where('user.email = :email', { email: body.email.toLowerCase() })
+    .where('user.username = :username', { username: body.username })
     .getOne();
 
   if (user) {
@@ -924,13 +720,13 @@ authRoutes.post('/reset-password', async (req, res, next) => {
     logger.info('Successfully sent password reset link', {
       label: 'API',
       ip: req.ip,
-      email: body.email,
+      username: body.username,
     });
   } else {
     logger.error('Something went wrong sending password reset link', {
       label: 'API',
       ip: req.ip,
-      email: body.email,
+      username: body.username,
     });
   }
 
@@ -976,7 +772,7 @@ authRoutes.post('/reset-password/:guid', async (req, res, next) => {
       label: 'API',
       ip: req.ip,
       guid: req.params.guid,
-      email: user.email,
+      username: user.username,
     });
     return next({
       status: 500,
@@ -990,7 +786,7 @@ authRoutes.post('/reset-password/:guid', async (req, res, next) => {
     label: 'API',
     ip: req.ip,
     guid: req.params.guid,
-    email: user.email,
+    username: user.username,
   });
 
   return res.status(200).json({ status: 'ok' });

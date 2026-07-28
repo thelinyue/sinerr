@@ -8,25 +8,38 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
-import type { DownloadingItem } from '@server/lib/downloadtracker';
 import { useIntl } from 'react-intl';
 
 const messages = defineMessages('components.StatusBadge', {
   status: '{status}',
   status4k: '4K {status}',
-  playonplex: 'Play on {mediaServerName}',
+  playonmediaserver: 'Play on {mediaServerName}',
   openinarr: 'Open in {arr}',
   managemedia: 'Manage {mediaType}',
   seasonnumber: 'S{seasonNumber}',
   seasonepisodenumber: 'S{seasonNumber}E{episodeNumber}',
 });
 
+interface DownloadingItem {
+  title: string;
+  status: string;
+  size: number;
+  sizeLeft: number;
+  estimatedCompletionTime: string;
+  downloadId: string;
+  externalId: string;
+  episode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+  };
+}
+
 interface StatusBadgeProps {
   status?: MediaStatus;
   downloadItem?: DownloadingItem[];
   is4k?: boolean;
   inProgress?: boolean;
-  plexUrl?: string;
+  mediaUrl?: string;
   serviceUrl?: string;
   tmdbId?: number;
   mediaType?: 'movie' | 'tv';
@@ -39,7 +52,7 @@ const StatusBadge = ({
   downloadItem = [],
   is4k = false,
   inProgress = false,
-  plexUrl,
+  mediaUrl,
   serviceUrl,
   tmdbId,
   mediaType,
@@ -59,7 +72,7 @@ const StatusBadge = ({
 
   if (
     mediaType &&
-    plexUrl &&
+    mediaUrl &&
     hasPermission(
       is4k
         ? [
@@ -83,14 +96,12 @@ const StatusBadge = ({
         ? settings.currentSettings.movie4kEnabled
         : settings.currentSettings.series4kEnabled))
   ) {
-    mediaLink = plexUrl;
-    mediaLinkDescription = intl.formatMessage(messages.playonplex, {
+    mediaLink = mediaUrl;
+    mediaLinkDescription = intl.formatMessage(messages.playonmediaserver, {
       mediaServerName:
         settings.currentSettings.mediaServerType === MediaServerType.EMBY
           ? 'Emby'
-          : settings.currentSettings.mediaServerType === MediaServerType.PLEX
-            ? 'Plex'
-            : 'Jellyfin',
+          : 'Jellyfin',
     });
   } else if (hasPermission(Permission.MANAGE_REQUESTS)) {
     if (mediaType && tmdbId) {
@@ -103,7 +114,7 @@ const StatusBadge = ({
     } else if (hasPermission(Permission.ADMIN) && serviceUrl) {
       mediaLink = serviceUrl;
       mediaLinkDescription = intl.formatMessage(messages.openinarr, {
-        arr: mediaType === 'movie' ? 'Radarr' : 'Sonarr',
+        arr: 'MoviePilot',
       });
     }
   }

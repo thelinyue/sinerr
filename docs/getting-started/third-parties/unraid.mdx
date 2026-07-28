@@ -1,6 +1,6 @@
 ---
 title: Unraid (Advanced)
-description: Install Seerr using Unraid
+description: Install Sinerr using Unraid
 sidebar_position: 2
 ---
 
@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 # Unraid
 
 :::warning
-Third-party installation methods are maintained by the community. The Seerr team is not responsible for these packages.
+Third-party installation methods are maintained by the community. The Sinerr team is not responsible for these packages.
 :::
 
 :::warning
@@ -28,25 +28,25 @@ In case you still want to do it manually, please follow the instructions below.
 
 Before proceeding, choose which installation method best suits your server:
 
-**Seerr Default** (`UID 1000:1000`) â€” Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
+**Sinerr Default** (`UID 1000:1000`) â€?Runs with the container's native `node` user. Matches the official image, but may break SMB share access, trigger "Fix Common Problems" warnings, and cause issues with backup plugins (such as CA Appdata Backup) and network integrations (such as Tailscale).
 
-**Unraid Default** (`UID 99:100`) â€” Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Seerr's built-in rootless user and may cause compatibility issues with future Seerr updates.
+**Unraid Default** (`UID 99:100`) â€?Runs with Unraid's native `nobody:users` ownership. Follows Unraid best practices, but overrides Sinerr's built-in rootless user and may cause compatibility issues with future Sinerr updates.
 
 <Tabs groupId="unraid-permissions" queryString>
-  <TabItem value="seerr-default" label="Seerr Default">
+  <TabItem value="sinerr-default" label="Sinerr Default">
 
   ### 1. Create the config directory
 
   Open the Unraid terminal and run:
 
   ```bash
-  mkdir -p /mnt/user/appdata/seerr
+  mkdir -p /mnt/user/appdata/sinerr
   ```
 
   ### 2. Set folder permissions
 
   ```bash
-  chown -R 1000:1000 /mnt/user/appdata/seerr
+  chown -R 1000:1000 /mnt/user/appdata/sinerr
   ```
 
   ### 3. Add the Docker container
@@ -61,9 +61,9 @@ Before proceeding, choose which installation method best suits your server:
 
   | Field | Value |
   |---|---|
-  | **Name** | `seerr` |
-  | **Repository** | `ghcr.io/seerr-team/seerr:latest` |
-  | **Icon URL** | `https://raw.githubusercontent.com/seerr-team/seerr/develop/public/android-chrome-512x512.png` |
+  | **Name** | `sinerr` |
+  | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
+  | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
   | **Extra Parameters** | `--init --restart=unless-stopped` |
   | **Network Type** | `bridge` |
@@ -82,7 +82,7 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | Container Path | `/app/config` |
-  | Host Path | `/mnt/user/appdata/seerr` |
+  | Host Path | `/mnt/user/appdata/sinerr` |
 
   **Variable:**
   | Field | Value |
@@ -98,7 +98,7 @@ Before proceeding, choose which installation method best suits your server:
 
   Click **Apply** to create and start the container.
 
-  ### 4. Access Seerr
+  ### 4. Access Sinerr
 
   Open the WebUI at `http://<your-unraid-ip>:5055` and follow the setup wizard.
 
@@ -110,13 +110,13 @@ Before proceeding, choose which installation method best suits your server:
   Open the Unraid terminal and run:
 
   ```bash
-  mkdir -p /mnt/user/appdata/seerr
+  mkdir -p /mnt/user/appdata/sinerr
   ```
 
   ### 2. Set folder permissions
 
   ```bash
-  chown -R 99:100 /mnt/user/appdata/seerr
+  chown -R 99:100 /mnt/user/appdata/sinerr
   ```
 
   ### 3. Add the Docker container
@@ -131,9 +131,9 @@ Before proceeding, choose which installation method best suits your server:
 
   | Field | Value |
   |---|---|
-  | **Name** | `seerr` |
-  | **Repository** | `ghcr.io/seerr-team/seerr:latest` |
-  | **Icon URL** | `https://raw.githubusercontent.com/seerr-team/seerr/develop/public/android-chrome-512x512.png` |
+  | **Name** | `sinerr` |
+  | **Repository** | `ghcr.io/thelinyue/sinerr:latest` |
+  | **Icon URL** | `https://raw.githubusercontent.com/thelinyue/sinerr/develop/public/android-chrome-512x512.png` |
   | **WebUI** | `http://[IP]:[PORT:5055]` |
   | **Extra Parameters** | `--init --restart=unless-stopped --user 99:100` |
   | **Network Type** | `bridge` |
@@ -152,7 +152,7 @@ Before proceeding, choose which installation method best suits your server:
   | Field | Value |
   |---|---|
   | Container Path | `/app/config` |
-  | Host Path | `/mnt/user/appdata/seerr` |
+  | Host Path | `/mnt/user/appdata/sinerr` |
 
   **Variable:**
   | Field | Value |
@@ -168,7 +168,7 @@ Before proceeding, choose which installation method best suits your server:
 
   Click **Apply** to create and start the container.
 
-  ### 4. Access Seerr
+  ### 4. Access Sinerr
 
   Open the WebUI at `http://<your-unraid-ip>:5055` and follow the setup wizard.
 

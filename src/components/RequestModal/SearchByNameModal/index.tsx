@@ -3,7 +3,6 @@ import CachedImage from '@app/components/Common/CachedImage';
 import Modal from '@app/components/Common/Modal';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
-import type { SonarrSeries } from '@server/api/servarr/sonarr';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
 
@@ -35,8 +34,10 @@ const SearchByNameModal = ({
   backdrop,
 }: SearchByNameModalProps) => {
   const intl = useIntl();
-  const { data, error } = useSWR<SonarrSeries[]>(
-    `/api/v1/service/sonarr/lookup/${tmdbId}`
+  const { data, error } = useSWR<
+    { tvdbId: number; title: string; year: number; remotePoster?: string; overview?: string }[]
+  >(
+    `/api/v1/service/moviepilot/lookup/${tmdbId}`
   );
 
   const handleClick = (tvdbId: number) => {
@@ -92,7 +93,7 @@ const SearchByNameModal = ({
                 <CachedImage
                   type="tvdb"
                   src={
-                    item.remotePoster ?? '/images/seerr_poster_not_found.png'
+                    item.remotePoster ?? '/images/sinerr_poster_not_found.png'
                   }
                   alt={item.title}
                   className="w-100 h-auto rounded-md"
