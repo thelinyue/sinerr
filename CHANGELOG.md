@@ -1,3 +1,43 @@
+## [1.0.1](https://github.com/thelinyue/sinerr/compare/v1.0.0...v1.0.1) (2026-07-28)
+
+
+### Security
+
+* **auth:** add rate limiting to login and password reset endpoints (5 min / 20 req)
+
+
+### Bug Fixes
+
+* **server:** add try-catch to `POST /media/:id/:status` handler
+* **server:** fix silent exception drop in `POST /request` causing hung connections
+* **server:** fix `/request/count` query builder mutation causing inaccurate counts
+* **server:** fix `req.params.guid` type error in `POST /reset-password/:guid`
+* **ui:** fix hanging `isUpdating` state on failed approve/decline/delete in RequestBlock
+* **ui:** fix Login component import path (`next/dist/client/router` -> `next/router`)
+* **ui:** add null checks for `releases.results` and `contentRatings.results` in MovieDetails/TvDetails
+
+
+### Performance Improvements
+
+* **frontend:** memoize all context values (`SettingsContext`, `InteractionContext`, `LanguageContext`, `SWRConfig`)
+* **frontend:** add `React.memo` to Sidebar, MobileMenu, LanguagePicker components
+* **frontend:** memoize filtered menu link lists in Sidebar and MobileMenu
+* **frontend:** refactor `useVerticalScroll` — stable debounce via `useMemo`, proper effect deps, ref-based callbacks
+* **frontend:** eliminate duplicate request/issue count fetch by using SWR cache in `_app.tsx`
+* **frontend:** stabilize Layout callbacks with `useCallback` (`setClosed`, `revalidateIssueCount`, `revalidateRequestsCount`)
+* **frontend:** wrap `checkPermission` with `useCallback` in `useUser` hook
+* **frontend:** add revalidation guard refs to prevent infinite SWR loops in Sidebar/MobileMenu
+
+
+### UI/UX
+
+* **ui:** replace `<a href="#">` logout with semantic `<button>` in UserDropdown
+* **ui:** add `aria-label` to SearchInput clear button and MobileMenu overflow button
+* **ui:** remove dead `error` state and unused imports from Login component
+* **ui:** remove unused `NotificationTypeSelector`, `PermissionEdit`, `SettingsMain`, `UserGeneralSettings` components
+* **i18n:** clean up obsolete translation keys across 44 locale files
+
+
 ## [2.7.3](https://github.com/fallenbagel/jellyseerr/compare/v2.7.2...v2.7.3) (2025-08-14)
 
 
