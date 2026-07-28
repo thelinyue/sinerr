@@ -229,31 +229,35 @@ settingsRoutes.get('/jellyfin/library', async (req, res, next) => {
   return res.status(200).json(settings.jellyfin.libraries);
 });
 
-settingsRoutes.get('/jellyfin/users', async (req, res) => {
-  const settings = getSettings();
+settingsRoutes.get('/jellyfin/users', async (req, res, next) => {
+  try {
+    const settings = getSettings();
 
-  const userRepository = getRepository(User);
-  const admin = await userRepository.findOneOrFail({
-    select: ['id', 'jellyfinDeviceId', 'jellyfinUserId'],
-    where: { id: 1 },
-    order: { id: 'ASC' },
-  });
-  const jellyfinClient = new JellyfinAPI(
-    getHostname(),
-    settings.jellyfin.apiKey,
-    admin.jellyfinDeviceId ?? ''
-  );
+    const userRepository = getRepository(User);
+    const admin = await userRepository.findOneOrFail({
+      select: ['id', 'jellyfinDeviceId', 'jellyfinUserId'],
+      where: { id: 1 },
+      order: { id: 'ASC' },
+    });
+    const jellyfinClient = new JellyfinAPI(
+      getHostname(),
+      settings.jellyfin.apiKey,
+      admin.jellyfinDeviceId ?? ''
+    );
 
-  jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
-  const resp = await jellyfinClient.getUsers();
-  const users = resp.users.map((user) => ({
-    username: user.Name,
-    id: user.Id,
-    thumb: `/avatarproxy/${user.Id}`,
-    email: user.Name,
-  }));
+    jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
+    const resp = await jellyfinClient.getUsers();
+    const users = resp.users.map((user) => ({
+      username: user.Name,
+      id: user.Id,
+      thumb: `/avatarproxy/${user.Id}`,
+      email: user.Name,
+    }));
 
-  return res.status(200).json(users);
+    return res.status(200).json(users);
+  } catch (e) {
+    next({ status: 500, message: e.message });
+  }
 });
 
 settingsRoutes.get('/jellyfin/sync', (_req, res) => {

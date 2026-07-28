@@ -5,7 +5,7 @@ export class ApiError extends Error {
     public statusCode: number,
     public errorCode: ApiErrorCode
   ) {
-    super();
+    super(`ApiError: ${statusCode} (${errorCode})`);
 
     this.name = 'apiError';
   }

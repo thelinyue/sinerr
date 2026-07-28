@@ -672,9 +672,6 @@ router.post(
         settings.jellyfin.apiKey,
         admin.jellyfinDeviceId ?? ''
       );
-      jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
-
-      //const jellyfinUsersResponse = await jellyfinClient.getUsers();
       const createdUsers: User[] = [];
 
       jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
@@ -703,13 +700,13 @@ router.post(
         if (!user) {
           const newUser = new User({
             jellyfinUsername: jellyfinUser?.Name,
-            jellyfinUserId: jellyfinUser?.Id,
+            jellyfinUserId: jellyfinUserId,
             jellyfinDeviceId: Buffer.from(
               `BOT_sinerr_${jellyfinUser?.Name ?? ''}`
             ).toString('base64'),
             username: jellyfinUser?.Name,
             permissions: settings.main.defaultPermissions,
-            avatar: `/avatarproxy/${jellyfinUser?.Id}`,
+            avatar: `/avatarproxy/${jellyfinUserId}`,
             userType:
               settings.main.mediaServerType === MediaServerType.JELLYFIN
                 ? UserType.JELLYFIN
@@ -722,7 +719,13 @@ router.post(
       }
       return res.status(201).json(User.filterMany(createdUsers));
     } catch (e) {
-      next({ status: 500, message: e.message });
+      next({
+        status: 500,
+        message:
+          e.errorCode ||
+          e.message ||
+          'Something went wrong importing Jellyfin users',
+      });
     }
   }
 );
