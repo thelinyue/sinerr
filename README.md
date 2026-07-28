@@ -10,7 +10,7 @@
 <a href="https://github.com/Linyue-GitHub/sinerr/blob/develop/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/Linyue-GitHub/sinerr"></a>
 </p>
 
-**Sinerr** is a free and open source software application for managing requests for your media library. It integrates with the media server of your choice: [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/). In addition, it integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)** and **[Radarr](https://radarr.video/)**.
+**Sinerr** 是一款免费开源的个人媒体库请求管理应用。支持对接 [Jellyfin](https://jellyfin.org)、[Emby](https://emby.media/) 媒体服务器，以及 **[Sonarr](https://sonarr.tv/)**、**[Radarr](https://radarr.video/)** 等下载管理工具。
 
 ## Docker Compose 部署
 
@@ -36,25 +36,25 @@ docker compose up -d
 
 访问 `http://localhost:5055` 完成初始化配置。
 
-## Current Features
+## 功能特性
 
-- Full Jellyfin/Emby integration including authentication with user import & management.
-- Support for **PostgreSQL** and **SQLite** databases.
-- Supports Movies, Shows and Mixed Libraries.
-- Ability to change email addresses for SMTP purposes.
-- Easy integration with your existing services. Currently, Sinerr supports Sonarr and Radarr. More to come!
-- Jellyfin/Emby library scan, to keep track of the titles which are already available.
-- Customizable request system, which allows users to request individual seasons or movies in a friendly, easy-to-use interface.
-- Incredibly simple request management UI. Don't dig through the app to simply approve recent requests!
-- Granular permission system.
-- Support for various notification agents.
-- Mobile-friendly design, for when you need to approve requests on the go!
-- Support for watchlisting & blocklisting media.
+- 完整的 Jellyfin/Emby 集成，支持用户导入与管理
+- 支持 **PostgreSQL** 和 **SQLite** 数据库
+- 支持电影、电视剧及混合媒体库
+- 可为 SMTP 邮件通知修改邮箱地址
+- 轻松对接 Sonarr、Radarr 等现有服务
+- Jellyfin/Emby 媒体库扫描，自动追踪已有内容
+- 可定制的请求系统，支持按季/按电影提交请求
+- 简洁的请求管理界面
+- 细粒度的权限系统
+- 支持多种通知方式
+- 移动端友好的响应式设计
+- 支持关注列表与屏蔽列表
 
-## API Documentation
+## API 文档
 
-You can access the API documentation from your local Sinerr install at http://localhost:5055/api-docs
+本地启动后访问 `http://localhost:5055/api-docs` 查看 API 文档。
 
-## Contributing
+## 参与贡献
 
-You can help improve Sinerr too! Check out our [Contribution Guide](./CONTRIBUTING.md) to get started.
+欢迎参与 Sinerr 的开发！请参阅 [贡献指南](./CONTRIBUTING.md)。
