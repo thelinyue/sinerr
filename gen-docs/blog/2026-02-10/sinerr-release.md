@@ -55,7 +55,7 @@ Previously, Sinerr relied solely on **TMDB** for movie and TV show information, 
 
 With this new integration, Sinerr can now use **the same data source as Sonarr** for series and anime, ensuring consistent and accurate season and episode information across both platforms.
 
-You can try this new experimental feature in the new “Metadata Providers�?tab of the settings page:
+You can try this new experimental feature in the new “Metadata Providers” tab of the settings page:
 
 ![Metadata Providers](./metadata-providers.png)
 
@@ -65,7 +65,7 @@ By default, Node.js doesn't cache any DNS requests. Our DNS cache manager addres
 
 We will post another blog post soon on all the issues we encountered with DNS caching in Node.js.
 
-You can enable this by checking the “DNS Cache�?setting in the network tabs of the Sinerr settings:
+You can enable this by checking the “DNS Cache” setting in the network tabs of the Sinerr settings:
 
 ![DNS Cache](./dns-cache.png)
 

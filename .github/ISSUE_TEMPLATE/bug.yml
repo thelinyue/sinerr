@@ -20,7 +20,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of Sinerr are you running? (You can find this in Settings â†?About â†?Version.)
+      description: What version of Sinerr are you running? (You can find this in Settings â†’ About â†’ Version.)
     validations:
       required: true
   - type: textarea
