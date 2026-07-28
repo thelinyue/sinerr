@@ -4,14 +4,37 @@
 <p align="center">
 <img src="https://github.com/Linyue-GitHub/sinerr/actions/workflows/release.yml/badge.svg" alt="Sinerr Release" />
 <img src="https://github.com/Linyue-GitHub/sinerr/actions/workflows/ci.yml/badge.svg" alt="Sinerr CI">
+<img src="https://github.com/Linyue-GitHub/sinerr/actions/workflows/dev.yml/badge.svg" alt="Dev Build">
 </p>
 <p align="center">
-<a href="https://discord.gg/seerr"><img src="https://img.shields.io/discord/783137440809746482" alt="Discord"></a>
-<a href="https://hub.docker.com/r/linyue/sinerr"><img src="https://img.shields.io/docker/pulls/linyue/sinerr" alt="Docker pulls"></a>
-<a href="https://translate.seerr.dev/engage/seerr/"><img src="https://translate.seerr.dev/widget/seerr/svg-badge.svg" alt="Translation status" /></a>
 <a href="https://github.com/Linyue-GitHub/sinerr/blob/develop/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/Linyue-GitHub/sinerr"></a>
+</p>
 
-**Seerr** is a free and open source software application for managing requests for your media library. It integrates with the media server of your choice: [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/). In addition, it integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)**, **[Radarr](https://radarr.video/)**.
+**Sinerr** is a free and open source software application for managing requests for your media library. It integrates with the media server of your choice: [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/). In addition, it integrates with your existing services, such as **[Sonarr](https://sonarr.tv/)** and **[Radarr](https://radarr.video/)**.
+
+## Docker Compose 部署
+
+```yaml
+services:
+  sinerr:
+    image: ghcr.io/Linyue-GitHub/sinerr:dev
+    container_name: sinerr
+    restart: unless-stopped
+    ports:
+      - "5055:5055"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./config:/app/config
+```
+
+启动：
+
+```bash
+docker compose up -d
+```
+
+访问 `http://localhost:5055` 完成初始化配置。
 
 ## Current Features
 
@@ -28,50 +51,10 @@
 - Mobile-friendly design, for when you need to approve requests on the go!
 - Support for watchlisting & blocklisting media.
 
-With more features on the way! Check out our [issue tracker](/../../issues) to see the features which have already been requested.
-
-## Getting Started
-
-Check out our documentation for instructions on how to install and run Sinerr:
-
-https://docs.seerr.dev/getting-started/
-
-## Preview
-
-<img src="./public/preview.jpg" alt="Sinerr application preview" />
-
-## Migrating from Overseerr/Jellyseerr to Sinerr
-
-Read our [release announcement](https://docs.seerr.dev/blog/seerr-release) to learn what Sinerr means for Jellyseerr and Overseerr users.
-
-Please follow our [migration guide](https://docs.seerr.dev/migration-guide) for detailed instructions on migrating from Overseerr or Jellyseerr.
-
-## Support
-
-- Check out the [Sinerr Documentation](https://docs.seerr.dev) before asking for help. Your question might already be in the docs!
-- You can get support on [Discord](https://discord.gg/seerr).
-- You can ask questions in the Help category of our [GitHub Discussions](/../../discussions).
-- Bug reports and feature requests can be submitted via [GitHub Issues](/../../issues).
-
 ## API Documentation
 
 You can access the API documentation from your local Sinerr install at http://localhost:5055/api-docs
 
-## Community
-
-You can ask questions, share ideas, and more in [GitHub Discussions](/../../discussions).
-
-If you would like to chat with other members of our growing community, [join the Sinerr Discord server](https://discord.gg/seerr)!
-
-Our [Code of Conduct](./CODE_OF_CONDUCT.md) applies to all Sinerr community channels.
-
 ## Contributing
 
 You can help improve Sinerr too! Check out our [Contribution Guide](./CONTRIBUTING.md) to get started.
-
-## Contributors ✨
-
-[![Contributors](https://opencollective.com/seerr/contributors.svg?width=890)](https://opencollective.com/seerr/#backers)
-
-[![Become a Backer](https://opencollective.com/seerr/backers.svg)](https://opencollective.com/seerr/#backers)
-[![Become a Sponsor](https://opencollective.com/seerr/sponsors.svg)](https://opencollective.com/seerr/#sponsors)
