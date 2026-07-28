@@ -1,3 +1,17 @@
+## [1.1.1](https://github.com/thelinyue/sinerr/compare/v1.1.0...v1.1.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **Emby 用户导入:** 修复 `/jellyfin/users` 接口缺少异常处理导致 Emby 不可达时前端无响应的问题
+* **Emby 用户导入:** 修复 `ApiError` 错误消息为空的问题，现在会携带具体错误码
+* **Emby 用户导入:** 修复重复调用 `setUserId()` 的问题
+* **Emby 用户导入:** 修复 `jellyfinUserId` 存储时使用原始 GUID（带横线）而查询时使用标准化 GUID（去横线）的不匹配问题
+* **Emby 用户导入:** 修复头像 URL 使用原始 GUID 与头像代理正则校验不兼容的问题
+* **i18n:** 修复中文翻译中 `{mediaServerName}` ICU 占位符缺少 `{` 导致模板字符串直接显示的问题
+* **i18n:** 修正中文翻译中残留的 "Seerr" 为 "Sinerr"
+
+
 ## [1.1.0](https://github.com/thelinyue/sinerr/compare/v1.0.1...v1.1.0) (2026-07-28)
 
 
