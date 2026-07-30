@@ -1,24 +1,28 @@
 import CachedImage from '@app/components/Common/CachedImage';
 import MiniQuotaDisplay from '@app/components/Layout/UserDropdown/MiniQuotaDisplay';
+import useSettings from '@app/hooks/useSettings';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import { Menu, Transition } from '@headlessui/react';
 import {
   ArrowRightOnRectangleIcon,
   ClockIcon,
+  ServerIcon,
 } from '@heroicons/react/24/outline';
 import { CogIcon, UserIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import type { LinkProps } from 'next/link';
 import Link from 'next/link';
-import { Fragment, forwardRef } from 'react';
+import { Fragment, forwardRef, useState } from 'react';
 import { useIntl } from 'react-intl';
+import ConnectionInfoModal from './ConnectionInfoModal';
 
 const messages = defineMessages('components.Layout.UserDropdown', {
   myprofile: 'Profile',
   settings: 'Settings',
   requests: 'Requests',
   signout: 'Sign Out',
+  connectioninfo: 'Connection Info',
 });
 
 const ForwardedLink = forwardRef<
@@ -37,6 +41,14 @@ ForwardedLink.displayName = 'ForwardedLink';
 const UserDropdown = () => {
   const intl = useIntl();
   const { user, revalidate, hasPermission } = useUser();
+  const settings = useSettings();
+  const [showConnectionInfo, setShowConnectionInfo] = useState(false);
+
+  const hasConnectionInfo =
+    settings.currentSettings.serverConnectionUrl ||
+    settings.currentSettings.jellyfinExternalHost ||
+    settings.currentSettings.jellyfinHost ||
+    (settings.currentSettings.clientDownloadUrls || []).length > 0;
 
   const logout = async () => {
     const response = await axios.post('/api/v1/auth/logout');
@@ -154,6 +166,23 @@ const UserDropdown = () => {
                   </ForwardedLink>
                 )}
               </Menu.Item>
+              {hasConnectionInfo && (
+                <Menu.Item>
+                  {({ active }) => (
+                    <button
+                      className={`flex w-full items-center rounded px-4 py-2 text-sm font-medium text-gray-200 transition duration-150 ease-in-out ${
+                        active
+                          ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white'
+                          : ''
+                      }`}
+                      onClick={() => setShowConnectionInfo(true)}
+                    >
+                      <ServerIcon className="mr-2 inline h-5 w-5" />
+                      <span>{intl.formatMessage(messages.connectioninfo)}</span>
+                    </button>
+                  )}
+                </Menu.Item>
+              )}
               <Menu.Item>
                 {({ active }) => (
                   <a
@@ -174,6 +203,11 @@ const UserDropdown = () => {
           </div>
         </Menu.Items>
       </Transition>
+
+      <ConnectionInfoModal
+        show={showConnectionInfo}
+        onClose={() => setShowConnectionInfo(false)}
+      />
     </Menu>
   );
 };

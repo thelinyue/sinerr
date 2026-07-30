@@ -45,6 +45,7 @@ export interface JellyfinSettings {
   libraries: Library[];
   serverId: string;
   apiKey: string;
+  jellyfinTemplateUserId?: string;
 }
 export interface TautulliSettings {
   hostname?: string;
@@ -140,7 +141,8 @@ export interface MainSettings {
   partialRequestsEnabled: boolean;
   enableSpecialEpisodes: boolean;
   locale: string;
-  youtubeUrl: string;
+  clientDownloadUrls: { name: string; url: string; icon: string }[];
+  serverConnectionUrl: string;
 }
 
 export interface ProxySettings {
@@ -197,7 +199,8 @@ interface FullPublicSettings extends PublicSettings {
   locale: string;
   emailEnabled: boolean;
   userEmailRequired: boolean;
-  youtubeUrl: string;
+  clientDownloadUrls: { name: string; url: string; icon: string }[];
+  serverConnectionUrl: string;
 }
 
 export interface NotificationAgentConfig {
@@ -401,7 +404,8 @@ class Settings {
         partialRequestsEnabled: true,
         enableSpecialEpisodes: false,
         locale: 'zh-CN',
-        youtubeUrl: '',
+        clientDownloadUrls: [],
+        serverConnectionUrl: '',
       },
       jellyfin: {
         name: '',
@@ -414,6 +418,7 @@ class Settings {
         libraries: [],
         serverId: '',
         apiKey: '',
+        jellyfinTemplateUserId: '',
       },
       tautulli: {},
       metadataSettings: {
@@ -660,7 +665,8 @@ class Settings {
       emailEnabled: this.data.notifications.agents.email.enabled,
       userEmailRequired:
         this.data.notifications.agents.email.options.userEmailRequired,
-      youtubeUrl: this.data.main.youtubeUrl,
+      clientDownloadUrls: this.data.main.clientDownloadUrls,
+      serverConnectionUrl: this.data.main.serverConnectionUrl,
     };
   }
 

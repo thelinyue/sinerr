@@ -70,6 +70,13 @@ const messages = defineMessages('components.UserList', {
   usercreatedfailedexisting:
     'The provided username is already in use by another user.',
   usercreatedsuccess: 'User created successfully!',
+  usercreatedpasswordtip:
+    'Please save this password in a secure location. It will not be shown again.',
+  copy: 'Copy',
+  copyall: 'Copy All',
+  embyLoginInstructions:
+    'Use the above username and password to sign in on the Emby server.',
+  embyServerUrl: 'Emby Server URL',
   username: 'Username',
   email: 'Email Address',
   password: 'Password',
@@ -77,6 +84,9 @@ const messages = defineMessages('components.UserList', {
     'Configure an application URL and enable email notifications to allow automatic password generation.',
   autogeneratepassword: 'Automatically Generate Password',
   autogeneratepasswordTip: 'Email a server-generated password to the user',
+  createEmbyAccount: 'Also create Emby account',
+  createEmbyAccountTip:
+    'A matching account will be created on the {mediaServerName} server with the same username and password. Template user permissions will be applied if configured.',
   validationUsername: 'You must provide an username',
   validationEmail: 'Email required',
   sortBy: 'Sort by {field}',
@@ -110,6 +120,13 @@ const UserList = () => {
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
   const [currentSort, setCurrentSort] = useState<Sort>('created');
   const [currentPageSize, setCurrentPageSize] = useState<number>(10);
+
+  const mediaServerFormatValues = {
+    mediaServerName:
+      settings.currentSettings.mediaServerType === MediaServerType.EMBY
+        ? 'Emby'
+        : 'Jellyfin',
+  };
 
   const page = router.query.page ? Number(router.query.page) : 1;
   const pageIndex = page - 1;
@@ -155,6 +172,11 @@ const UserList = () => {
   }>({
     isOpen: false,
   });
+  const [generatedCredentials, setGeneratedCredentials] = useState<{
+    username: string;
+    password: string;
+    embyUrl?: string;
+  } | null>(null);
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
 
@@ -331,10 +353,6 @@ const UserList = () => {
   const hasNextPage = data.pageInfo.pages > pageIndex + 1;
   const hasPrevPage = pageIndex > 0;
 
-  const passwordGenerationEnabled =
-    settings.currentSettings.applicationUrl &&
-    settings.currentSettings.emailEnabled;
-
   return (
     <>
       <PageTitle title={intl.formatMessage(messages.users)} />
@@ -383,19 +401,32 @@ const UserList = () => {
             email: '',
             password: '',
             genpassword: false,
+            createEmbyAccount: false,
           }}
           validationSchema={CreateUserSchema}
           onSubmit={async (values) => {
             try {
-              await axios.post('/api/v1/user', {
+              const response = await axios.post('/api/v1/user', {
                 username: values.username,
                 email: values.email,
                 password: values.genpassword ? null : values.password,
+                createEmbyAccount: values.createEmbyAccount,
               });
-              addToast(intl.formatMessage(messages.usercreatedsuccess), {
-                appearance: 'success',
-                autoDismiss: true,
-              });
+              if (values.genpassword && response.data.generatedPassword) {
+                setGeneratedCredentials({
+                  username: values.username,
+                  password: response.data.generatedPassword,
+                  embyUrl: values.createEmbyAccount
+                    ? settings.currentSettings.jellyfinExternalHost ||
+                      settings.currentSettings.jellyfinHost
+                    : undefined,
+                });
+              } else {
+                addToast(intl.formatMessage(messages.usercreatedsuccess), {
+                  appearance: 'success',
+                  autoDismiss: true,
+                });
+              }
               setCreateModal({ isOpen: false });
             } catch (e) {
               addToast(
@@ -448,15 +479,6 @@ const UserList = () => {
                     type="warning"
                   />
                 )}
-                {currentHasPermission(Permission.ADMIN) &&
-                  !passwordGenerationEnabled && (
-                    <Alert
-                      title={intl.formatMessage(
-                        messages.passwordinfodescription
-                      )}
-                      type="info"
-                    />
-                  )}
                 <Form className="section">
                   <div className="form-row">
                     <label htmlFor="username" className="text-label">
@@ -499,11 +521,7 @@ const UserList = () => {
                         )}
                     </div>
                   </div>
-                  <div
-                    className={`form-row ${
-                      passwordGenerationEnabled ? '' : 'opacity-50'
-                    }`}
-                  >
+                  <div className="form-row">
                     <label htmlFor="genpassword" className="checkbox-label">
                       {intl.formatMessage(messages.autogeneratepassword)}
                       <span className="label-tip">
@@ -515,7 +533,6 @@ const UserList = () => {
                         type="checkbox"
                         id="genpassword"
                         name="genpassword"
-                        disabled={!passwordGenerationEnabled}
                         onClick={() => setFieldValue('password', '')}
                       />
                     </div>
@@ -549,11 +566,165 @@ const UserList = () => {
                         )}
                     </div>
                   </div>
+                  {settings.currentSettings.mediaServerType ===
+                    MediaServerType.EMBY && (
+                    <div className="form-row">
+                      <label
+                        htmlFor="createEmbyAccount"
+                        className="checkbox-label"
+                      >
+                        {intl.formatMessage(messages.createEmbyAccount)}
+                        <span className="label-tip">
+                          {intl.formatMessage(
+                            messages.createEmbyAccountTip,
+                            mediaServerFormatValues
+                          )}
+                        </span>
+                      </label>
+                      <div className="form-input-area">
+                        <Field
+                          type="checkbox"
+                          id="createEmbyAccount"
+                          name="createEmbyAccount"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </Form>
               </Modal>
             );
           }}
         </Formik>
+      </Transition>
+
+      <Transition
+        as="div"
+        enter="transition-opacity duration-300"
+        enterFrom="opacity-0"
+        enterTo="opacity-100"
+        leave="transition-opacity duration-300"
+        leaveFrom="opacity-100"
+        leaveTo="opacity-0"
+        show={!!generatedCredentials}
+      >
+        <Modal
+          title={intl.formatMessage(messages.usercreatedsuccess)}
+          onOk={() => setGeneratedCredentials(null)}
+          okText={intl.formatMessage(globalMessages.close)}
+          okButtonType="primary"
+          onCancel={() => setGeneratedCredentials(null)}
+        >
+          <div className="space-y-4">
+            <p className="text-gray-300">
+              {intl.formatMessage(messages.usercreatedpasswordtip)}
+            </p>
+            <div className="form-row">
+              <label className="text-label">
+                {intl.formatMessage(messages.username)}
+              </label>
+              <div className="form-input-area">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={generatedCredentials?.username ?? ''}
+                    className="w-full rounded-md border border-gray-500 bg-gray-700 text-white"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button
+                    buttonType="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        generatedCredentials?.username ?? ''
+                      );
+                    }}
+                  >
+                    {intl.formatMessage(messages.copy)}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="form-row">
+              <label className="text-label">
+                {intl.formatMessage(messages.password)}
+              </label>
+              <div className="form-input-area">
+                <div className="flex items-center gap-2">
+                  <SensitiveInput
+                    as="input"
+                    type="text"
+                    readOnly
+                    value={generatedCredentials?.password ?? ''}
+                    className="w-full rounded-md border border-gray-500 bg-gray-700 text-white"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button
+                    buttonType="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        generatedCredentials?.password ?? ''
+                      );
+                    }}
+                  >
+                    {intl.formatMessage(messages.copy)}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {generatedCredentials?.embyUrl && (
+              <>
+                <div className="form-row">
+                  <label className="text-label">
+                    {intl.formatMessage(messages.embyServerUrl)}
+                  </label>
+                  <div className="form-input-area">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedCredentials.embyUrl}
+                        className="w-full rounded-md border border-gray-500 bg-gray-700 text-white"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <Button
+                        buttonType="ghost"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            generatedCredentials.embyUrl ?? ''
+                          );
+                        }}
+                      >
+                        {intl.formatMessage(messages.copy)}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400">
+                  {intl.formatMessage(messages.embyLoginInstructions)}
+                </p>
+              </>
+            )}
+            <div className="flex justify-end gap-2 border-t border-gray-700 pt-2">
+              <Button
+                buttonType="ghost"
+                onClick={() => {
+                  const lines = [
+                    `${intl.formatMessage(messages.username)}: ${generatedCredentials?.username ?? ''}`,
+                    `${intl.formatMessage(messages.password)}: ${generatedCredentials?.password ?? ''}`,
+                  ];
+                  if (generatedCredentials?.embyUrl) {
+                    lines.push(
+                      `${intl.formatMessage(messages.embyServerUrl)}: ${generatedCredentials.embyUrl}`
+                    );
+                  }
+                  navigator.clipboard.writeText(lines.join('\n'));
+                }}
+              >
+                {intl.formatMessage(messages.copyall)}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </Transition>
 
       <Transition

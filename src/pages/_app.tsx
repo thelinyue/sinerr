@@ -26,15 +26,29 @@ import { IntlProvider } from 'react-intl';
 import { SWRConfig } from 'swr';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const localeCache = new Map<string, Promise<any>>();
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const loadLocaleData = (locale: AvailableLocale): Promise<any> => {
+  const cached = localeCache.get(locale);
+  if (cached) {
+    return cached;
+  }
+
+  let promise: Promise<any>;
   switch (locale) {
     case 'zh-CN':
-      return import('../i18n/locale/zh_Hans.json');
+      promise = import('../i18n/locale/zh_Hans.json');
+      break;
     case 'zh-TW':
-      return import('../i18n/locale/zh_Hant.json');
+      promise = import('../i18n/locale/zh_Hant.json');
+      break;
     default:
-      return import('../i18n/locale/en.json');
+      promise = import('../i18n/locale/en.json');
   }
+
+  localeCache.set(locale, promise);
+  return promise;
 };
 
 // Custom types so we can correctly type our GetInitialProps function
@@ -123,10 +137,13 @@ const CoreApp: Omit<NextAppComponentType, 'origGetInitialProps'> = ({
   return (
     <SWRConfig
       value={{
-        fetcher: (url) => axios.get(url).then((res) => res.data),
+        fetcher: (url) =>
+          axios.get(url, { timeout: 15000 }).then((res) => res.data),
         fallback: {
           '/api/v1/auth/me': user,
         },
+        dedupingInterval: 6000,
+        focusThrottleInterval: 10000,
       }}
     >
       <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
@@ -191,56 +208,62 @@ CoreApp.getInitialProps = async (initialProps) => {
     enablePushRegistration: false,
     locale: 'zh-CN',
     emailEnabled: false,
-    youtubeUrl: '',
+    clientDownloadUrls: [] as { name: string; url: string; icon: string }[],
+    serverConnectionUrl: '',
   };
 
   if (ctx.res) {
-    // Check if app is initialized and redirect if necessary
-    const response = await axios.get<PublicSettingsResponse>(
-      `http://${getHostAndPort()}/api/v1/settings/public`
-    );
+    const axiosConfig = { timeout: 10000 };
 
-    currentSettings = response.data;
+    try {
+      const response = await axios.get<PublicSettingsResponse>(
+        `http://${getHostAndPort()}/api/v1/settings/public`,
+        axiosConfig
+      );
 
-    const initialized = response.data.initialized;
+      currentSettings = response.data;
 
-    if (!initialized) {
-      if (!router.pathname.match(/(setup)/)) {
-        ctx.res.writeHead(307, {
-          Location: '/setup',
-        });
-        ctx.res.end();
+      if (!response.data.initialized) {
+        if (!router.pathname.match(/(setup)/)) {
+          ctx.res.writeHead(307, { Location: '/setup' });
+          ctx.res.end();
+          return {
+            pageProps: {},
+            user,
+            messages: {},
+            locale: 'en' as AvailableLocale,
+            currentSettings,
+          };
+        }
       }
-    } else {
+
       try {
-        // Attempt to get the user by running a request to the local api
-        const response = await axios.get<User>(
+        const userResponse = await axios.get<User>(
           `http://${getHostAndPort()}/api/v1/auth/me`,
           {
+            ...axiosConfig,
             headers:
               ctx.req && ctx.req.headers.cookie
                 ? { cookie: ctx.req.headers.cookie }
                 : undefined,
           }
         );
-        user = response.data;
+        user = userResponse.data;
 
         if (router.pathname.match(/(setup|login)/)) {
-          ctx.res.writeHead(307, {
-            Location: '/',
-          });
+          ctx.res.writeHead(307, { Location: '/' });
           ctx.res.end();
         }
       } catch {
-        // If there is no user, and ctx.res is set (to check if we are on the server side)
-        // _AND_ we are not already on the login or setup route, redirect to /login with a 307
-        // before anything actually renders
         if (!router.pathname.match(/(login|setup|resetpassword)/)) {
-          ctx.res.writeHead(307, {
-            Location: '/login',
-          });
+          ctx.res.writeHead(307, { Location: '/login' });
           ctx.res.end();
         }
+      }
+    } catch {
+      if (!router.pathname.match(/(setup)/)) {
+        ctx.res.writeHead(307, { Location: '/setup' });
+        ctx.res.end();
       }
     }
   }

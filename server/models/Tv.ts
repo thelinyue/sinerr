@@ -7,7 +7,6 @@ import type {
   TmdbTvSeasonResult,
 } from '@server/api/themoviedb/interfaces';
 import type Media from '@server/entity/Media';
-import type { Video } from './Movie';
 import type {
   Cast,
   Crew,
@@ -22,7 +21,6 @@ import {
   mapAggregateCast,
   mapCrew,
   mapExternalIds,
-  mapVideos,
   mapWatchProviders,
 } from './common';
 
@@ -77,7 +75,6 @@ export interface TvDetails {
   genres: Genre[];
   homepage: string;
   inProduction: boolean;
-  relatedVideos?: Video[];
   languages: string[];
   lastAirDate: string;
   lastEpisodeToAir?: Episode;
@@ -172,7 +169,6 @@ export const mapTvDetails = (
     id: genre.id,
     name: genre.name,
   })),
-  relatedVideos: mapVideos(show.videos),
   homepage: show.homepage,
   id: show.id,
   inProduction: show.in_production,

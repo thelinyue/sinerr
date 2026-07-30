@@ -41,6 +41,10 @@ const messages = defineMessages('components.Settings', {
   enablessl: 'Use SSL',
   urlBase: 'URL Base',
   jellyfinForgotPasswordUrl: 'Forgot Password URL',
+  jellyfinTemplateUser: 'Template User',
+  jellyfinTemplateUserDescription:
+    "When creating a new {mediaServerName} account, the template user's permission settings will be copied.",
+  notemplate: 'None',
   apiKey: 'API key',
   jellyfinSyncFailedNoLibrariesFound: 'No libraries were found',
   jellyfinSyncFailedAutomaticGroupedFolders:
@@ -103,6 +107,9 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
     {
       refreshInterval: 1000,
     }
+  );
+  const { data: jellyfinUsers } = useSWR<{ username: string; id: string }[]>(
+    '/api/v1/settings/jellyfin/users'
   );
   const intl = useIntl();
   const { addToast } = useToasts();
@@ -443,6 +450,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
           urlBase: data?.urlBase || '',
           jellyfinExternalUrl: data?.externalHostname || '',
           jellyfinForgotPasswordUrl: data?.jellyfinForgotPasswordUrl || '',
+          templateUserId: data?.jellyfinTemplateUserId || '',
           apiKey: data?.apiKey,
         }}
         validationSchema={JellyfinSettingsSchema}
@@ -455,6 +463,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
               urlBase: values.urlBase,
               externalHostname: values.jellyfinExternalUrl,
               jellyfinForgotPasswordUrl: values.jellyfinForgotPasswordUrl,
+              jellyfinTemplateUserId: values.templateUserId || '',
               apiKey: values.apiKey,
             } as JellyfinSettings);
 
@@ -657,6 +666,36 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
                         {errors.jellyfinForgotPasswordUrl}
                       </div>
                     )}
+                </div>
+              </div>
+              <div className="form-row">
+                <label htmlFor="templateUserId" className="text-label">
+                  {intl.formatMessage(messages.jellyfinTemplateUser)}
+                </label>
+                <div className="form-input-area">
+                  <div className="form-input-field">
+                    <Field
+                      as="select"
+                      id="templateUserId"
+                      name="templateUserId"
+                      className="rounded"
+                    >
+                      <option value="">
+                        {intl.formatMessage(messages.notemplate)}
+                      </option>
+                      {jellyfinUsers?.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.username}
+                        </option>
+                      ))}
+                    </Field>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {intl.formatMessage(
+                      messages.jellyfinTemplateUserDescription,
+                      mediaServerFormatValues
+                    )}
+                  </p>
                 </div>
               </div>
               <div

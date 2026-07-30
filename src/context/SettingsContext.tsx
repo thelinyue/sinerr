@@ -29,7 +29,8 @@ const defaultSettings = {
   enablePushRegistration: false,
   locale: 'zh-CN',
   emailEnabled: false,
-  youtubeUrl: '',
+  clientDownloadUrls: [] as { name: string; url: string; icon: string }[],
+  serverConnectionUrl: '',
 };
 
 export const SettingsContext = React.createContext<SettingsContextProps>({

@@ -38,7 +38,6 @@ import {
   CogIcon,
   ExclamationTriangleIcon,
   EyeSlashIcon,
-  FilmIcon,
   MinusCircleIcon,
   PlayIcon,
   StarIcon,
@@ -69,7 +68,6 @@ const messages = defineMessages('components.MovieDetails', {
     '{releaseCount, plural, one {Release Date} other {Release Dates}}',
   revenue: 'Revenue',
   budget: 'Budget',
-  watchtrailer: 'Watch Trailer',
   originallanguage: 'Original Language',
   overview: 'Overview',
   runtime: '{minutes} minutes',
@@ -208,24 +206,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
       text: getAvailable4kMediaServerName(),
       url: mediaUrl4k,
       svg: <PlayIcon />,
-    });
-  }
-
-  const trailerVideo = data.relatedVideos
-    ?.filter((r) => r.type === 'Trailer')
-    .sort((a, b) => a.size - b.size)
-    .pop();
-  const trailerUrl =
-    trailerVideo?.site === 'YouTube' &&
-    settings.currentSettings.youtubeUrl != ''
-      ? `${settings.currentSettings.youtubeUrl}${trailerVideo?.key}`
-      : trailerVideo?.url;
-
-  if (trailerUrl) {
-    mediaLinks.push({
-      text: intl.formatMessage(messages.watchtrailer),
-      url: trailerUrl,
-      svg: <FilmIcon />,
     });
   }
 

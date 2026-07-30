@@ -46,7 +46,8 @@ export interface PublicSettingsResponse {
   enablePushRegistration: boolean;
   locale: string;
   emailEnabled: boolean;
-  youtubeUrl: string;
+  clientDownloadUrls: { name: string; url: string; icon: string }[];
+  serverConnectionUrl: string;
 }
 
 export interface CacheItem {

@@ -3,12 +3,9 @@ import type {
   TmdbCreditCast,
   TmdbCreditCrew,
   TmdbExternalIds,
-  TmdbVideo,
-  TmdbVideoResult,
   TmdbWatchProviderDetails,
   TmdbWatchProviders,
 } from '@server/api/themoviedb/interfaces';
-import type { Video } from '@server/models/Movie';
 
 export interface ProductionCompany {
   id: number;
@@ -129,16 +126,6 @@ export const mapExternalIds = (eids: TmdbExternalIds): ExternalIds => ({
   twitterId: eids.twitter_id,
 });
 
-export const mapVideos = (videoResult: TmdbVideoResult): Video[] =>
-  videoResult?.results.map(({ key, name, size, type, site }: TmdbVideo) => ({
-    site,
-    key,
-    name,
-    size,
-    type,
-    url: siteUrlCreator(site, key),
-  }));
-
 export const mapWatchProviders = (watchProvidersResult: {
   [iso_3166_1: string]: TmdbWatchProviders;
 }): WatchProviders[] =>
@@ -164,8 +151,3 @@ export const mapWatchProviderDetails = (
         name: provider.provider_name,
       }) as WatchProviderDetails
   );
-
-const siteUrlCreator = (site: Video['site'], key: string): string =>
-  ({
-    YouTube: `https://www.youtube.com/watch?v=${key}`,
-  })[site];

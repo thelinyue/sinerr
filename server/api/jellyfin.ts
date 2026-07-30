@@ -8,6 +8,36 @@ import logger from '@server/logger';
 import { ApiError } from '@server/types/error';
 import { getAppVersion } from '@server/utils/appVersion';
 
+export interface JellyfinUserPolicy {
+  IsAdministrator: boolean;
+  IsHidden: boolean;
+  IsDisabled: boolean;
+  EnableRemoteControlOfOtherUsers: boolean;
+  EnableSharedDeviceControl: boolean;
+  EnableRemoteAccess: boolean;
+  EnableLiveTvManagement: boolean;
+  EnableLiveTvAccess: boolean;
+  EnableMediaPlayback: boolean;
+  EnableAudioPlaybackTranscoding: boolean;
+  EnableVideoPlaybackTranscoding: boolean;
+  EnablePlaybackRemuxing: boolean;
+  EnableContentDeletion: boolean;
+  EnableContentDownloading: boolean;
+  EnableSubtitleDownloading: boolean;
+  EnableSubtitleManagement: boolean;
+  EnableSyncTranscoding: boolean;
+  EnableMediaConversion: boolean;
+  EnableAllChannels: boolean;
+  EnableAllDevices: boolean;
+  EnablePublicSharing: boolean;
+  BlockedChannels: string[];
+  BlockedTags: string[];
+  BlockedMediaFolders: string[];
+  EnabledDevices: string[];
+  EnabledChannels: string[];
+  EnabledFolders: string[];
+}
+
 export interface JellyfinUserResponse {
   Name: string;
   ServerId: string;
@@ -20,6 +50,10 @@ export interface JellyfinUserResponse {
     IsAdministrator: boolean;
   };
   PrimaryImageTag?: string;
+}
+
+export interface JellyfinUserResponseFull extends JellyfinUserResponse {
+  Policy: JellyfinUserPolicy;
 }
 
 export interface JellyfinDevice {
@@ -357,6 +391,36 @@ class JellyfinAPI extends ExternalAPI {
     }
   }
 
+  public async getUserById(userId: string): Promise<JellyfinUserResponseFull> {
+    try {
+      const userResponse = await this.get<JellyfinUserResponseFull>(
+        `/Users/${userId}`
+      );
+      return userResponse;
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting user from the Jellyfin server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.InvalidAuthToken);
+    }
+  }
+
+  public async updateUserPolicy(
+    userId: string,
+    policy: Partial<JellyfinUserPolicy>
+  ): Promise<void> {
+    try {
+      await this.post(`/Users/${userId}/Policy`, policy);
+    } catch (e) {
+      logger.error(
+        `Something went wrong while updating user policy on the Jellyfin server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
+    }
+  }
+
   public async getLibraries(): Promise<JellyfinLibrary[]> {
     try {
       const mediaFolderResponse = await this.get<any>(`/Library/MediaFolders`);
@@ -525,6 +589,65 @@ class JellyfinAPI extends ExternalAPI {
       );
 
       throw new ApiError(e.response?.status, ApiErrorCode.InvalidAuthToken);
+    }
+  }
+
+  public async createUser(data: {
+    Name: string;
+    Password?: string;
+  }): Promise<JellyfinUserResponse> {
+    try {
+      const response = await this.post<JellyfinUserResponse>('/Users/New', {
+        Name: data.Name,
+        Password: data.Password,
+        HasPassword: true,
+      });
+      return response;
+    } catch (e) {
+      logger.error(
+        `Something went wrong while creating a user on the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
+    }
+  }
+
+  public async forgotPassword(username: string): Promise<{
+    Action: string;
+    PinFile?: string;
+  }> {
+    try {
+      const response = await this.post<{
+        Action: string;
+        PinFile?: string;
+      }>('/Users/ForgotPassword', {
+        EnteredUsername: username,
+      });
+      return response;
+    } catch (e) {
+      logger.error(
+        `Something went wrong while initiating forgot password on the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
+    }
+  }
+
+  public async forgotPasswordPin(
+    pin: string,
+    newPassword: string
+  ): Promise<void> {
+    try {
+      await this.post('/Users/ForgotPassword/Pin', {
+        Pin: pin,
+        NewPassword: newPassword,
+      });
+    } catch (e) {
+      logger.error(
+        `Something went wrong while completing forgot password on the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
     }
   }
 

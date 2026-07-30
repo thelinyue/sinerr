@@ -14,11 +14,13 @@ import TvGenreSlider from '@app/components/Discover/TvGenreSlider';
 import { sliderTitles } from '@app/components/Discover/constants';
 import MediaSlider from '@app/components/MediaSlider';
 import { encodeURIExtraParams } from '@app/hooks/useDiscover';
+import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import {
   ArrowDownOnSquareIcon,
   ArrowPathIcon,
@@ -204,9 +206,11 @@ const Discover = () => {
           </Transition>
         </>
       )}
+
+      <ConnectionGuide />
+
       {(isEditing ? sliders : discoverData)?.map((slider, index) => {
         let sliderComponent: React.ReactNode;
-
         switch (slider.type) {
           case DiscoverSliderType.RECENTLY_ADDED:
             sliderComponent = <RecentlyAddedSlider />;
@@ -454,6 +458,208 @@ const Discover = () => {
         );
       })}
     </>
+  );
+};
+
+const ConnectionGuide = () => {
+  const settings = useSettings();
+  const { user } = useUser();
+  const [dismissed, setDismissed] = useState(true);
+  const [showDemo, setShowDemo] = useState(false);
+
+  useEffect(() => {
+    setDismissed(localStorage.getItem('connection-guide-dismissed') === 'true');
+  }, []);
+
+  const serverUrl =
+    settings.currentSettings.serverConnectionUrl ||
+    settings.currentSettings.jellyfinExternalHost ||
+    settings.currentSettings.jellyfinHost;
+
+  const downloads = settings.currentSettings.clientDownloadUrls || [];
+
+  if (dismissed || (!serverUrl && downloads.length === 0)) {
+    return null;
+  }
+
+  const dismiss = () => {
+    localStorage.setItem('connection-guide-dismissed', 'true');
+    setDismissed(true);
+  };
+
+  return (
+    <Transition
+      as="div"
+      show={!dismissed}
+      enter="transition-opacity duration-300"
+      enterFrom="opacity-0"
+      enterTo="opacity-100"
+    >
+      <div className="mx-4 mb-6 rounded-lg border border-indigo-500/30 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 p-5">
+        <div className="mb-3 flex items-start justify-between">
+          <h2 className="text-lg font-bold text-white">
+            <span className="mr-2">📺</span>如何开始观看？
+          </h2>
+          <button
+            onClick={dismiss}
+            className="flex-shrink-0 text-sm text-gray-400 hover:text-white"
+          >
+            不再显示
+          </button>
+        </div>
+        <div className="space-y-4">
+          {downloads.length > 0 && (
+            <div className="flex items-start gap-3">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                1
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="mb-2 text-sm font-medium text-white">
+                  下载客户端
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {downloads.map((d, i) => (
+                    <a
+                      key={i}
+                      href={d.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-gray-700/80 px-3 py-1 text-xs text-white transition-colors hover:bg-gray-600"
+                    >
+                      <span>{d.icon || '📱'}</span>
+                      <span>{d.name}</span>
+                      <ArrowDownTrayIcon className="h-3 w-3" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {serverUrl && (
+            <div className="flex items-start gap-3">
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-sm font-bold text-white">
+                {downloads.length > 0 ? '2' : '1'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="mb-1 text-sm font-medium text-white">
+                  输入服务器地址
+                </p>
+                <div className="mb-2 flex items-center gap-2">
+                  <code className="flex-1 break-all rounded bg-gray-800/80 px-3 py-1.5 font-mono text-xs text-gray-300">
+                    {serverUrl}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(serverUrl);
+                    }}
+                    className="flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500"
+                  >
+                    复制
+                  </button>
+                </div>
+                <p className="text-xs text-yellow-400/90">
+                  ⚠ 默认端口号为 <strong>443</strong>，如连接失败请检查端口设置
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-start gap-3">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+              {downloads.length > 0 ? '3' : '2'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="mb-1 text-sm font-medium text-white">登录 Emby</p>
+              <p className="mb-2 text-xs text-gray-300">
+                使用当前账号
+                <strong className="mx-1 text-white">
+                  {user?.displayName || user?.username || '用户名'}
+                </strong>
+                和密码登录，首次登录建议勾选"记住我"
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => setShowDemo(!showDemo)}
+                  className="inline-flex items-center text-xs text-indigo-400 transition-colors hover:text-indigo-300"
+                >
+                  {showDemo ? '收起示例' : '查看连接示例'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {showDemo && (
+            <div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-800/80">
+              <div className="flex items-center gap-2 bg-gray-700 px-4 py-2">
+                <div className="flex gap-1.5">
+                  <div className="h-3 w-3 rounded-full bg-red-500" />
+                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
+                  <div className="h-3 w-3 rounded-full bg-green-500" />
+                </div>
+                <span className="ml-2 text-xs text-gray-400">
+                  Emby 客户端 — 连接服务器
+                </span>
+              </div>
+              <div className="space-y-3 p-4">
+                <div className="flex gap-3">
+                  <div className="flex-[2]">
+                    <span className="mb-1 block text-xs text-gray-500">
+                      主机地址
+                    </span>
+                    <div className="truncate rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-green-400">
+                      {serverUrl
+                        ? serverUrl.replace(/:\d+$/, '').replace(/\/$/, '')
+                        : 'your-server.com'}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <span className="mb-1 block text-xs text-gray-500">
+                      端口号
+                    </span>
+                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
+                      {serverUrl
+                        ? serverUrl.match(/:(\d+)/)?.[1] || '443'
+                        : '443'}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <span className="mb-1 block text-xs text-gray-500">
+                      用户名
+                    </span>
+                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
+                      {user?.displayName || user?.username || 'username'}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <span className="mb-1 block text-xs text-gray-500">
+                      密码
+                    </span>
+                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
+                      ••••••••
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked
+                    readOnly
+                    className="rounded border-gray-600"
+                  />
+                  记住我
+                </div>
+                <div className="rounded bg-indigo-600 py-2 text-center text-sm font-medium text-white">
+                  登录
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Transition>
   );
 };
 

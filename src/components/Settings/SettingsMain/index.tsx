@@ -71,9 +71,12 @@ const messages = defineMessages('components.Settings.SettingsMain', {
   partialRequestsEnabled: 'Allow Partial Series Requests',
   enableSpecialEpisodes: 'Allow Special Episodes Requests',
   locale: 'Display Language',
-  youtubeUrl: 'YouTube URL',
-  youtubeUrlTip:
-    'Base URL for YouTube videos if a self-hosted YouTube instance is used.',
+  clientDownloadUrls: 'Client Download Links',
+  clientDownloadUrlsTip:
+    'Configure download links displayed in the sidebar client download dialog.',
+  serverConnectionUrl: 'Server Connection URL',
+  serverConnectionUrlTip:
+    'Server connection address shown in the sidebar for users to copy.',
   validationUrl: 'You must provide a valid URL',
   validationUrlTrailingSlash: 'URL must not end in a trailing slash',
 });
@@ -117,13 +120,6 @@ const SettingsMain = () => {
         'lte-250',
         'Number must be less than or equal to 250.',
         (value) => (value ?? 0) <= 250
-      ),
-    youtubeUrl: Yup.string()
-      .url(intl.formatMessage(messages.validationUrl))
-      .test(
-        'no-trailing-slash',
-        intl.formatMessage(messages.validationUrlTrailingSlash),
-        (value) => !value || !value.endsWith('/')
       ),
   });
 
@@ -182,7 +178,8 @@ const SettingsMain = () => {
             partialRequestsEnabled: data?.partialRequestsEnabled,
             enableSpecialEpisodes: data?.enableSpecialEpisodes,
             cacheImages: data?.cacheImages,
-            youtubeUrl: data?.youtubeUrl,
+            clientDownloadUrls: data?.clientDownloadUrls || [],
+            serverConnectionUrl: data?.serverConnectionUrl || '',
           }}
           enableReinitialize
           validationSchema={MainSettingsSchema}
@@ -204,7 +201,8 @@ const SettingsMain = () => {
                 partialRequestsEnabled: values.partialRequestsEnabled,
                 enableSpecialEpisodes: values.enableSpecialEpisodes,
                 cacheImages: values.cacheImages,
-                youtubeUrl: values.youtubeUrl,
+                clientDownloadUrls: values.clientDownloadUrls,
+                serverConnectionUrl: values.serverConnectionUrl,
               });
               mutate('/api/v1/settings/public');
 
@@ -584,26 +582,106 @@ const SettingsMain = () => {
                   </div>
                 </div>
                 <div className="form-row">
-                  <label htmlFor="youtubeUrl" className="text-label">
-                    {intl.formatMessage(messages.youtubeUrl)}
+                  <label className="text-label">
+                    {intl.formatMessage(messages.clientDownloadUrls)}
                     <span className="label-tip">
-                      {intl.formatMessage(messages.youtubeUrlTip)}
+                      {intl.formatMessage(messages.clientDownloadUrlsTip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area space-y-3">
+                    {(values.clientDownloadUrls || []).map(
+                      (_: unknown, index: number) => {
+                        const icon =
+                          values.clientDownloadUrls?.[index]?.icon || '';
+                        const isImageIcon = /^https?:\/\//.test(icon);
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 rounded-lg bg-gray-700/50 p-3"
+                          >
+                            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-600 text-2xl">
+                              {isImageIcon ? (
+                                <img
+                                  src={icon}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    (
+                                      e.target as HTMLImageElement
+                                    ).style.display = 'none';
+                                  }}
+                                />
+                              ) : icon ? (
+                                <span>{icon}</span>
+                              ) : (
+                                <span className="text-gray-500">📱</span>
+                              )}
+                            </div>
+                            <div className="flex-1 space-y-1.5">
+                              <Field
+                                name={`clientDownloadUrls.${index}.icon`}
+                                placeholder="Icon (emoji or image URL)"
+                                className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-sm text-white"
+                              />
+                              <Field
+                                name={`clientDownloadUrls.${index}.name`}
+                                placeholder="App name"
+                                className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-sm text-white"
+                              />
+                              <Field
+                                name={`clientDownloadUrls.${index}.url`}
+                                placeholder="Download URL"
+                                className="w-full rounded border border-gray-500 bg-gray-700 px-2 py-1 text-sm text-white"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-1 flex-shrink-0 text-red-400 hover:text-red-300"
+                              onClick={() => {
+                                const updated = [
+                                  ...(values.clientDownloadUrls || []),
+                                ];
+                                updated.splice(index, 1);
+                                setFieldValue('clientDownloadUrls', updated);
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      }
+                    )}
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300"
+                      onClick={() => {
+                        const updated = [
+                          ...(values.clientDownloadUrls || []),
+                          { icon: '', name: '', url: '' },
+                        ];
+                        setFieldValue('clientDownloadUrls', updated);
+                      }}
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <label htmlFor="serverConnectionUrl" className="text-label">
+                    {intl.formatMessage(messages.serverConnectionUrl)}
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.serverConnectionUrlTip)}
                     </span>
                   </label>
                   <div className="form-input-area">
                     <div className="form-input-field">
                       <Field
-                        id="youtubeUrl"
-                        name="youtubeUrl"
+                        id="serverConnectionUrl"
+                        name="serverConnectionUrl"
                         type="text"
                         inputMode="url"
                       />
                     </div>
-                    {errors.youtubeUrl &&
-                      touched.youtubeUrl &&
-                      typeof errors.youtubeUrl === 'string' && (
-                        <div className="error">{errors.youtubeUrl}</div>
-                      )}
                   </div>
                 </div>
                 <div className="actions">

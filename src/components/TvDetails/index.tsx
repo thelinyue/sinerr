@@ -42,7 +42,6 @@ import {
   CogIcon,
   ExclamationTriangleIcon,
   EyeSlashIcon,
-  FilmIcon,
   MinusCircleIcon,
   PlayIcon,
   StarIcon,
@@ -75,7 +74,6 @@ const messages = defineMessages('components.TvDetails', {
   cast: 'Cast',
   recommendations: 'Recommendations',
   similar: 'Similar Series',
-  watchtrailer: 'Watch Trailer',
   overviewunavailable: 'Overview unavailable.',
   originaltitle: 'Original Title',
   showtype: 'Series Type',
@@ -207,24 +205,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
       text: getAvailable4kMediaServerName(),
       url: mediaUrl4k,
       svg: <PlayIcon />,
-    });
-  }
-
-  const trailerVideo = data.relatedVideos
-    ?.filter((r) => r.type === 'Trailer')
-    .sort((a, b) => a.size - b.size)
-    .pop();
-  const trailerUrl =
-    trailerVideo?.site === 'YouTube' &&
-    settings.currentSettings.youtubeUrl != ''
-      ? `${settings.currentSettings.youtubeUrl}${trailerVideo?.key}`
-      : trailerVideo?.url;
-
-  if (trailerUrl) {
-    mediaLinks.push({
-      text: intl.formatMessage(messages.watchtrailer),
-      url: trailerUrl,
-      svg: <FilmIcon />,
     });
   }
 

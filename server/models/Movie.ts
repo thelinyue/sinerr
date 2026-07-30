@@ -13,29 +13,7 @@ import type {
   ProductionCompany,
   WatchProviders,
 } from './common';
-import {
-  mapCast,
-  mapCrew,
-  mapExternalIds,
-  mapVideos,
-  mapWatchProviders,
-} from './common';
-
-export interface Video {
-  url?: string;
-  site: 'YouTube';
-  key: string;
-  name: string;
-  size: number;
-  type:
-    | 'Clip'
-    | 'Teaser'
-    | 'Trailer'
-    | 'Featurette'
-    | 'Opening Credits'
-    | 'Behind the Scenes'
-    | 'Bloopers';
-}
+import { mapCast, mapCrew, mapExternalIds, mapWatchProviders } from './common';
 
 export interface MovieDetails {
   id: number;
@@ -49,7 +27,6 @@ export interface MovieDetails {
   originalTitle: string;
   overview?: string;
   popularity: number;
-  relatedVideos?: Video[];
   posterPath?: string;
   productionCompanies: ProductionCompany[];
   productionCountries: {
@@ -109,7 +86,6 @@ export const mapMovieDetails = (
   adult: movie.adult,
   budget: movie.budget,
   genres: movie.genres,
-  relatedVideos: mapVideos(movie.videos),
   originalLanguage: movie.original_language,
   originalTitle: movie.original_title,
   popularity: movie.popularity,

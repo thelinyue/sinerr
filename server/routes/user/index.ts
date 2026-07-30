@@ -19,6 +19,7 @@ import { normalizeJellyfinGuid } from '@server/utils/jellyfin';
 import { isOwnProfileOrAdmin } from '@server/utils/profileMiddleware';
 import { Router } from 'express';
 import gravatarUrl from 'gravatar-url';
+import { nanoid } from 'nanoid';
 
 import type { EntityManager } from 'typeorm';
 import { In, Not } from 'typeorm';
@@ -190,15 +191,12 @@ router.post(
       }
 
       const passedExplicitPassword = body.password && body.password.length > 0;
+      const createEmby =
+        body.createEmbyAccount &&
+        (settings.main.mediaServerType === MediaServerType.JELLYFIN ||
+          settings.main.mediaServerType === MediaServerType.EMBY);
       const avatar =
         body.avatar ?? gravatarUrl(username, { default: 'mm', size: 200 });
-
-      if (
-        !passedExplicitPassword &&
-        !settings.notifications.agents.email.enabled
-      ) {
-        throw new Error('Email notifications must be enabled');
-      }
 
       const user = new User({
         email: body.email || null,
@@ -209,14 +207,100 @@ router.post(
         userType: UserType.LOCAL,
       });
 
+      let generatedPassword: string | undefined;
+      let embyPassword: string | undefined;
+
       if (passedExplicitPassword) {
-        await user?.setPassword(body.password);
+        await user.setPassword(body.password);
+        embyPassword = body.password;
+      } else if (createEmby) {
+        generatedPassword = nanoid(16);
+        embyPassword = generatedPassword;
+        await user.setPassword(generatedPassword);
       } else {
-        await user?.generatePassword();
+        generatedPassword = nanoid(16);
+        await user.setPassword(generatedPassword);
       }
 
       await userRepository.save(user);
-      return res.status(201).json(user.filter());
+
+      if (createEmby) {
+        try {
+          const hostname = getHostname();
+          const deviceId = Buffer.from(`BOT_sinerr_${username ?? ''}`).toString(
+            'base64'
+          );
+
+          const jellyfinClient = new JellyfinAPI(
+            hostname ?? '',
+            settings.jellyfin.apiKey,
+            deviceId,
+            settings.main.mediaServerType
+          );
+
+          const account = await jellyfinClient.createUser({
+            Name: username,
+            Password: embyPassword ?? nanoid(16),
+          });
+
+          user.jellyfinUserId = account.Id;
+          user.jellyfinUsername = account.Name;
+          user.jellyfinDeviceId = deviceId;
+          user.avatar = `/avatarproxy/${account.Id}`;
+          user.userType =
+            settings.main.mediaServerType === MediaServerType.JELLYFIN
+              ? UserType.JELLYFIN
+              : UserType.EMBY;
+
+          if (settings.jellyfin.jellyfinTemplateUserId) {
+            try {
+              const templateUser = await jellyfinClient.getUserById(
+                settings.jellyfin.jellyfinTemplateUserId
+              );
+              const policy = templateUser.Policy;
+              delete (policy as unknown as Record<string, unknown>)
+                .IsAdministrator;
+
+              await jellyfinClient.updateUserPolicy(account.Id, policy);
+              logger.info(
+                'Applied template user policy to new Emby/Jellyfin user',
+                {
+                  label: 'User Management',
+                  username,
+                  templateUserId: settings.jellyfin.jellyfinTemplateUserId,
+                }
+              );
+            } catch (e) {
+              logger.warn('Failed to apply template user policy', {
+                label: 'User Management',
+                error: e.message,
+              });
+            }
+          }
+
+          await userRepository.save(user);
+          logger.info('Created matching Emby/Jellyfin account for local user', {
+            label: 'User Management',
+            username,
+            jellyfinUserId: account.Id,
+          });
+        } catch (e) {
+          logger.error(
+            'Failed to create Emby/Jellyfin account for local user',
+            {
+              label: 'User Management',
+              username,
+              error: e.message,
+            }
+          );
+        }
+      }
+
+      const response = user.filter() as Record<string, unknown>;
+      if (generatedPassword) {
+        response.generatedPassword = generatedPassword;
+      }
+      return res.status(201).json(response);
     } catch (e) {
       next({ status: 500, message: e.message });
     }
