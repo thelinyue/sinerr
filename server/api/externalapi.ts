@@ -67,7 +67,10 @@ class ExternalAPI {
       return cachedItem;
     }
 
-    const response = await this.axios.get<T>(endpoint, config);
+    const response = await this.axios.get<T>(endpoint, {
+      ...config,
+      signal: AbortSignal.timeout(this.axios.defaults.timeout ?? DEFAULT_TTL * 1000),
+    });
 
     if (this.cache && ttl !== 0) {
       this.cache.set(cacheKey, response.data, ttl ?? DEFAULT_TTL);
@@ -92,7 +95,10 @@ class ExternalAPI {
       return cachedItem;
     }
 
-    const response = await this.axios.post<T>(endpoint, data, config);
+    const response = await this.axios.post<T>(endpoint, data, {
+      ...config,
+      signal: AbortSignal.timeout(this.axios.defaults.timeout ?? DEFAULT_TTL * 1000),
+    });
 
     if (this.cache && ttl !== 0) {
       this.cache.set(cacheKey, response.data, ttl ?? DEFAULT_TTL);
