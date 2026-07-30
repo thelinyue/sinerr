@@ -10,7 +10,6 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
 import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
-import type { WatchlistResponse } from '@server/interfaces/api/discoverInterfaces';
 import type {
   QuotaResponse,
   UserRequestsResponse,
@@ -34,8 +33,6 @@ const messages = defineMessages('components.UserProfile', {
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
   recentlywatched: 'Recently Watched',
-  watchlist: "{username}'s Watchlist",
-  emptywatchlist: 'Media added to your watchlist will appear here.',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -78,19 +75,6 @@ const UserProfile = () => {
         : null
     );
 
-  const { data: watchlistItems, error: watchlistError } =
-    useSWR<WatchlistResponse>(
-      user?.id === currentUser?.id ||
-        currentHasPermission(Permission.MANAGE_REQUESTS, {
-          type: 'or',
-        })
-        ? `/api/v1/user/${user?.id}/watchlist`
-        : null,
-      {
-        revalidateOnMount: true,
-      }
-    );
-
   const updateAvailableTitles = useCallback(
     (requestId: number, mediaTitle: MediaTitle) => {
       setAvailableTitles((titles) => ({
@@ -112,10 +96,6 @@ const UserProfile = () => {
   if (!user) {
     return <ErrorPage statusCode={404} />;
   }
-
-  const watchlistSliderTitle = intl.formatMessage(messages.watchlist, {
-    username: user.displayName,
-  });
 
   return (
     <>
@@ -311,44 +291,6 @@ const UserProfile = () => {
                 />
               ))}
               placeholder={<RequestCard.Placeholder />}
-            />
-          </>
-        )}
-      {(user.id === currentUser?.id ||
-        currentHasPermission(Permission.MANAGE_REQUESTS, { type: 'or' })) &&
-        (!watchlistItems ||
-          !!watchlistItems.results.length ||
-          (user.id === currentUser?.id &&
-            (user.settings?.watchlistSyncMovies ||
-              user.settings?.watchlistSyncTv))) &&
-        !watchlistError && (
-          <>
-            <div className="slider-header">
-              <Link
-                href={
-                  user.id === currentUser?.id
-                    ? '/profile/watchlist'
-                    : `/users/${user.id}/watchlist`
-                }
-                className="slider-title"
-              >
-                <span>{watchlistSliderTitle}</span>
-                <ArrowRightCircleIcon />
-              </Link>
-            </div>
-            <Slider
-              sliderKey="watchlist"
-              isLoading={!watchlistItems}
-              isEmpty={!!watchlistItems && watchlistItems.results.length === 0}
-              emptyMessage={intl.formatMessage(messages.emptywatchlist)}
-              items={watchlistItems?.results.map((item) => (
-                <TmdbTitleCard
-                  id={item.tmdbId}
-                  key={`watchlist-slider-item-${item.ratingKey}`}
-                  tmdbId={item.tmdbId}
-                  type={item.mediaType}
-                />
-              ))}
             />
           </>
         )}

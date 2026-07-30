@@ -1,3 +1,17 @@
+## [1.3.0](https://github.com/thelinyue/sinerr/compare/v1.2.0...v1.3.0) (2026-07-30)
+
+### Removed
+
+* **监控列表 (Watchlist):** 彻底移除监控列表功能，包括添加/移除按钮、列表页面、自动请求联动及相关权限配置
+  * 移除 Watchlist 数据库实体和 API 路由（POST/DELETE /api/v1/watchlist）
+  * 移除详情页和卡片上的星形按钮（add to watchlist）
+  * 移除 /discover/watchlist、/profile/watchlist、/users/[userId]/watchlist 页面
+  * 移除 UserProfile 中的监控列表滑块
+  * 移除用户设置中的 Auto-Request 开关（watchlistSyncMovies/watchlistSyncTv）
+  * 移除 AUTO_REQUEST / AUTO_REQUEST_MOVIE / AUTO_REQUEST_TV 权限
+  * 移除 MEDIA_AUTO_REQUESTED 通知类型
+  * 移除 Plex Watchlist Sync 残留桩代码
+
 ## [1.2.0](https://github.com/thelinyue/sinerr/compare/v1.1.1...v1.2.0) (2026-07-30)
 
 

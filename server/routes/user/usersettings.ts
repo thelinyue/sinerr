@@ -60,8 +60,6 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
         globalMovieQuotaLimit: defaultQuotas.movie.quotaLimit,
         globalTvQuotaDays: defaultQuotas.tv.quotaDays,
         globalTvQuotaLimit: defaultQuotas.tv.quotaLimit,
-        watchlistSyncMovies: user.settings?.watchlistSyncMovies,
-        watchlistSyncTv: user.settings?.watchlistSyncTv,
       });
     } catch (e) {
       next({ status: 500, message: e.message });
@@ -125,16 +123,12 @@ userSettingsRoutes.post<
         discoverRegion: req.body.discoverRegion,
         streamingRegion: req.body.streamingRegion,
         originalLanguage: req.body.originalLanguage,
-        watchlistSyncMovies: req.body.watchlistSyncMovies,
-        watchlistSyncTv: req.body.watchlistSyncTv,
       });
     } else {
       user.settings.locale = req.body.locale;
       user.settings.discoverRegion = req.body.discoverRegion;
       user.settings.streamingRegion = req.body.streamingRegion;
       user.settings.originalLanguage = req.body.originalLanguage;
-      user.settings.watchlistSyncMovies = req.body.watchlistSyncMovies;
-      user.settings.watchlistSyncTv = req.body.watchlistSyncTv;
     }
 
     const savedUser = await userRepository.save(user);
@@ -145,8 +139,6 @@ userSettingsRoutes.post<
       discoverRegion: savedUser.settings?.discoverRegion,
       streamingRegion: savedUser.settings?.streamingRegion,
       originalLanguage: savedUser.settings?.originalLanguage,
-      watchlistSyncMovies: savedUser.settings?.watchlistSyncMovies,
-      watchlistSyncTv: savedUser.settings?.watchlistSyncTv,
       email: savedUser.email ?? undefined,
     });
   } catch (e) {

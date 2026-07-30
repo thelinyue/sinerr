@@ -124,7 +124,6 @@ const MediaSlider = ({
             <TitleCard
               key={title.id}
               id={title.id}
-              isAddedToWatchlist={title.mediaInfo?.watchlists?.length ?? 0}
               image={title.posterPath}
               status={title.mediaInfo?.status}
               summary={title.overview}
@@ -140,7 +139,6 @@ const MediaSlider = ({
             <TitleCard
               key={title.id}
               id={title.id}
-              isAddedToWatchlist={title.mediaInfo?.watchlists?.length ?? 0}
               image={title.posterPath}
               status={title.mediaInfo?.status}
               summary={title.overview}

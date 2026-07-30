@@ -62,10 +62,6 @@ const messages = defineMessages(
     languageDefault: 'Default ({language})',
     validationemailrequired: 'Email required',
     validationemailformat: 'Valid email required',
-    watchlistsyncmovies: 'Auto-Request Movies',
-    watchlistsyncmoviestip: 'Automatically request movies on your watchlist',
-    watchlistsyncseries: 'Auto-Request Series',
-    watchlistsyncseriestip: 'Automatically request series on your watchlist',
   }
 );
 
@@ -143,8 +139,6 @@ const UserGeneralSettings = () => {
           movieQuotaDays: data?.movieQuotaDays,
           tvQuotaLimit: data?.tvQuotaLimit,
           tvQuotaDays: data?.tvQuotaDays,
-          watchlistSyncMovies: data?.watchlistSyncMovies,
-          watchlistSyncTv: data?.watchlistSyncTv,
         }}
         validationSchema={UserGeneralSettingsSchema}
         enableReinitialize
@@ -163,8 +157,6 @@ const UserGeneralSettings = () => {
               movieQuotaDays: movieQuotaEnabled ? values.movieQuotaDays : null,
               tvQuotaLimit: tvQuotaEnabled ? values.tvQuotaLimit : null,
               tvQuotaDays: tvQuotaEnabled ? values.tvQuotaDays : null,
-              watchlistSyncMovies: values.watchlistSyncMovies,
-              watchlistSyncTv: values.watchlistSyncTv,
             });
 
             if (currentUser?.id === user?.id && setLocale) {
@@ -478,65 +470,6 @@ const UserGeneralSettings = () => {
                     </div>
                   </>
                 )}
-              {hasPermission(
-                [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_MOVIE],
-                { type: 'or' }
-              ) && (
-                <div className="form-row">
-                  <label
-                    htmlFor="watchlistSyncMovies"
-                    className="checkbox-label"
-                  >
-                    <span>
-                      {intl.formatMessage(messages.watchlistsyncmovies)}
-                    </span>
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.watchlistsyncmoviestip)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <Field
-                      type="checkbox"
-                      id="watchlistSyncMovies"
-                      name="watchlistSyncMovies"
-                      onChange={() => {
-                        setFieldValue(
-                          'watchlistSyncMovies',
-                          !values.watchlistSyncMovies
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-              {hasPermission(
-                [Permission.AUTO_REQUEST, Permission.AUTO_REQUEST_TV],
-                { type: 'or' }
-              ) && (
-                <div className="form-row">
-                  <label htmlFor="watchlistSyncTv" className="checkbox-label">
-                    <span>
-                      {intl.formatMessage(messages.watchlistsyncseries)}
-                    </span>
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.watchlistsyncseriestip)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <Field
-                      type="checkbox"
-                      id="watchlistSyncTv"
-                      name="watchlistSyncTv"
-                      onChange={() => {
-                        setFieldValue(
-                          'watchlistSyncTv',
-                          !values.watchlistSyncTv
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
               <div className="actions">
                 <div className="flex justify-end">
                   <span className="ml-3 inline-flex rounded-md shadow-sm">

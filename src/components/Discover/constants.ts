@@ -74,7 +74,6 @@ export const sliderTitles = defineMessages('components.Discover', {
   recentlyAdded: 'Recently Added',
   upcoming: 'Upcoming Movies',
   trending: 'Trending',
-  watchlist: 'Your Watchlist',
   moviegenres: 'Movie Genres',
   tvgenres: 'Series Genres',
   studios: 'Studios',
@@ -88,6 +87,7 @@ export const sliderTitles = defineMessages('components.Discover', {
   tmdbsearch: 'TMDB Search',
   tmdbmoviestreamingservices: 'TMDB Movie Streaming Services',
   tmdbtvstreamingservices: 'TMDB TV Streaming Services',
+  mostplayed: 'Weekly Ranking',
 });
 
 export const QueryFilterOptions = z.object({

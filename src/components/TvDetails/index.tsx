@@ -2,7 +2,6 @@ import RTAudFresh from '@app/assets/rt_aud_fresh.svg';
 import RTAudRotten from '@app/assets/rt_aud_rotten.svg';
 import RTFresh from '@app/assets/rt_fresh.svg';
 import RTRotten from '@app/assets/rt_rotten.svg';
-import Spinner from '@app/assets/spinner.svg';
 import TmdbLogo from '@app/assets/tmdb_logo.svg';
 import BlocklistModal from '@app/components/BlocklistModal';
 import Badge from '@app/components/Common/Badge';
@@ -42,18 +41,12 @@ import {
   CogIcon,
   ExclamationTriangleIcon,
   EyeSlashIcon,
-  MinusCircleIcon,
   PlayIcon,
-  StarIcon,
 } from '@heroicons/react/24/solid';
 import type { RTRating } from '@server/api/rating/rottentomatoes';
 import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import { IssueStatus } from '@server/constants/issue';
-import {
-  MediaRequestStatus,
-  MediaStatus,
-  MediaType,
-} from '@server/constants/media';
+import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import type { TvDetails as TvDetailsType } from '@server/models/Tv';
 import type { Crew } from '@server/models/common';
@@ -97,12 +90,6 @@ const messages = defineMessages('components.TvDetails', {
   rtcriticsscore: 'Rotten Tomatoes Tomatometer',
   rtaudiencescore: 'Rotten Tomatoes Audience Score',
   tmdbuserscore: 'TMDB User Score',
-  watchlistSuccess: '<strong>{title}</strong> added to watchlist successfully!',
-  watchlistDeleted:
-    '<strong>{title}</strong> Removed from watchlist successfully!',
-  watchlistError: 'Something went wrong. Please try again.',
-  removefromwatchlist: 'Remove From Watchlist',
-  addtowatchlist: 'Add To Watchlist',
 });
 
 interface TvDetailsProps {
@@ -118,10 +105,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
-  const [toggleWatchlist, setToggleWatchlist] = useState<boolean>(
-    !tv?.onUserWatchlist
-  );
   const [isBlocklistUpdating, setIsBlocklistUpdating] =
     useState<boolean>(false);
   const [showBlocklistModal, setShowBlocklistModal] = useState(false);
@@ -326,67 +309,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
 
     return intl.formatMessage(messages.play4k, { mediaServerName: 'Jellyfin' });
   }
-
-  const onClickWatchlistBtn = async (): Promise<void> => {
-    setIsUpdating(true);
-
-    try {
-      await axios.post('/api/v1/watchlist', {
-        tmdbId: tv?.id,
-        mediaType: MediaType.TV,
-        title: tv?.name,
-      });
-      addToast(
-        <span>
-          {intl.formatMessage(messages.watchlistSuccess, {
-            title: tv?.name,
-            strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
-          })}
-        </span>,
-        { appearance: 'success', autoDismiss: true }
-      );
-
-      setIsUpdating(false);
-      setToggleWatchlist((prevState) => !prevState);
-    } catch {
-      addToast(intl.formatMessage(messages.watchlistError), {
-        appearance: 'error',
-        autoDismiss: true,
-      });
-
-      setIsUpdating(false);
-    }
-  };
-
-  const onClickDeleteWatchlistBtn = async (): Promise<void> => {
-    setIsUpdating(true);
-
-    try {
-      await axios.delete(
-        `/api/v1/watchlist/${tv?.id}?mediaType=${MediaType.TV}`
-      );
-
-      addToast(
-        <span>
-          {intl.formatMessage(messages.watchlistDeleted, {
-            title: tv?.name,
-            strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
-          })}
-        </span>,
-        { appearance: 'info', autoDismiss: true }
-      );
-
-      setIsUpdating(false);
-      setToggleWatchlist((prevState) => !prevState);
-    } catch {
-      addToast(intl.formatMessage(messages.watchlistError), {
-        appearance: 'error',
-        autoDismiss: true,
-      });
-
-      setIsUpdating(false);
-    }
-  };
 
   const onClickHideItemBtn = async (): Promise<void> => {
     setIsBlocklistUpdating(true);
@@ -599,38 +521,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 </Button>
               </Tooltip>
             )}
-          {data?.mediaInfo?.status !== MediaStatus.BLOCKLISTED && (
-            <>
-              {toggleWatchlist ? (
-                <Tooltip content={intl.formatMessage(messages.addtowatchlist)}>
-                  <Button
-                    buttonType={'ghost'}
-                    className="z-40 mr-2"
-                    buttonSize={'md'}
-                    onClick={onClickWatchlistBtn}
-                  >
-                    {isUpdating ? (
-                      <Spinner />
-                    ) : (
-                      <StarIcon className={'text-amber-300'} />
-                    )}
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Tooltip
-                  content={intl.formatMessage(messages.removefromwatchlist)}
-                >
-                  <Button
-                    className="z-40 mr-2"
-                    buttonSize={'md'}
-                    onClick={onClickDeleteWatchlistBtn}
-                  >
-                    {isUpdating ? <Spinner /> : <MinusCircleIcon />}
-                  </Button>
-                </Tooltip>
-              )}
-            </>
-          )}
+
           <div className="z-20">
             <PlayButton links={mediaLinks} />
           </div>

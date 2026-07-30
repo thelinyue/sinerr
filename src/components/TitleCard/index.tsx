@@ -18,17 +18,13 @@ import {
   ArrowDownTrayIcon,
   EyeIcon,
   EyeSlashIcon,
-  MinusCircleIcon,
-  StarIcon,
 } from '@heroicons/react/24/outline';
 import { MediaStatus } from '@server/constants/media';
-import type { Watchlist } from '@server/entity/Watchlist';
 import type { MediaType } from '@server/models/Search';
 import axios from 'axios';
 import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { mutate } from 'swr';
 
 interface TitleCardProps {
   id: number;
@@ -41,18 +37,13 @@ interface TitleCardProps {
   status?: MediaStatus;
   canExpand?: boolean;
   inProgress?: boolean;
-  isAddedToWatchlist?: number | boolean;
   mutateParent?: () => void;
+  playCount?: number;
+  hideRequestButton?: boolean;
 }
 
 const messages = defineMessages('components.TitleCard', {
-  addToWatchList: 'Add to watchlist',
-  watchlistSuccess:
-    '<strong>{title}</strong> added to watchlist  successfully!',
-  watchlistDeleted:
-    '<strong>{title}</strong> Removed from watchlist  successfully!',
-  watchlistCancel: 'watchlist for <strong>{title}</strong> canceled.',
-  watchlistError: 'Something went wrong. Please try again.',
+  plays: '{playCount} plays',
 });
 
 const TitleCard = ({
@@ -63,10 +54,11 @@ const TitleCard = ({
   title,
   status,
   mediaType,
-  isAddedToWatchlist = false,
   inProgress = false,
   canExpand = false,
   mutateParent,
+  playCount,
+  hideRequestButton,
 }: TitleCardProps) => {
   const isTouch = useIsTouch();
   const intl = useIntl();
@@ -76,8 +68,6 @@ const TitleCard = ({
   const [showDetail, setShowDetail] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const { addToast } = useToasts();
-  const [toggleWatchlist, setToggleWatchlist] =
-    useState<boolean>(!isAddedToWatchlist);
   const [showBlocklistModal, setShowBlocklistModal] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -104,70 +94,6 @@ const TitleCard = ({
     () => setShowBlocklistModal(false),
     []
   );
-
-  const onClickWatchlistBtn = async (): Promise<void> => {
-    setIsUpdating(true);
-    try {
-      const response = await axios.post<Watchlist>('/api/v1/watchlist', {
-        tmdbId: id,
-        mediaType,
-        title,
-      });
-      mutate('/api/v1/discover/watchlist');
-      if (response.data) {
-        addToast(
-          <span>
-            {intl.formatMessage(messages.watchlistSuccess, {
-              title,
-              strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
-            })}
-          </span>,
-          { appearance: 'success', autoDismiss: true }
-        );
-      }
-    } catch {
-      addToast(intl.formatMessage(messages.watchlistError), {
-        appearance: 'error',
-        autoDismiss: true,
-      });
-    } finally {
-      setIsUpdating(false);
-      setToggleWatchlist((prevState) => !prevState);
-    }
-  };
-
-  const onClickDeleteWatchlistBtn = async (): Promise<void> => {
-    setIsUpdating(true);
-    try {
-      const response = await axios.delete<Watchlist>(
-        `/api/v1/watchlist/${id}?mediaType=${mediaType}`
-      );
-
-      if (response.status === 204) {
-        addToast(
-          <span>
-            {intl.formatMessage(messages.watchlistDeleted, {
-              title,
-              strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
-            })}
-          </span>,
-          { appearance: 'info', autoDismiss: true }
-        );
-      }
-    } catch {
-      addToast(intl.formatMessage(messages.watchlistError), {
-        appearance: 'error',
-        autoDismiss: true,
-      });
-    } finally {
-      setIsUpdating(false);
-      mutate('/api/v1/discover/watchlist');
-      if (mutateParent) {
-        mutateParent();
-      }
-      setToggleWatchlist((prevState) => !prevState);
-    }
-  };
 
   const onClickHideItemBtn = async (): Promise<void> => {
     setIsUpdating(true);
@@ -300,15 +226,17 @@ const TitleCard = ({
 
   const closeModal = useCallback(() => setShowRequestModal(false), []);
 
-  const showRequestButton = hasPermission(
-    [
-      Permission.REQUEST,
-      mediaType === 'movie' || mediaType === 'collection'
-        ? Permission.REQUEST_MOVIE
-        : Permission.REQUEST_TV,
-    ],
-    { type: 'or' }
-  );
+  const showRequestButton =
+    !hideRequestButton &&
+    hasPermission(
+      [
+        Permission.REQUEST,
+        mediaType === 'movie' || mediaType === 'collection'
+          ? Permission.REQUEST_MOVIE
+          : Permission.REQUEST_TV,
+      ],
+      { type: 'or' }
+    );
 
   const showHideButton = hasPermission([Permission.MANAGE_BLOCKLIST], {
     type: 'or',
@@ -403,24 +331,6 @@ const TitleCard = ({
             </div>
             {showDetail && currentStatus !== MediaStatus.BLOCKLISTED && (
               <div className="flex flex-col gap-1">
-                {toggleWatchlist ? (
-                  <Button
-                    buttonType={'ghost'}
-                    className="z-40"
-                    buttonSize={'sm'}
-                    onClick={onClickWatchlistBtn}
-                  >
-                    <StarIcon className={'h-3 text-amber-300'} />
-                  </Button>
-                ) : (
-                  <Button
-                    className="z-40"
-                    buttonSize={'sm'}
-                    onClick={onClickDeleteWatchlistBtn}
-                  >
-                    <MinusCircleIcon className={'h-3'} />
-                  </Button>
-                )}
                 {showHideButton &&
                   currentStatus !== MediaStatus.PROCESSING &&
                   currentStatus !== MediaStatus.AVAILABLE &&
@@ -573,6 +483,11 @@ const TitleCard = ({
                       <span>{intl.formatMessage(globalMessages.request)}</span>
                     </Button>
                   )}
+                {playCount != null && playCount > 0 && (
+                  <div className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600/60 to-purple-600/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                    {intl.formatMessage(messages.plays, { playCount })}
+                  </div>
+                )}
               </div>
             </div>
           </Transition>

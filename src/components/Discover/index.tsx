@@ -37,7 +37,6 @@ import useSWR from 'swr';
 
 const messages = defineMessages('components.Discover', {
   discover: 'Discover',
-  emptywatchlist: 'Media added to your watchlist will appear here.',
   resettodefault: 'Reset to Default',
   resetwarning:
     'Reset all sliders to default. This will also delete any custom sliders!',
@@ -392,6 +391,17 @@ const Discover = () => {
                 linkUrl={`/discover/tv?watchRegion=${
                   slider.data?.split(',')[0]
                 }&watchProviders=${slider.data?.split(',')[1]}`}
+              />
+            );
+            break;
+          case DiscoverSliderType.MOST_PLAYED:
+            sliderComponent = (
+              <MediaSlider
+                sliderKey="mostplayed"
+                title={intl.formatMessage(sliderTitles.mostplayed)}
+                url="/api/v1/discover/mostplayed"
+                extraParams="period=week"
+                linkUrl="/discover/mostplayed"
               />
             );
             break;

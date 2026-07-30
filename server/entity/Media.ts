@@ -1,9 +1,9 @@
-import { MediaStatus, MediaType } from '@server/constants/media';
+import type { MediaType } from '@server/constants/media';
+import { MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import { getRepository } from '@server/datasource';
 import { Blocklist } from '@server/entity/Blocklist';
 import type { User } from '@server/entity/User';
-import { Watchlist } from '@server/entity/Watchlist';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { DbAwareColumn, resolveDbType } from '@server/utils/DbColumnHelper';
@@ -56,12 +56,6 @@ class Media {
 
       const media = await mediaRepository
         .createQueryBuilder('media')
-        .leftJoinAndSelect(
-          'media.watchlists',
-          'watchlist',
-          'media.id= watchlist.media and watchlist.requestedBy = :userId',
-          { userId: user?.id }
-        ) //,
         .where(' media.tmdbId in (:...finalIds)', { finalIds })
         .getMany();
 
@@ -123,9 +117,6 @@ class Media {
     cascade: ['insert', 'remove'],
   })
   public requests: MediaRequest[];
-
-  @OneToMany(() => Watchlist, (watchlist) => watchlist.media)
-  public watchlists: null | Watchlist[];
 
   @OneToMany(() => Season, (season) => season.media, {
     cascade: true,
@@ -238,8 +229,7 @@ class Media {
   }
 
   @AfterLoad()
-  public setServiceUrl(): void {
-  }
+  public setServiceUrl(): void {}
 }
 
 export default Media;

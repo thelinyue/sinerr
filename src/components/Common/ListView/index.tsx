@@ -1,11 +1,9 @@
 import PersonCard from '@app/components/PersonCard';
 import TitleCard from '@app/components/TitleCard';
-import TmdbTitleCard from '@app/components/TitleCard/TmdbTitleCard';
 import { Permission, useUser } from '@app/hooks/useUser';
 import useVerticalScroll from '@app/hooks/useVerticalScroll';
 import globalMessages from '@app/i18n/globalMessages';
 import { MediaStatus } from '@server/constants/media';
-import type { WatchlistItem } from '@server/interfaces/api/discoverInterfaces';
 import type {
   CollectionResult,
   MovieResult,
@@ -16,12 +14,10 @@ import { useIntl } from 'react-intl';
 
 type ListViewProps = {
   items?: (TvResult | MovieResult | PersonResult | CollectionResult)[];
-  watchlistItems?: WatchlistItem[];
   isEmpty?: boolean;
   isLoading?: boolean;
   isReachingEnd?: boolean;
   onScrollBottom: () => void;
-  mutateParent?: () => void;
 };
 
 const ListView = ({
@@ -30,8 +26,6 @@ const ListView = ({
   isLoading,
   onScrollBottom,
   isReachingEnd,
-  watchlistItems,
-  mutateParent,
 }: ListViewProps) => {
   const intl = useIntl();
   const { hasPermission } = useUser();
@@ -50,20 +44,6 @@ const ListView = ({
         </div>
       )}
       <ul className="cards-vertical">
-        {watchlistItems?.map((title, index) => {
-          return (
-            <li key={`${title.ratingKey}-${index}`}>
-              <TmdbTitleCard
-                id={title.tmdbId}
-                tmdbId={title.tmdbId}
-                type={title.mediaType}
-                isAddedToWatchlist={true}
-                canExpand
-                mutateParent={mutateParent}
-              />
-            </li>
-          );
-        })}
         {items
           ?.filter((title) => {
             if (!blocklistVisibility)
@@ -82,9 +62,6 @@ const ListView = ({
                   <TitleCard
                     key={title.id}
                     id={title.id}
-                    isAddedToWatchlist={
-                      title.mediaInfo?.watchlists?.length ?? 0
-                    }
                     image={title.posterPath}
                     status={title.mediaInfo?.status}
                     summary={title.overview}
@@ -96,6 +73,14 @@ const ListView = ({
                       (title.mediaInfo?.downloadStatus ?? []).length > 0
                     }
                     canExpand
+                    playCount={
+                      (title as unknown as Record<string, unknown>)
+                        .playCount as number | undefined
+                    }
+                    hideRequestButton={
+                      (title as unknown as Record<string, unknown>).playCount !=
+                      null
+                    }
                   />
                 );
                 break;
@@ -104,9 +89,6 @@ const ListView = ({
                   <TitleCard
                     key={title.id}
                     id={title.id}
-                    isAddedToWatchlist={
-                      title.mediaInfo?.watchlists?.length ?? 0
-                    }
                     image={title.posterPath}
                     status={title.mediaInfo?.status}
                     summary={title.overview}
@@ -118,6 +100,14 @@ const ListView = ({
                       (title.mediaInfo?.downloadStatus ?? []).length > 0
                     }
                     canExpand
+                    playCount={
+                      (title as unknown as Record<string, unknown>)
+                        .playCount as number | undefined
+                    }
+                    hideRequestButton={
+                      (title as unknown as Record<string, unknown>).playCount !=
+                      null
+                    }
                   />
                 );
                 break;
