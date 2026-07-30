@@ -5,7 +5,12 @@ ENV TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+RUN apk update && \
+  apk add --no-cache python3 make g++ gcc libc6-compat bash && \
+  npm install --global node-gyp && \
+  corepack enable
 
 COPY . ./app
 WORKDIR /app
@@ -34,11 +39,7 @@ FROM base AS build
 
 ARG COMMIT_TAG
 ENV COMMIT_TAG=${COMMIT_TAG}
-
-RUN \
-  apk update && \
-  apk add --no-cache python3 make g++ gcc libc6-compat bash && \
-  npm install --global node-gyp
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CYPRESS_INSTALL_BINARY=0 pnpm install --frozen-lockfile
 

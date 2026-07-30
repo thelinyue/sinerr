@@ -1,3 +1,11 @@
+## [1.3.4](https://github.com/thelinyue/sinerr/compare/v1.3.3...v1.3.4) (2026-07-30)
+
+
+### Bug Fixes
+
+* **CI/CD:** 重构 Dockerfile — 编译工具移至 `base` 阶段（所有阶段共享）、添加 `NODE_OPTIONS` 内存限制、修复 pnpm v10 `onlyBuiltDependencies` 配置被忽略问题（迁移至 `.npmrc`）
+
+
 ## [1.3.3](https://github.com/thelinyue/sinerr/compare/v1.3.2...v1.3.3) (2026-07-30)
 
 
