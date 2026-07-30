@@ -1,3 +1,12 @@
+## [1.3.2](https://github.com/thelinyue/sinerr/compare/v1.3.1...v1.3.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **外部 API:** `AbortSignal.timeout()` 回退值从 300 秒降至 30 秒，防止 axios timeout 未设置时请求挂死
+* **Emby 导入:** 服务端日志新增目标地址、API Key 长度等诊断信息，便于排查 Docker 网络问题
+
+
 ## [1.3.1](https://github.com/thelinyue/sinerr/compare/v1.3.0...v1.3.1) (2026-07-30)
 
 
