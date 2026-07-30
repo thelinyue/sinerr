@@ -1,5 +1,6 @@
 import { MediaServerType } from '@server/constants/server';
 import blocklistedTagsProcessor from '@server/job/blocklistedTagsProcessor';
+import { refreshMostPlayedCache } from '@server/job/refreshMostPlayedCache';
 import availabilitySync from '@server/lib/availabilitySync';
 import ImageProxy from '@server/lib/imageproxy';
 import {
@@ -67,6 +68,25 @@ export const startJobs = (): void => {
       }),
       running: () => jellyfinFullScanner.status().running,
       cancelFn: () => jellyfinFullScanner.cancel(),
+    });
+
+    // Refresh most played cache daily
+    scheduledJobs.push({
+      id: 'mostplayed-cache-refresh',
+      name: 'Most Played Cache Refresh',
+      type: 'process',
+      interval: 'hours',
+      cronSchedule: jobs['mostplayed-cache-refresh'].schedule,
+      job: schedule.scheduleJob(
+        jobs['mostplayed-cache-refresh'].schedule,
+        () => {
+          logger.info(
+            'Starting scheduled job: Most Played Cache Refresh',
+            { label: 'Jobs' }
+          );
+          refreshMostPlayedCache();
+        }
+      ),
     });
   }
 

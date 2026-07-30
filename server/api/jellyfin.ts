@@ -174,6 +174,13 @@ export interface JellyfinItemsReponse {
   StartIndex: number;
 }
 
+export interface JellyfinPlaybackReportItem {
+  ItemId: string;
+  ItemName: string;
+  ItemType: string;
+  PlayCount: number;
+}
+
 class JellyfinAPI extends ExternalAPI {
   private userId?: string;
   private mediaServerType: MediaServerType;
@@ -665,6 +672,112 @@ class JellyfinAPI extends ExternalAPI {
       );
 
       throw new ApiError(e.response?.status, ApiErrorCode.InvalidAuthToken);
+    }
+  }
+
+  public async getBatchItems(ids: string): Promise<JellyfinLibraryItemExtended[]> {
+    try {
+      const itemResponse = await this.get<JellyfinItemsReponse>(`/Items`, {
+        params: {
+          ids,
+          fields: 'ProviderIds',
+        },
+      });
+
+      return itemResponse.Items || [];
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting batch items from the Jellyfin server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return [];
+    }
+  }
+
+  public async getPlaybackReport(options: {
+    days?: number;
+    itemType?: string;
+    limit?: number;
+  } = {}): Promise<JellyfinPlaybackReportItem[]> {
+    const days = options.days ?? 7;
+    const itemType = options.itemType ?? 'Movie';
+    const limit = options.limit ?? 100;
+
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - days);
+    const dateStr = sinceDate.toISOString().split('T')[0];
+
+    try {
+      const conditions: string[] = [];
+      if (days > 0) {
+        conditions.push(`DateCreated >= '${dateStr}'`);
+      }
+      if (itemType) {
+        conditions.push(`ItemType = '${itemType}'`);
+      }
+      const whereClause = conditions.length > 0
+        ? `WHERE ${conditions.join(' AND ')}`
+        : '';
+
+      const query = [
+        'SELECT ItemId, ItemName, ItemType, COUNT(ItemId) as PlayCount',
+        'FROM PlaybackActivity',
+        whereClause,
+        'GROUP BY ItemId',
+        'ORDER BY PlayCount DESC',
+        `LIMIT ${limit}`,
+      ].filter(Boolean).join(' ');
+
+      logger.info('Executing playback report query', {
+        label: 'Jellyfin API',
+        query,
+      });
+
+      const response = await this.post<{
+        colums: string[];
+        results: unknown[][];
+        message: string;
+      }>(
+        '/user_usage_stats/submit_custom_query',
+        {
+          CustomQueryString: query,
+          ReplaceUserId: false,
+        }
+      );
+
+      if (!response?.colums || !response?.results) {
+        logger.warn('Playback report returned unexpected format', {
+          label: 'Jellyfin API',
+          responseKeys: response ? Object.keys(response) : 'null',
+          responseType: typeof response,
+        });
+        return [];
+      }
+
+      logger.info('Playback report query result', {
+        label: 'Jellyfin API',
+        colums: response.colums,
+        rowCount: response.results.length,
+        message: response.message,
+      });
+
+      const colIdx: Record<string, number> = {};
+      response.colums.forEach((col, i) => {
+        colIdx[col] = i;
+      });
+
+      return response.results.map((row) => ({
+        ItemId: String(row[colIdx['ItemId']] ?? ''),
+        ItemName: String(row[colIdx['ItemName']] ?? ''),
+        ItemType: String(row[colIdx['ItemType']] ?? ''),
+        PlayCount: Number(row[colIdx['PlayCount']] ?? 0),
+      }));
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting playback report from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return [];
     }
   }
 }

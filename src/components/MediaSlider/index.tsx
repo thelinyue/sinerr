@@ -117,7 +117,7 @@ const MediaSlider = ({
         );
       return title;
     })
-    .map((title) => {
+    .map((title, index) => {
       switch (title.mediaType) {
         case 'movie':
           return (
@@ -132,6 +132,7 @@ const MediaSlider = ({
               year={title.releaseDate}
               mediaType={title.mediaType}
               inProgress={(title.mediaInfo?.downloadStatus ?? []).length > 0}
+              priority={index < 4}
             />
           );
         case 'tv':
@@ -147,6 +148,7 @@ const MediaSlider = ({
               year={title.firstAirDate}
               mediaType={title.mediaType}
               inProgress={(title.mediaInfo?.downloadStatus ?? []).length > 0}
+              priority={index < 4}
             />
           );
         case 'person':

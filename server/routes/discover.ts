@@ -5,6 +5,11 @@ import { MediaType } from '@server/constants/media';
 import Media from '@server/entity/Media';
 import type { User } from '@server/entity/User';
 import type { GenreSliderItem } from '@server/interfaces/api/discoverInterfaces';
+import {
+  getMostPlayedCache,
+  type MostPlayedCacheEntry,
+  type RankingPeriod,
+} from '@server/job/refreshMostPlayedCache';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { mapProductionCompany } from '@server/models/Movie';
@@ -16,7 +21,8 @@ import {
 } from '@server/models/Search';
 import { mapNetwork } from '@server/models/Tv';
 import { isCollection, isMovie, isPerson } from '@server/utils/typeHelpers';
-import { Router } from 'express';
+import { Router, Response } from 'express';
+import type { Request } from 'express';
 import { sortBy } from 'lodash';
 import { z } from 'zod';
 
@@ -913,5 +919,134 @@ discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
     }
   }
 );
+
+async function serveMostPlayedFromCache(
+  sorted: MostPlayedCacheEntry[],
+  page: number,
+  limit: number,
+  req: Request,
+  tmdb: TheMovieDb,
+  res: Response
+) {
+  const totalResults = sorted.length;
+  const totalPages = Math.ceil(totalResults / limit);
+  const startIdx = (page - 1) * limit;
+  const pageItems = sorted.slice(startIdx, startIdx + limit);
+
+  const movieIds = pageItems
+    .filter((item) => item.mediaType === 'movie')
+    .map((item) => Number(item.tmdbId));
+  const tvIds = pageItems
+    .filter((item) => item.mediaType === 'tv')
+    .map((item) => Number(item.tmdbId));
+
+  const [movieDetails, tvDetails] = await Promise.all([
+    Promise.all(
+      movieIds.map((id) =>
+        tmdb.getMovie({ movieId: id, language: req.locale }).catch(() => null)
+      )
+    ),
+    Promise.all(
+      tvIds.map((id) =>
+        tmdb.getTvShow({ tvId: id, language: req.locale }).catch(() => null)
+      )
+    ),
+  ]);
+
+  const tmdbDetailMap = new Map<number, { type: 'movie' | 'tv'; data: unknown }>();
+  movieDetails.forEach((detail, i) => {
+    if (detail) tmdbDetailMap.set(movieIds[i], { type: 'movie', data: detail });
+  });
+  tvDetails.forEach((detail, i) => {
+    if (detail) tmdbDetailMap.set(tvIds[i], { type: 'tv', data: detail });
+  });
+
+  const media = await Media.getRelatedMedia(
+    req.user,
+    pageItems.map((item) => ({
+      tmdbId: Number(item.tmdbId),
+      mediaType:
+        item.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE,
+    }))
+  );
+
+  const results = pageItems
+    .map((item, index) => {
+      const detail = tmdbDetailMap.get(Number(item.tmdbId));
+      if (!detail) {
+        return null;
+      }
+      const tmdbId = Number(item.tmdbId);
+      const relatedMedia = media.find(
+        (m) =>
+          m.tmdbId === tmdbId &&
+          m.mediaType ===
+            (item.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE)
+      );
+      if (detail.type === 'tv') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mappedResult = mapTvResult(detail.data as any, relatedMedia);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (mappedResult as any).playCount = item.count;
+        return mappedResult;
+      }
+      const compatMovie = {
+        ...(detail.data as Record<string, unknown>),
+        genre_ids:
+          (detail.data as { genres?: { id: number }[] })?.genres?.map(
+            (g) => g.id
+          ) ?? [],
+        media_type: 'movie' as const,
+        video: false,
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mappedResult = mapMovieResult(compatMovie as any, relatedMedia);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mappedResult as any).playCount = item.count;
+      return mappedResult;
+    })
+    .filter(Boolean);
+
+  return res.status(200).json({
+    page,
+    totalPages,
+    totalResults,
+    results,
+  });
+}
+
+discoverRoutes.get('/mostplayed', async (req, res, next) => {
+  const tmdb = createTmdbWithRegionLanguage(req.user);
+
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = 20;
+    const period: RankingPeriod =
+      (req.query.period as RankingPeriod) || 'week';
+
+    const cache = getMostPlayedCache(period);
+
+    if (!cache || cache.sorted.length === 0) {
+      return res.status(200).json({
+        page,
+        totalPages: 0,
+        totalResults: 0,
+        results: [],
+      });
+    }
+
+    return serveMostPlayedFromCache(cache.sorted, page, limit, req, tmdb, res);
+  } catch (e) {
+    logger.error('Something went wrong retrieving most played movies', {
+      label: 'API',
+      errorMessage: e.message,
+      stack: e.stack,
+    });
+    return next({
+      status: 500,
+      message: 'Unable to retrieve most played movies.',
+    });
+  }
+});
 
 export default discoverRoutes;

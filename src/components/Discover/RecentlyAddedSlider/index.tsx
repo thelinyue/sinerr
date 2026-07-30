@@ -37,13 +37,14 @@ const RecentlyAddedSlider = () => {
       <Slider
         sliderKey="media"
         isLoading={!media}
-        items={(media?.results ?? []).map((item) => (
+        items={(media?.results ?? []).map((item, index) => (
           <TmdbTitleCard
             key={`media-slider-item-${item.id}`}
             id={item.id}
             tmdbId={item.tmdbId}
             tvdbId={item.tvdbId}
             type={item.mediaType}
+            priority={index < 4}
           />
         ))}
       />

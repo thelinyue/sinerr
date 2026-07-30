@@ -40,6 +40,7 @@ interface TitleCardProps {
   mutateParent?: () => void;
   playCount?: number;
   hideRequestButton?: boolean;
+  priority?: boolean;
 }
 
 const messages = defineMessages('components.TitleCard', {
@@ -59,6 +60,7 @@ const TitleCard = ({
   mutateParent,
   playCount,
   hideRequestButton,
+  priority,
 }: TitleCardProps) => {
   const isTouch = useIsTouch();
   const intl = useIntl();
@@ -312,6 +314,7 @@ const TitleCard = ({
             }
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             fill
+            priority={priority}
           />
           <div className="absolute left-0 right-0 flex items-center justify-between p-2">
             <div

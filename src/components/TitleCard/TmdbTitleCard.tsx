@@ -12,6 +12,7 @@ export interface TmdbTitleCardProps {
   type: 'movie' | 'tv';
   canExpand?: boolean;
   mutateParent?: () => void;
+  priority?: boolean;
 }
 
 const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
@@ -25,6 +26,7 @@ const TmdbTitleCard = ({
   type,
   canExpand,
   mutateParent,
+  priority,
 }: TmdbTitleCardProps) => {
   const { hasPermission } = useUser();
 
@@ -69,6 +71,7 @@ const TmdbTitleCard = ({
       mediaType={'movie'}
       canExpand={canExpand}
       mutateParent={mutateParent}
+      priority={priority}
     />
   ) : (
     <TitleCard
@@ -83,6 +86,7 @@ const TmdbTitleCard = ({
       mediaType={'tv'}
       canExpand={canExpand}
       mutateParent={mutateParent}
+      priority={priority}
     />
   );
 };
