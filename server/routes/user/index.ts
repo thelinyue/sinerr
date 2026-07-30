@@ -765,7 +765,26 @@ router.post(
       const createdUsers: User[] = [];
 
       jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
-      const jellyfinUsers = await jellyfinClient.getUsers();
+
+      logger.debug('Calling Emby/Jellyfin getUsers() API', { label: 'User Import' });
+      const jellyfinUsers = await Promise.race([
+        jellyfinClient.getUsers(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'Emby/Jellyfin getUsers request timed out after 25 seconds'
+                )
+              ),
+            25000
+          )
+        ),
+      ]);
+      logger.debug('Emby/Jellyfin getUsers() returned, processing users', {
+        label: 'User Import',
+        userCount: jellyfinUsers?.users?.length ?? 0,
+      });
 
       const jellyfinUsersById = new Map(
         jellyfinUsers.users.map((user) => [
