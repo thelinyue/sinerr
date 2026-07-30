@@ -1,3 +1,11 @@
+## [1.4.1](https://github.com/thelinyue/sinerr/compare/v1.4.0...v1.4.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **Emby 导入:** 移除与 axios 内置超时冲突的 `AbortSignal.timeout()`，改用 `Promise.race` 包裹 `getUsers()` 实现 25 秒硬超时兜底
+
+
 ## [1.4.0](https://github.com/thelinyue/sinerr/compare/v1.3.5...v1.4.0) (2026-07-30)
 
 
