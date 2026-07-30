@@ -1,3 +1,11 @@
+## [1.3.5](https://github.com/thelinyue/sinerr/compare/v1.3.4...v1.3.5) (2026-07-30)
+
+
+### Bug Fixes
+
+* **构建:** 修复 v1.3.0 提交遗漏 `DiscoverSliderType.MOST_PLAYED` 枚举值导致 Next.js 编译失败
+
+
 ## [1.3.4](https://github.com/thelinyue/sinerr/compare/v1.3.3...v1.3.4) (2026-07-30)
 
 
