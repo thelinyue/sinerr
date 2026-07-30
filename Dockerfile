@@ -36,13 +36,9 @@ ARG COMMIT_TAG
 ENV COMMIT_TAG=${COMMIT_TAG}
 
 RUN \
-  case "${TARGETPLATFORM}" in \
-  'linux/arm64' | 'linux/arm/v7') \
   apk update && \
   apk add --no-cache python3 make g++ gcc libc6-compat bash && \
-  npm install --global node-gyp \
-  ;; \
-  esac
+  npm install --global node-gyp
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CYPRESS_INSTALL_BINARY=0 pnpm install --frozen-lockfile
 

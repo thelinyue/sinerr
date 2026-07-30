@@ -1,3 +1,11 @@
+## [1.3.3](https://github.com/thelinyue/sinerr/compare/v1.3.2...v1.3.3) (2026-07-30)
+
+
+### Bug Fixes
+
+* **CI/CD:** 修复 Docker 镜像构建失败 — amd64 平台缺少 Alpine 编译工具（`python3`、`make`、`g++`、`gcc`），导致 `@swc/core`、`sharp` 等原生模块无法编译
+
+
 ## [1.3.2](https://github.com/thelinyue/sinerr/compare/v1.3.1...v1.3.2) (2026-07-30)
 
 
