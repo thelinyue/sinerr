@@ -1,3 +1,19 @@
+## [1.3.1](https://github.com/thelinyue/sinerr/compare/v1.3.0...v1.3.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **外部 API:** 添加 `AbortSignal.timeout()` 防止 Emby 不可达时 TCP 连接挂起导致前端 30 秒超时
+* **Emby 用户导入:** 修复 `newJellyfinsigninenabled` 消息缺少 `strong` 标签值导致 formatjs 抛出 MissingValueError
+* **Emby 用户导入:** 修复 `/jellyfin/users` 接口缺少异常处理导致 Emby 不可达时前端无响应
+* **Emby 用户导入:** 修复 `ApiError` 错误消息为空、`jellyfinUserId` 存储格式不匹配、头像 URL 不兼容等问题
+* **i18n:** 修复中文翻译中 ICU 占位符 `{mediaServerName}` 缺少 `{` 导致模板字符串直接显示
+* **i18n:** 修正中文翻译中残留的 "Seerr" 为 "Sinerr"
+* **React 19 兼容:** 修复 Transition.Child 的 `appear` 属性泄露到 DOM 元素的警告
+* **React 19 兼容:** 修复 formatMessage 富文本 Fragment 子节点缺少 key 的警告
+* **服务端:** 增强 Emby 导入端点错误日志，前端展示具体错误消息便于排查
+
+
 ## [1.3.0](https://github.com/thelinyue/sinerr/compare/v1.2.0...v1.3.0) (2026-07-30)
 
 ### Removed
