@@ -175,6 +175,7 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
                 MediaServerType.EMBY
                   ? 'Emby'
                   : 'Jellyfin',
+              strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
             })}
             type="info"
           />
