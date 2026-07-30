@@ -256,6 +256,11 @@ settingsRoutes.get('/jellyfin/users', async (req, res, next) => {
 
     return res.status(200).json(users);
   } catch (e) {
+    logger.error('Failed to fetch Jellyfin users for import list', {
+      label: 'Jellyfin Settings',
+      error: e.message || e.errorCode,
+      hostname: getHostname(),
+    });
     next({ status: 500, message: e.message });
   }
 });

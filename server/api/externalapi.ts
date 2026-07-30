@@ -69,7 +69,7 @@ class ExternalAPI {
 
     const response = await this.axios.get<T>(endpoint, {
       ...config,
-      signal: AbortSignal.timeout(this.axios.defaults.timeout ?? DEFAULT_TTL * 1000),
+      signal: AbortSignal.timeout(this.axios.defaults.timeout || 30000),
     });
 
     if (this.cache && ttl !== 0) {
@@ -97,7 +97,7 @@ class ExternalAPI {
 
     const response = await this.axios.post<T>(endpoint, data, {
       ...config,
-      signal: AbortSignal.timeout(this.axios.defaults.timeout ?? DEFAULT_TTL * 1000),
+      signal: AbortSignal.timeout(this.axios.defaults.timeout || 30000),
     });
 
     if (this.cache && ttl !== 0) {

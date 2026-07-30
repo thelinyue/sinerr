@@ -751,6 +751,12 @@ router.post(
       });
 
       const hostname = getHostname();
+      logger.info('Importing Jellyfin users - connecting to Emby/Jellyfin', {
+        label: 'User Import',
+        hostname,
+        apiKeyLength: settings.jellyfin.apiKey?.length ?? 0,
+        deviceId: admin.jellyfinDeviceId?.substring(0, 12) ?? '(none)',
+      });
       const jellyfinClient = new JellyfinAPI(
         hostname,
         settings.jellyfin.apiKey,
@@ -807,6 +813,7 @@ router.post(
         label: 'User Import',
         error: e.errorCode || e.message,
         status: e.statusCode || e.response?.status || e.status,
+        hostname: getHostname(),
       });
       next({
         status: 500,
