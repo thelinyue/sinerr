@@ -1,3 +1,12 @@
+## [1.4.0](https://github.com/thelinyue/sinerr/compare/v1.3.5...v1.4.0) (2026-07-30)
+
+
+### Features
+
+* **每周排行:** 新增 MostPlayed 排行榜滑块，首页展示 Emby 播放排行，支持日/周/月切换
+* **Emby 账号:** 新增用户注册、密码重置（PIN 码验证）等 Emby 账号管理 API
+
+
 ## [1.3.5](https://github.com/thelinyue/sinerr/compare/v1.3.4...v1.3.5) (2026-07-30)
 
 
