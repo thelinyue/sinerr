@@ -169,14 +169,18 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
       {data?.length ? (
         <>
           <Alert
-            title={intl.formatMessage(messages.newJellyfinsigninenabled, {
-              mediaServerName:
-                settings.currentSettings.mediaServerType ===
-                MediaServerType.EMBY
-                  ? 'Emby'
-                  : 'Jellyfin',
-              strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
-            })}
+            title={
+              <span>
+                {intl.formatMessage(messages.newJellyfinsigninenabled, {
+                  mediaServerName:
+                    settings.currentSettings.mediaServerType ===
+                    MediaServerType.EMBY
+                      ? 'Emby'
+                      : 'Jellyfin',
+                  strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
+                })}
+              </span>
+            }
             type="info"
           />
           <div className="flex flex-col">
