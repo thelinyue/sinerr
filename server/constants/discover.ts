@@ -21,6 +21,7 @@ export enum DiscoverSliderType {
   TMDB_NETWORK,
   TMDB_MOVIE_STREAMING_SERVICES,
   TMDB_TV_STREAMING_SERVICES,
+  MOST_PLAYED,
 }
 
 export const defaultSliders: Partial<DiscoverSlider>[] = [
@@ -31,63 +32,69 @@ export const defaultSliders: Partial<DiscoverSlider>[] = [
     order: 0,
   },
   {
-    type: DiscoverSliderType.RECENT_REQUESTS,
+    type: DiscoverSliderType.MOST_PLAYED,
     enabled: true,
     isBuiltIn: true,
     order: 1,
   },
   {
-    type: DiscoverSliderType.TRENDING,
+    type: DiscoverSliderType.RECENT_REQUESTS,
     enabled: true,
     isBuiltIn: true,
     order: 2,
   },
   {
-    type: DiscoverSliderType.POPULAR_MOVIES,
+    type: DiscoverSliderType.TRENDING,
     enabled: true,
     isBuiltIn: true,
     order: 3,
   },
   {
-    type: DiscoverSliderType.MOVIE_GENRES,
+    type: DiscoverSliderType.POPULAR_MOVIES,
     enabled: true,
     isBuiltIn: true,
     order: 4,
   },
   {
-    type: DiscoverSliderType.UPCOMING_MOVIES,
+    type: DiscoverSliderType.MOVIE_GENRES,
     enabled: true,
     isBuiltIn: true,
     order: 5,
   },
   {
-    type: DiscoverSliderType.STUDIOS,
+    type: DiscoverSliderType.UPCOMING_MOVIES,
     enabled: true,
     isBuiltIn: true,
     order: 6,
   },
   {
-    type: DiscoverSliderType.POPULAR_TV,
+    type: DiscoverSliderType.STUDIOS,
     enabled: true,
     isBuiltIn: true,
     order: 7,
   },
   {
-    type: DiscoverSliderType.TV_GENRES,
+    type: DiscoverSliderType.POPULAR_TV,
     enabled: true,
     isBuiltIn: true,
     order: 8,
   },
   {
-    type: DiscoverSliderType.UPCOMING_TV,
+    type: DiscoverSliderType.TV_GENRES,
     enabled: true,
     isBuiltIn: true,
     order: 9,
   },
   {
-    type: DiscoverSliderType.NETWORKS,
+    type: DiscoverSliderType.UPCOMING_TV,
     enabled: true,
     isBuiltIn: true,
     order: 10,
+  },
+  {
+    type: DiscoverSliderType.NETWORKS,
+    enabled: true,
+    isBuiltIn: true,
+    order: 11,
   },
 ];
