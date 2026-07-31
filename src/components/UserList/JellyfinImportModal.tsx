@@ -171,6 +171,7 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
             : 'Jellyfin',
       })}
       onOk={() => {
+        console.log('[DEBUG] onOk clicked, selectedUsers:', selectedUsers);
         importUsers();
       }}
       okDisabled={isImporting || !selectedUsers.length}
