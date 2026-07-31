@@ -137,6 +137,17 @@ app
       server.enable('trust proxy');
     }
     server.use(cookieParser());
+    server.use((req, _res, next) => {
+      if (req.path === '/api/v1/user/import-from-jellyfin') {
+        logger.info('IMPORT ENDPOINT HIT', {
+          label: 'Debug',
+          method: req.method,
+          ip: req.ip,
+          session: !!req.session?.userId,
+        });
+      }
+      next();
+    });
     server.use(express.json());
     server.use(express.urlencoded({ extended: true }));
     server.use((req, _res, next) => {

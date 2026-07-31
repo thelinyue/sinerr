@@ -738,6 +738,7 @@ router.post(
   '/import-from-jellyfin',
   isAuthenticated(Permission.MANAGE_USERS),
   async (req, res, next) => {
+    logger.info('IMPORT HANDLER ENTERED', { label: 'Debug' });
     try {
       const settings = getSettings();
       const userRepository = getRepository(User);
