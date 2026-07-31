@@ -94,7 +94,12 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
-      const createdUsers = await importJellyfinUsers(selectedUsers);
+      // Defer to next tick to ensure React's event handling doesn't interfere
+      const createdUsers = await new Promise<any[]>((resolve, reject) => {
+        setTimeout(() => {
+          importJellyfinUsers(selectedUsers).then(resolve).catch(reject);
+        }, 100);
+      });
       console.log('[DEBUG] Import result:', createdUsers.length, 'users');
 
       if (!createdUsers.length) {
