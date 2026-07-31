@@ -43,7 +43,7 @@ docker compose up -d
 ```yaml
 services:
   sinerr:
-    image: ghcr.io/thelinyue/sinerr:dev
+    image: ghcr.io/thelinyue/sinerr:latest
     container_name: sinerr
     restart: unless-stopped
     ports:
@@ -75,10 +75,7 @@ services:
       - POSTGRES_PASSWORD=sinerr
       - POSTGRES_DB=sinerr
     volumes:
-      - postgres:/var/lib/postgresql
-
-volumes:
-  postgres:
+      - ./PostgreSQL:/var/lib/postgresql
 ```
 
 启动：
