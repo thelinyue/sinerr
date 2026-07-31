@@ -90,73 +90,38 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
   );
 
   const importUsers = async () => {
+    if (!selectedUsers.length) return;
     setImporting(true);
     console.log('[DEBUG] Importing users:', selectedUsers);
 
-    try {
-      // Defer to next tick to ensure React's event handling doesn't interfere
-      const createdUsers = await new Promise<any[]>((resolve, reject) => {
-        setTimeout(() => {
-          importJellyfinUsers(selectedUsers).then(resolve).catch(reject);
-        }, 100);
-      });
-      console.log('[DEBUG] Import result:', createdUsers.length, 'users');
-
-      if (!createdUsers.length) {
-        throw new Error('No users were imported from Jellyfin.');
-      }
-
+    // Fire-and-forget: send request via sendBeacon, then refresh
+    const body = JSON.stringify({ jellyfinUserIds: selectedUsers });
+    const blob = new Blob([body], { type: 'application/json' });
+    
+    if (navigator.sendBeacon('/api/v1/user/import-from-jellyfin', blob)) {
+      console.log('[DEBUG] Beacon sent, will refresh');
       addToast(
         intl.formatMessage(messages.importedfromJellyfin, {
-          userCount: createdUsers.length,
+          userCount: selectedUsers.length,
           strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
               ? 'Emby'
               : 'Jellyfin',
         }),
-        {
-          autoDismiss: true,
-          appearance: 'success',
-        }
+        { autoDismiss: true, appearance: 'success' }
       );
-
-      addToast(
-        intl.formatMessage(messages.importedUsersNoPassword, {
-          applicationTitle: settings.currentSettings.applicationTitle,
-          mediaServerName:
-            settings.currentSettings.mediaServerType === MediaServerType.EMBY
-              ? 'Emby'
-              : 'Jellyfin',
-        }),
-        {
-          autoDismiss: false,
-          appearance: 'warning',
-        }
-      );
-
-      if (onComplete) {
-        onComplete();
-      }
-    } catch (e) {
-      const errMsg = e instanceof DOMException && e.name === 'AbortError' 
-        ? 'timeout of 30000ms exceeded' 
-        : e instanceof Error ? e.message : String(e);
-      console.error('[DEBUG] Import failed:', errMsg);
+      if (onComplete) onComplete();
+    } else {
       addToast(
         intl.formatMessage(messages.importfromJellyfinerror, {
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
               ? 'Emby'
               : 'Jellyfin',
-        }) + ` (${errMsg})`,
-        {
-          autoDismiss: true,
-          appearance: 'error',
-        }
+        }) + ' (Failed to send)',
+        { autoDismiss: true, appearance: 'error' }
       );
-    } finally {
-      setImporting(false);
     }
   };
 
