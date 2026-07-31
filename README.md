@@ -17,7 +17,7 @@
 ```yaml
 services:
   sinerr:
-    image: ghcr.io/thelinyue/sinerr:dev
+    image: ghcr.io/thelinyue/sinerr:latest
     container_name: sinerr
     restart: unless-stopped
     ports:
