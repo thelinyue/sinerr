@@ -61,6 +61,8 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
   const importUsers = async () => {
     setImporting(true);
 
+    console.log('[DEBUG] Importing users:', selectedUsers);
+
     try {
       const { data: createdUsers } = await axios.post(
         '/api/v1/user/import-from-jellyfin',
@@ -105,6 +107,7 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
         onComplete();
       }
     } catch (e) {
+      console.error('[DEBUG] Import failed:', e?.message, e?.response?.status, e?.response?.data);
       addToast(
         intl.formatMessage(messages.importfromJellyfinerror, {
           mediaServerName:
