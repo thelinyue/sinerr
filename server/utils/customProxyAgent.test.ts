@@ -44,6 +44,7 @@ const proxySettings: ProxySettings = {
   password: '',
   bypassFilter: '*.bypass.test',
   bypassLocalAddresses: true,
+  proxyWhitelist: '',
 };
 
 describe('proxy routing (construction-order independence)', () => {
