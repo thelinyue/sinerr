@@ -19,6 +19,7 @@ const migrateNetworkSettings = (settings: any): AllSettings => {
       password: '',
       bypassFilter: '',
       bypassLocalAddresses: true,
+      proxyWhitelist: '',
     },
   };
   delete settings.main.csrfProtection;

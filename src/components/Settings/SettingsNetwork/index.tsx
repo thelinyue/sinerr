@@ -39,6 +39,9 @@ const messages = defineMessages('components.Settings.SettingsNetwork', {
   proxyBypassFilter: 'Proxy Ignored Addresses',
   proxyBypassFilterTip:
     "Use ',' as a separator, and '*.' as a wildcard for subdomains",
+  proxyWhitelist: 'Proxy Whitelist',
+  proxyWhitelistTip:
+    "Only send requests to these domains through the proxy. Use ',' as a separator, and '*.' as a wildcard for subdomains. Leave empty to proxy all requests.",
   proxyBypassLocalAddresses: 'Bypass Proxy for Local Addresses',
   validationDnsCacheMinTtl: 'You must provide a valid minimum TTL',
   validationDnsCacheMaxTtl: 'You must provide a valid maximum TTL',
@@ -144,6 +147,7 @@ const SettingsNetwork = () => {
             proxyPassword: data?.proxy?.password,
             proxyBypassFilter: data?.proxy?.bypassFilter,
             proxyBypassLocalAddresses: data?.proxy?.bypassLocalAddresses,
+            proxyWhitelist: data?.proxy?.proxyWhitelist,
             apiRequestTimeout:
               data?.apiRequestTimeout !== undefined
                 ? data.apiRequestTimeout / 1000
@@ -171,6 +175,7 @@ const SettingsNetwork = () => {
                   password: values.proxyPassword,
                   bypassFilter: values.proxyBypassFilter,
                   bypassLocalAddresses: values.proxyBypassLocalAddresses,
+                  proxyWhitelist: values.proxyWhitelist,
                 },
                 apiRequestTimeout: Number(values.apiRequestTimeout) * 1000,
               });
@@ -534,6 +539,33 @@ const SettingsNetwork = () => {
                             typeof errors.proxyBypassFilter === 'string' && (
                               <div className="error">
                                 {errors.proxyBypassFilter}
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <label
+                          htmlFor="proxyWhitelist"
+                          className="checkbox-label"
+                        >
+                          {intl.formatMessage(messages.proxyWhitelist)}
+                          <span className="label-tip">
+                            {intl.formatMessage(messages.proxyWhitelistTip)}
+                          </span>
+                        </label>
+                        <div className="form-input-area">
+                          <div className="form-input-field">
+                            <Field
+                              id="proxyWhitelist"
+                              name="proxyWhitelist"
+                              type="text"
+                            />
+                          </div>
+                          {errors.proxyWhitelist &&
+                            touched.proxyWhitelist &&
+                            typeof errors.proxyWhitelist === 'string' && (
+                              <div className="error">
+                                {errors.proxyWhitelist}
                               </div>
                             )}
                         </div>

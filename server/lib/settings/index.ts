@@ -114,6 +114,7 @@ export interface ProxySettings {
   password: string;
   bypassFilter: string;
   bypassLocalAddresses: boolean;
+  proxyWhitelist: string;
 }
 
 export interface MainSettings {
@@ -143,17 +144,6 @@ export interface MainSettings {
   locale: string;
   clientDownloadUrls: { name: string; url: string; icon: string }[];
   serverConnectionUrl: string;
-}
-
-export interface ProxySettings {
-  enabled: boolean;
-  hostname: string;
-  port: number;
-  useSsl: boolean;
-  user: string;
-  password: string;
-  bypassFilter: string;
-  bypassLocalAddresses: boolean;
 }
 
 export interface DnsCacheSettings {
@@ -573,6 +563,7 @@ class Settings {
           password: '',
           bypassFilter: '',
           bypassLocalAddresses: true,
+          proxyWhitelist: '',
         },
         dnsCache: {
           enabled: false,

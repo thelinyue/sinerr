@@ -96,6 +96,21 @@ export default async function createCustomProxyAgent(
       }
     }
 
+    const whitelist = proxySettings.proxyWhitelist?.trim();
+    if (whitelist) {
+      return !whitelist.split(',').some((entry) => {
+        const trimmed = entry.trim();
+        if (!trimmed) {
+          return false;
+        }
+        if (trimmed.startsWith('*')) {
+          const domain = trimmed.slice(1);
+          return hostname.endsWith(domain);
+        }
+        return hostname === trimmed;
+      });
+    }
+
     return false;
   };
 

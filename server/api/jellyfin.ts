@@ -78,23 +78,6 @@ export interface JellyfinLoginResponse {
   AccessToken: string;
 }
 
-export interface QuickConnectInitiateResponse {
-  Secret: string;
-  Code: string;
-  DateAdded: string;
-}
-
-export interface QuickConnectStatusResponse {
-  Authenticated: boolean;
-  Secret: string;
-  Code: string;
-  DeviceId: string;
-  DeviceName: string;
-  AppName: string;
-  AppVersion: string;
-  DateAdded: string;
-}
-
 export interface JellyfinUserListResponse {
   users: JellyfinUserResponse[];
 }
@@ -274,62 +257,6 @@ class JellyfinAPI extends ExternalAPI {
           error: e.response?.status,
           ip: ClientIP,
         }
-      );
-
-      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
-    }
-  }
-
-  public async initiateQuickConnect(): Promise<QuickConnectInitiateResponse> {
-    try {
-      const response = await this.post<QuickConnectInitiateResponse>(
-        '/QuickConnect/Initiate'
-      );
-
-      return response;
-    } catch (e) {
-      logger.error(
-        `Something went wrong while initiating Quick Connect: ${e.message}`,
-        { label: 'Jellyfin API', error: e.response?.status }
-      );
-
-      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
-    }
-  }
-
-  public async checkQuickConnect(
-    secret: string
-  ): Promise<QuickConnectStatusResponse> {
-    try {
-      const response = await this.get<QuickConnectStatusResponse>(
-        '/QuickConnect/Connect',
-        { params: { secret } }
-      );
-
-      return response;
-    } catch (e) {
-      logger.error(
-        `Something went wrong while getting Quick Connect status: ${e.message}`,
-        { label: 'Jellyfin API', error: e.response?.status }
-      );
-
-      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
-    }
-  }
-
-  public async authenticateQuickConnect(
-    secret: string
-  ): Promise<JellyfinLoginResponse> {
-    try {
-      const response = await this.post<JellyfinLoginResponse>(
-        '/Users/AuthenticateWithQuickConnect',
-        { Secret: secret }
-      );
-      return response;
-    } catch (e) {
-      logger.error(
-        `Something went wrong while authenticating with Quick Connect: ${e.message}`,
-        { label: 'Jellyfin API', error: e.response?.status }
       );
 
       throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
@@ -676,7 +603,9 @@ class JellyfinAPI extends ExternalAPI {
     }
   }
 
-  public async getBatchItems(ids: string): Promise<JellyfinLibraryItemExtended[]> {
+  public async getBatchItems(
+    ids: string
+  ): Promise<JellyfinLibraryItemExtended[]> {
     try {
       const itemResponse = await this.get<JellyfinItemsReponse>(`/Items`, {
         params: {
@@ -695,11 +624,13 @@ class JellyfinAPI extends ExternalAPI {
     }
   }
 
-  public async getPlaybackReport(options: {
-    days?: number;
-    itemType?: string;
-    limit?: number;
-  } = {}): Promise<JellyfinPlaybackReportItem[]> {
+  public async getPlaybackReport(
+    options: {
+      days?: number;
+      itemType?: string;
+      limit?: number;
+    } = {}
+  ): Promise<JellyfinPlaybackReportItem[]> {
     const days = options.days ?? 7;
     const itemType = options.itemType ?? 'Movie';
     const limit = options.limit ?? 100;
@@ -716,9 +647,8 @@ class JellyfinAPI extends ExternalAPI {
       if (itemType) {
         conditions.push(`ItemType = '${itemType}'`);
       }
-      const whereClause = conditions.length > 0
-        ? `WHERE ${conditions.join(' AND ')}`
-        : '';
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       const query = [
         'SELECT ItemId, ItemName, ItemType, COUNT(ItemId) as PlayCount',
@@ -727,7 +657,9 @@ class JellyfinAPI extends ExternalAPI {
         'GROUP BY ItemId',
         'ORDER BY PlayCount DESC',
         `LIMIT ${limit}`,
-      ].filter(Boolean).join(' ');
+      ]
+        .filter(Boolean)
+        .join(' ');
 
       logger.info('Executing playback report query', {
         label: 'Jellyfin API',
@@ -738,13 +670,10 @@ class JellyfinAPI extends ExternalAPI {
         colums: string[];
         results: unknown[][];
         message: string;
-      }>(
-        '/user_usage_stats/submit_custom_query',
-        {
-          CustomQueryString: query,
-          ReplaceUserId: false,
-        }
-      );
+      }>('/user_usage_stats/submit_custom_query', {
+        CustomQueryString: query,
+        ReplaceUserId: false,
+      });
 
       if (!response?.colums || !response?.results) {
         logger.warn('Playback report returned unexpected format', {

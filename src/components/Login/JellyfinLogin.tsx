@@ -1,19 +1,14 @@
 import Button from '@app/components/Common/Button';
 import SensitiveInput from '@app/components/Common/SensitiveInput';
-import JellyfinQuickConnectModal from '@app/components/Login/JellyfinQuickConnectModal';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import defineMessages from '@app/utils/defineMessages';
-import {
-  ArrowLeftOnRectangleIcon,
-  QrCodeIcon,
-} from '@heroicons/react/24/outline';
+import { ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { ApiErrorCode } from '@server/constants/error';
 import { MediaServerType, ServerType } from '@server/constants/server';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
-import { useCallback, useState } from 'react';
 import { useIntl } from 'react-intl';
 import * as Yup from 'yup';
 
@@ -32,8 +27,6 @@ const messages = defineMessages('components.Login', {
   signingin: 'Signing In…',
   signin: 'Sign In',
   forgotpassword: 'Forgot Password?',
-  quickconnect: 'Quick Connect',
-  quickconnecterror: 'Quick Connect failed. Please try again.',
 });
 
 interface JellyfinLoginProps {
@@ -45,7 +38,6 @@ const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
   const toasts = useToasts();
   const intl = useIntl();
   const settings = useSettings();
-  const [showQuickConnect, setShowQuickConnect] = useState(false);
 
   const mediaServerFormatValues = {
     mediaServerName:
@@ -55,16 +47,6 @@ const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
           ? ServerType.EMBY
           : 'Media Server',
   };
-
-  const handleQuickConnectError = useCallback(
-    (error: string) => {
-      toasts.addToast(error, {
-        autoDismiss: true,
-        appearance: 'error',
-      });
-    },
-    [toasts]
-  );
 
   const LoginSchema = Yup.object().shape({
     username: Yup.string().required(
@@ -215,30 +197,6 @@ const JellyfinLogin = ({ revalidate, serverType }: JellyfinLoginProps) => {
           );
         }}
       </Formik>
-
-      <div className="mt-4">
-        <Button
-          buttonType="ghost"
-          type="button"
-          onClick={() => setShowQuickConnect(true)}
-          className="w-full"
-        >
-          <QrCodeIcon />
-          <span>{intl.formatMessage(messages.quickconnect)}</span>
-        </Button>
-      </div>
-
-      {showQuickConnect && (
-        <JellyfinQuickConnectModal
-          onClose={() => setShowQuickConnect(false)}
-          onAuthenticated={() => {
-            setShowQuickConnect(false);
-            revalidate();
-          }}
-          onError={handleQuickConnectError}
-          mediaServerName={mediaServerFormatValues.mediaServerName}
-        />
-      )}
     </div>
   );
 };
