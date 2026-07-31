@@ -1,3 +1,11 @@
+## [1.4.4](https://github.com/thelinyue/sinerr/compare/v1.4.3...v1.4.4) (2026-07-31)
+
+
+### Bug Fixes
+
+* **Emby 导入:** 修复硬编码 `id=1` 查找 admin 用户失败的问题。当数据库重置后 admin 的 id 可能不是 1，改用 `req.user.id` 查找当前登录用户
+
+
 ## [1.4.3](https://github.com/thelinyue/sinerr/compare/v1.4.2...v1.4.3) (2026-07-31)
 
 
