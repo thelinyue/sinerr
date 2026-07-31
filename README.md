@@ -36,6 +36,59 @@ docker compose up -d
 
 访问 `http://localhost:5055` 完成初始化配置。
 
+### 使用 PostgreSQL 数据库
+
+默认使用 SQLite。如需改用 PostgreSQL，请将 `DB_TYPE` 设为 `postgres` 并添加以下配置：
+
+```yaml
+services:
+  sinerr:
+    image: ghcr.io/thelinyue/sinerr:dev
+    container_name: sinerr
+    restart: unless-stopped
+    ports:
+      - "5055:5055"
+    environment:
+      - TZ=Asia/Shanghai
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sinerr
+      - DB_PASS=sinerr
+      - DB_NAME=sinerr
+      - DB_LOG_QUERIES=false
+      - DB_USE_SSL=false
+      - DB_POOL_SIZE=10
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - postgres
+    links:
+      - postgres
+
+  postgres:
+    image: postgres:18
+    container_name: sinerr-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=sinerr
+      - POSTGRES_PASSWORD=sinerr
+      - POSTGRES_DB=sinerr
+    volumes:
+      - postgres:/var/lib/postgresql
+
+volumes:
+  postgres:
+```
+
+启动：
+
+```bash
+docker compose up -d
+```
+
+访问 `http://localhost:5055` 完成初始化配置。
+
 ## 功能特性
 
 - 完整的 Jellyfin/Emby 集成，支持用户导入与管理
