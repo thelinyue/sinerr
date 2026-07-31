@@ -63,17 +63,16 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      console.log('[DEBUG] Fetching import with users:', selectedUsers);
       
       const res = await fetch('/api/v1/user/import-from-jellyfin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jellyfinUserIds: selectedUsers }),
-        signal: controller.signal,
+        credentials: 'same-origin',
       });
       
-      clearTimeout(timeoutId);
+      console.log('[DEBUG] Import response status:', res.status);
       
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -81,6 +80,7 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
       }
       
       const createdUsers = await res.json();
+      console.log('[DEBUG] Import created:', createdUsers.length, 'users');
 
       if (!createdUsers.length) {
         throw new Error('No users were imported from Jellyfin.');
