@@ -746,7 +746,7 @@ router.post(
 
       // taken from auth.ts
       const admin = await userRepository.findOneOrFail({
-        where: { id: 1 },
+        where: { id: req.user?.id ?? 1 },
         select: ['id', 'jellyfinDeviceId', 'jellyfinUserId'],
         order: { id: 'ASC' },
       });

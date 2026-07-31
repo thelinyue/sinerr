@@ -236,7 +236,7 @@ settingsRoutes.get('/jellyfin/users', async (req, res, next) => {
     const userRepository = getRepository(User);
     const admin = await userRepository.findOneOrFail({
       select: ['id', 'jellyfinDeviceId', 'jellyfinUserId'],
-      where: { id: 1 },
+      where: { id: req.user?.id ?? 1 },
       order: { id: 'ASC' },
     });
     const jellyfinClient = new JellyfinAPI(
