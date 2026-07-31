@@ -121,8 +121,16 @@ const ConnectionInfoModal = ({ show, onClose }: ConnectionInfoModalProps) => {
                     key={index}
                     className="flex items-center gap-3 rounded-lg bg-gray-700/50 p-3"
                   >
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center text-2xl">
-                      {item.icon || '📱'}
+                    <div className="flex h-12 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg text-2xl">
+                      {/^https?:\/\//.test(item.icon) ? (
+                        <img
+                          src={item.icon}
+                          alt={item.name}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        item.icon || '📱'
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-white">

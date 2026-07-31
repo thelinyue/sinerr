@@ -760,7 +760,8 @@ router.post(
       const jellyfinClient = new JellyfinAPI(
         hostname,
         settings.jellyfin.apiKey,
-        admin.jellyfinDeviceId ?? ''
+        admin.jellyfinDeviceId ?? '',
+        settings.main.mediaServerType
       );
       const createdUsers: User[] = [];
 

@@ -527,19 +527,40 @@ const ConnectionGuide = () => {
                 <p className="mb-2 text-sm font-medium text-white">
                   下载客户端
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-3">
                   {downloads.map((d, i) => (
-                    <a
+                    <div
                       key={i}
-                      href={d.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full bg-gray-700/80 px-3 py-1 text-xs text-white transition-colors hover:bg-gray-600"
+                      className="flex items-center gap-3 rounded-lg bg-gray-700/50 p-3"
                     >
-                      <span>{d.icon || '📱'}</span>
-                      <span>{d.name}</span>
-                      <ArrowDownTrayIcon className="h-3 w-3" />
-                    </a>
+                      <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg p-1">
+                        {/^https?:\/\//.test(d.icon) ? (
+                          <img
+                            src={d.icon}
+                            alt={d.name}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-2xl">{d.icon || '📱'}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-white">
+                          {d.name}
+                        </p>
+                      </div>
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0"
+                      >
+                        <Button buttonType="primary" buttonSize="sm">
+                          <ArrowDownTrayIcon className="mr-1 h-4 w-4" />
+                          下载
+                        </Button>
+                      </a>
+                    </div>
                   ))}
                 </div>
               </div>

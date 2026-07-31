@@ -1,3 +1,14 @@
+## [1.4.2](https://github.com/thelinyue/sinerr/compare/v1.4.1...v1.4.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **Emby 导入:** 显式传入 `mediaServerType` 确保 Emby auth header 版本正确
+* **Emby 导入:** `ExternalAPI` 回退原始 axios timeout，不用 `AbortSignal`
+* **Emby 导入:** `getUsers()` 包裹 `Promise.race` 25 秒硬超时兜底
+* **Emby 导入:** HTTP 请求头添加 `Connection: close` 避免 keep-alive 半关闭连接挂死
+
+
 ## [1.4.1](https://github.com/thelinyue/sinerr/compare/v1.4.0...v1.4.1) (2026-07-30)
 
 

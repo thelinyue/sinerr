@@ -214,6 +214,7 @@ class JellyfinAPI extends ExternalAPI {
           Authorization: authHeaderVal,
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          Connection: 'close',
         },
         timeout: settings.network.apiRequestTimeout,
       }
