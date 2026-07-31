@@ -33,7 +33,8 @@ const messages = defineMessages('components.UserList', {
 
 function importJellyfinUsers(jellyfinUserIds: string[]): Promise<any[]> {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+    const XHR = window.XMLHttpRequest;
+    const xhr = new XHR();
     xhr.timeout = 30000;
     xhr.open('POST', '/api/v1/user/import-from-jellyfin');
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -184,7 +185,9 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
             ? 'Emby'
             : 'Jellyfin',
       })}
-      onOk={() => {
+      onOk={(e) => {
+        e?.stopPropagation();
+        e?.preventDefault();
         console.log('[DEBUG] onOk clicked, selectedUsers:', selectedUsers);
         importUsers();
       }}
