@@ -1,3 +1,11 @@
+## [1.4.3](https://github.com/thelinyue/sinerr/compare/v1.4.2...v1.4.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* **调试:** 在中间件层和路由 handler 添加请求追踪日志，定位导入端点未执行的原因
+
+
 ## [1.4.2](https://github.com/thelinyue/sinerr/compare/v1.4.1...v1.4.2) (2026-07-30)
 
 
