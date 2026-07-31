@@ -63,24 +63,39 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
-      console.log('[DEBUG] Fetching import with users:', selectedUsers);
+      console.log('[DEBUG] XHR importing users:', selectedUsers);
       
-      const res = await fetch('/api/v1/user/import-from-jellyfin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jellyfinUserIds: selectedUsers }),
-        credentials: 'same-origin',
+      const createdUsers = await new Promise<any[]>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.timeout = 30000;
+        xhr.open('POST', '/api/v1/user/import-from-jellyfin');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = () => {
+          console.log('[DEBUG] XHR response:', xhr.status);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error('Invalid JSON response'));
+            }
+          } else {
+            try {
+              const err = JSON.parse(xhr.responseText);
+              reject(new Error(err.message || `HTTP ${xhr.status}`));
+            } catch {
+              reject(new Error(`HTTP ${xhr.status}`));
+            }
+          }
+        };
+        
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.ontimeout = () => reject(new Error('timeout of 30000ms exceeded'));
+        
+        xhr.send(JSON.stringify({ jellyfinUserIds: selectedUsers }));
       });
-      
-      console.log('[DEBUG] Import response status:', res.status);
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || `HTTP ${res.status}`);
-      }
-      
-      const createdUsers = await res.json();
-      console.log('[DEBUG] Import created:', createdUsers.length, 'users');
+
+      console.log('[DEBUG] XHR import created:', createdUsers.length, 'users');
 
       if (!createdUsers.length) {
         throw new Error('No users were imported from Jellyfin.');
