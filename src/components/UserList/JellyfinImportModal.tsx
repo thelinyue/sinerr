@@ -63,11 +63,17 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const res = await fetch('/api/v1/user/import-from-jellyfin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jellyfinUserIds: selectedUsers }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -113,19 +119,17 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
         onComplete();
       }
     } catch (e) {
-      console.error('[DEBUG] Import failed:', e?.message, e?.response?.status, e?.response?.data);
+      const errMsg = e instanceof DOMException && e.name === 'AbortError' 
+        ? 'timeout of 30000ms exceeded' 
+        : e instanceof Error ? e.message : String(e);
+      console.error('[DEBUG] Import failed:', errMsg);
       addToast(
         intl.formatMessage(messages.importfromJellyfinerror, {
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
               ? 'Emby'
               : 'Jellyfin',
-        }) +
-          (e?.response?.data?.message
-            ? ` (${e.response.data.message})`
-            : e?.message
-              ? ` (${e.message})`
-              : ''),
+        }) + ` (${errMsg})`,
         {
           autoDismiss: true,
           appearance: 'error',
