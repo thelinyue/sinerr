@@ -226,7 +226,15 @@ app
     server.use((_req, res, next) => {
       const original = res.json;
       res.json = function jsonp(json) {
-        return original.call(this, JSON.parse(JSON.stringify(json)));
+        try {
+          return original.call(this, JSON.parse(JSON.stringify(json)));
+        } catch (e) {
+          logger.error('Failed to serialize JSON response', {
+            label: 'Server',
+            error: (e as Error).message,
+          });
+          return original.call(this, json);
+        }
       };
       next();
     });
