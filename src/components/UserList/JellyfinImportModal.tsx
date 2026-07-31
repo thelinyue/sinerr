@@ -31,6 +31,37 @@ const messages = defineMessages('components.UserList', {
     'The <strong>Enable New {mediaServerName} Sign-In</strong> setting is currently enabled. {mediaServerName} users with library access do not need to be imported in order to sign in.',
 });
 
+function importJellyfinUsers(jellyfinUserIds: string[]): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.timeout = 30000;
+    xhr.open('POST', '/api/v1/user/import-from-jellyfin');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error('Invalid JSON response'));
+        }
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText);
+          reject(new Error(err.message || `HTTP ${xhr.status}`));
+        } catch {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('timeout of 30000ms exceeded'));
+
+    xhr.send(JSON.stringify({ jellyfinUserIds }));
+  });
+}
+
 const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
   onCancel,
   onComplete,
@@ -59,43 +90,11 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
 
   const importUsers = async () => {
     setImporting(true);
-
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
-      console.log('[DEBUG] XHR importing users:', selectedUsers);
-      
-      const createdUsers = await new Promise<any[]>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.timeout = 30000;
-        xhr.open('POST', '/api/v1/user/import-from-jellyfin');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        
-        xhr.onload = () => {
-          console.log('[DEBUG] XHR response:', xhr.status);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText));
-            } catch {
-              reject(new Error('Invalid JSON response'));
-            }
-          } else {
-            try {
-              const err = JSON.parse(xhr.responseText);
-              reject(new Error(err.message || `HTTP ${xhr.status}`));
-            } catch {
-              reject(new Error(`HTTP ${xhr.status}`));
-            }
-          }
-        };
-        
-        xhr.onerror = () => reject(new Error('Network error'));
-        xhr.ontimeout = () => reject(new Error('timeout of 30000ms exceeded'));
-        
-        xhr.send(JSON.stringify({ jellyfinUserIds: selectedUsers }));
-      });
-
-      console.log('[DEBUG] XHR import created:', createdUsers.length, 'users');
+      const createdUsers = await importJellyfinUsers(selectedUsers);
+      console.log('[DEBUG] Import result:', createdUsers.length, 'users');
 
       if (!createdUsers.length) {
         throw new Error('No users were imported from Jellyfin.');
