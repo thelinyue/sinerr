@@ -7,7 +7,6 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { MediaServerType } from '@server/constants/server';
 import type { UserResultsResponse } from '@server/interfaces/api/userInterfaces';
-import axios from 'axios';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
@@ -64,11 +63,18 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     console.log('[DEBUG] Importing users:', selectedUsers);
 
     try {
-      const { data: createdUsers } = await axios.post(
-        '/api/v1/user/import-from-jellyfin',
-        { jellyfinUserIds: selectedUsers },
-        { timeout: 30000 }
-      );
+      const res = await fetch('/api/v1/user/import-from-jellyfin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jellyfinUserIds: selectedUsers }),
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `HTTP ${res.status}`);
+      }
+      
+      const createdUsers = await res.json();
 
       if (!createdUsers.length) {
         throw new Error('No users were imported from Jellyfin.');
