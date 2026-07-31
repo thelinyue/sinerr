@@ -1,3 +1,11 @@
+## [1.4.5](https://github.com/thelinyue/sinerr/compare/v1.4.4...v1.4.5) (2026-07-31)
+
+
+### Bug Fixes
+
+* **Emby 导入:** 将前端导入请求从 `axios.post` 改为原生 `fetch`，解决 axios 在浏览器端超时但 API 实际正常的问题
+
+
 ## [1.4.4](https://github.com/thelinyue/sinerr/compare/v1.4.3...v1.4.4) (2026-07-31)
 
 
