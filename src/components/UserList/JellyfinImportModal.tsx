@@ -31,38 +31,6 @@ const messages = defineMessages('components.UserList', {
     'The <strong>Enable New {mediaServerName} Sign-In</strong> setting is currently enabled. {mediaServerName} users with library access do not need to be imported in order to sign in.',
 });
 
-function importJellyfinUsers(jellyfinUserIds: string[]): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const XHR = window.XMLHttpRequest;
-    const xhr = new XHR();
-    xhr.timeout = 30000;
-    xhr.open('POST', '/api/v1/user/import-from-jellyfin');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch {
-          reject(new Error('Invalid JSON response'));
-        }
-      } else {
-        try {
-          const err = JSON.parse(xhr.responseText);
-          reject(new Error(err.message || `HTTP ${xhr.status}`));
-        } catch {
-          reject(new Error(`HTTP ${xhr.status}`));
-        }
-      }
-    };
-
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.ontimeout = () => reject(new Error('timeout of 30000ms exceeded'));
-
-    xhr.send(JSON.stringify({ jellyfinUserIds }));
-  });
-}
-
 const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
   onCancel,
   onComplete,
@@ -89,17 +57,14 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     `/api/v1/user?take=${children}`
   );
 
-  const importUsers = async () => {
+  const importUsers = () => {
     if (!selectedUsers.length) return;
     setImporting(true);
-    console.log('[DEBUG] Importing users:', selectedUsers);
 
-    // Fire-and-forget: send request via sendBeacon, then refresh
     const body = JSON.stringify({ jellyfinUserIds: selectedUsers });
     const blob = new Blob([body], { type: 'application/json' });
     
     if (navigator.sendBeacon('/api/v1/user/import-from-jellyfin', blob)) {
-      console.log('[DEBUG] Beacon sent, will refresh');
       addToast(
         intl.formatMessage(messages.importedfromJellyfin, {
           userCount: selectedUsers.length,
@@ -155,10 +120,7 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
             ? 'Emby'
             : 'Jellyfin',
       })}
-      onOk={(e) => {
-        e?.stopPropagation();
-        e?.preventDefault();
-        console.log('[DEBUG] onOk clicked, selectedUsers:', selectedUsers);
+      onOk={() => {
         importUsers();
       }}
       okDisabled={isImporting || !selectedUsers.length}
