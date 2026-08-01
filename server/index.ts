@@ -9,6 +9,7 @@ import notificationManager from '@server/lib/notifications';
 import DiscordAgent from '@server/lib/notifications/agents/discord';
 import EmailAgent from '@server/lib/notifications/agents/email';
 import GotifyAgent from '@server/lib/notifications/agents/gotify';
+import MediaryAgent from '@server/lib/notifications/agents/mediary';
 import NtfyAgent from '@server/lib/notifications/agents/ntfy';
 import PushbulletAgent from '@server/lib/notifications/agents/pushbullet';
 import PushoverAgent from '@server/lib/notifications/agents/pushover';
@@ -23,6 +24,7 @@ import clearCookies from '@server/middleware/clearcookies';
 import routes from '@server/routes';
 import avatarproxy from '@server/routes/avatarproxy';
 import imageproxy from '@server/routes/imageproxy';
+import webhookRoutes from '@server/routes/webhook';
 import { appDataPermissions } from '@server/utils/appDataVolume';
 import { getAppVersion } from '@server/utils/appVersion';
 import createCustomProxyAgent, {
@@ -107,6 +109,7 @@ app
       new DiscordAgent(),
       new EmailAgent(),
       new GotifyAgent(),
+      new MediaryAgent(),
       new NtfyAgent(),
       new PushbulletAgent(),
       new PushoverAgent(),
@@ -238,6 +241,7 @@ app
       };
       next();
     });
+    server.use('/api/v1/webhook', webhookRoutes);
     server.use('/api/v1', routes);
 
     // Do not set cookies so CDNs can cache them

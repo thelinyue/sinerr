@@ -35,8 +35,8 @@ import { rescheduleJob } from 'node-schedule';
 import path from 'path';
 import semver from 'semver';
 
-import metadataRoutes from './metadata';
 import mediaryRoutes from './mediary';
+import metadataRoutes from './metadata';
 import moviepilotRoutes from './moviepilot';
 import notificationRoutes from './notifications';
 
@@ -437,16 +437,26 @@ settingsRoutes.get(
 );
 
 settingsRoutes.get('/jobs', (_req, res) => {
+  const settings = getSettings();
+  const autoScan = settings.jellyfin?.autoScan ?? true;
+  const jellyfinJobIds = [
+    'jellyfin-recently-added-scan',
+    'jellyfin-full-scan',
+    'mostplayed-cache-refresh',
+  ];
+
   return res.status(200).json(
-    scheduledJobs.map((job) => ({
-      id: job.id,
-      name: job.name,
-      type: job.type,
-      interval: job.interval,
-      cronSchedule: job.cronSchedule,
-      nextExecutionTime: job.job.nextInvocation(),
-      running: job.running ? job.running() : false,
-    }))
+    scheduledJobs
+      .filter((job) => autoScan || !jellyfinJobIds.includes(job.id))
+      .map((job) => ({
+        id: job.id,
+        name: job.name,
+        type: job.type,
+        interval: job.interval,
+        cronSchedule: job.cronSchedule,
+        nextExecutionTime: job.job.nextInvocation(),
+        running: job.running ? job.running() : false,
+      }))
   );
 });
 

@@ -46,6 +46,7 @@ export interface JellyfinSettings {
   serverId: string;
   apiKey: string;
   jellyfinTemplateUserId?: string;
+  autoScan?: boolean;
 }
 export interface TautulliSettings {
   hostname?: string;
@@ -78,6 +79,19 @@ export interface DVRSettings {
 }
 
 export interface MoviePilotSettings {
+  id: number;
+  name: string;
+  hostname: string;
+  port: number;
+  apiKey: string;
+  useSsl: boolean;
+  baseUrl?: string;
+  isDefault: boolean;
+  externalUrl?: string;
+  syncEnabled: boolean;
+}
+
+export interface MediaryServerSettings {
   id: number;
   name: string;
   hostname: string;
@@ -296,10 +310,15 @@ export interface NotificationAgentNtfy extends NotificationAgentConfig {
   };
 }
 
+export interface NotificationAgentMediary extends NotificationAgentConfig {
+  options: Record<string, unknown>;
+}
+
 export enum NotificationAgentKey {
   DISCORD = 'discord',
   EMAIL = 'email',
   GOTIFY = 'gotify',
+  MEDIARY = 'mediary',
   NTFY = 'ntfy',
   PUSHBULLET = 'pushbullet',
   PUSHOVER = 'pushover',
@@ -313,6 +332,7 @@ interface NotificationAgents {
   discord: NotificationAgentDiscord;
   email: NotificationAgentEmail;
   gotify: NotificationAgentGotify;
+  mediary: NotificationAgentMediary;
   ntfy: NotificationAgentNtfy;
   pushbullet: NotificationAgentPushbullet;
   pushover: NotificationAgentPushover;
@@ -348,6 +368,7 @@ export interface AllSettings {
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
   moviepilot: MoviePilotSettings[];
+  mediary: MediaryServerSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
   jobs: Record<JobId, JobSettings>;
@@ -410,6 +431,7 @@ class Settings {
         serverId: '',
         apiKey: '',
         jellyfinTemplateUserId: '',
+        autoScan: true,
       },
       tautulli: {},
       metadataSettings: {
@@ -417,6 +439,7 @@ class Settings {
         anime: MetadataProviderType.TMDB,
       },
       moviepilot: [],
+      mediary: [],
       public: {
         initialized: false,
       },
@@ -525,6 +548,12 @@ class Settings {
               locale: 'en',
             },
           },
+          mediary: {
+            enabled: false,
+            embedPoster: false,
+            types: 0,
+            options: {},
+          },
         },
       },
       jobs: {
@@ -622,6 +651,17 @@ class Settings {
     this.data.moviepilot = data;
   }
 
+  get mediary(): MediaryServerSettings[] {
+    if (!this.data.mediary) {
+      this.data.mediary = [];
+    }
+    return this.data.mediary;
+  }
+
+  set mediary(data: MediaryServerSettings[]) {
+    this.data.mediary = data;
+  }
+
   get public(): PublicSettings {
     return this.data.public;
   }
@@ -641,12 +681,12 @@ class Settings {
       mediaServerLogin: this.data.main.mediaServerLogin,
       jellyfinExternalHost: this.data.jellyfin.externalHostname,
       jellyfinForgotPasswordUrl: this.data.jellyfin.jellyfinForgotPasswordUrl,
-      movie4kEnabled: this.data.moviepilot.some(
-        (moviepilot) => moviepilot.isDefault
-      ),
-      series4kEnabled: this.data.moviepilot.some(
-        (moviepilot) => moviepilot.isDefault
-      ),
+      movie4kEnabled:
+        this.data.moviepilot.some((mp) => mp.isDefault) ||
+        this.data.mediary.some((m) => m.isDefault),
+      series4kEnabled:
+        this.data.moviepilot.some((mp) => mp.isDefault) ||
+        this.data.mediary.some((m) => m.isDefault),
       discoverRegion: this.data.main.discoverRegion,
       streamingRegion: this.data.main.streamingRegion,
       originalLanguage: this.data.main.originalLanguage,

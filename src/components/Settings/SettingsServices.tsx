@@ -5,16 +5,23 @@ import Button from '@app/components/Common/Button';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
+import MediaryModal from '@app/components/Settings/MediaryModal';
 import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
 import OverrideRuleModal from '@app/components/Settings/OverrideRule/OverrideRuleModal';
 import OverrideRuleTiles from '@app/components/Settings/OverrideRule/OverrideRuleTiles';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
-import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
+import {
+  CloudIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@heroicons/react/24/solid';
 import type OverrideRule from '@server/entity/OverrideRule';
 import type { OverrideRuleResultsResponse } from '@server/interfaces/api/overrideRuleInterfaces';
 import type {
+  MediaryServerSettings,
   MoviePilotSettings,
 } from '@server/lib/settings';
 import axios from 'axios';
@@ -25,9 +32,11 @@ import useSWR, { mutate } from 'swr';
 const messages = defineMessages('components.Settings', {
   services: 'Services',
   moviepilotsettings: 'MoviePilot Settings',
+  mediarysettings: 'Mediary Settings',
   serviceSettingsDescription:
     'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only two of them can be marked as defaults (one non-4K and one 4K). Administrators are able to override the server used to process new requests prior to approval.',
   moviepilotSettingsDescription: 'Configure MoviePilot connection settings',
+  mediarySettingsDescription: 'Configure Mediary connection settings',
   deleteserverconfirm: 'Are you sure you want to delete this server?',
   ssl: 'SSL',
   default: 'Default',
@@ -36,6 +45,7 @@ const messages = defineMessages('components.Settings', {
   address: 'Address',
   activeProfile: 'Active Profile',
   addmoviepilot: 'Add MoviePilot Server',
+  addmediary: 'Add Mediary Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
   noDefaultNon4kServer:
@@ -61,6 +71,7 @@ interface ServerInstanceProps {
   externalUrl?: string;
   profileName?: string;
   isMoviepilot?: boolean;
+  isMediary?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -92,6 +103,7 @@ const ServerInstance = ({
   isDefault = false,
   isSSL = false,
   isMoviepilot = false,
+  isMediary = false,
   externalUrl,
   onEdit,
   onDelete,
@@ -162,7 +174,12 @@ const ServerInstance = ({
           rel="noopener noreferrer"
           className="opacity-50 hover:opacity-100"
         >
-          <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
+          {isMoviepilot && (
+            <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
+          )}
+          {isMediary && (
+            <CloudIcon className="h-10 w-10 flex-shrink-0 text-indigo-500" />
+          )}
         </a>
       </div>
       <div className="border-t border-gray-500">
@@ -198,6 +215,11 @@ const SettingsServices = () => {
     error: moviepilotError,
     mutate: revalidateMoviePilot,
   } = useSWR<MoviePilotSettings[]>('/api/v1/settings/moviepilot');
+  const {
+    data: mediaryData,
+    error: mediaryError,
+    mutate: revalidateMediary,
+  } = useSWR<MediaryServerSettings[]>('/api/v1/settings/mediary');
   const { data: rules, mutate: revalidate } =
     useSWR<OverrideRuleResultsResponse>('/api/v1/overrideRule');
   const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
@@ -207,9 +229,16 @@ const SettingsServices = () => {
     open: false,
     moviepilot: null,
   });
+  const [editMediaryModal, setEditMediaryModal] = useState<{
+    open: boolean;
+    mediary: MediaryServerSettings | null;
+  }>({
+    open: false,
+    mediary: null,
+  });
   const [deleteServerModal, setDeleteServerModal] = useState<{
     open: boolean;
-    type: 'moviepilot';
+    type: 'moviepilot' | 'mediary';
     serverId: number | null;
   }>({
     open: false,
@@ -229,7 +258,11 @@ const SettingsServices = () => {
       `/api/v1/settings/${deleteServerModal.type}/${deleteServerModal.serverId}`
     );
     setDeleteServerModal({ open: false, serverId: null, type: 'moviepilot' });
-    revalidateMoviePilot();
+    if (deleteServerModal.type === 'moviepilot') {
+      revalidateMoviePilot();
+    } else {
+      revalidateMediary();
+    }
     mutate('/api/v1/settings/public');
   };
 
@@ -255,6 +288,19 @@ const SettingsServices = () => {
           }}
         />
       )}
+      {editMediaryModal.open && (
+        <MediaryModal
+          mediary={editMediaryModal.mediary}
+          onClose={() => {
+            setEditMediaryModal({ open: false, mediary: null });
+          }}
+          onSave={() => {
+            revalidateMediary();
+            mutate('/api/v1/settings/public');
+            setEditMediaryModal({ open: false, mediary: null });
+          }}
+        />
+      )}
       <Transition
         as={Fragment}
         show={deleteServerModal.open}
@@ -277,7 +323,8 @@ const SettingsServices = () => {
             })
           }
           title={intl.formatMessage(messages.deleteServer, {
-            serverType: 'MoviePilot',
+            serverType:
+              deleteServerModal.type === 'mediary' ? 'Mediary' : 'MoviePilot',
           })}
         >
           {intl.formatMessage(messages.deleteserverconfirm)}
@@ -343,6 +390,68 @@ const SettingsServices = () => {
             </ul>
           </>
         )}
+      </div>
+      <div className="mb-6 mt-10">
+        <h3 className="heading">
+          {intl.formatMessage(messages.mediarysettings)}
+        </h3>
+        <p className="description">
+          {intl.formatMessage(messages.mediarySettingsDescription)}
+        </p>
+      </div>
+      <div className="section">
+        {!mediaryData && !mediaryError && <LoadingSpinner />}
+        {mediaryError && (
+          <Alert title="Failed to load Mediary settings" type="error" />
+        )}
+        {mediaryData && !mediaryError ? (
+          <>
+            {mediaryData.length > 0 &&
+              !mediaryData.some((m) => m.isDefault) && (
+                <Alert
+                  title={intl.formatMessage(messages.noDefaultServer, {
+                    serverType: 'Mediary',
+                    mediaType: intl.formatMessage(messages.mediaTypeMovie),
+                  })}
+                />
+              )}
+            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {mediaryData.map((m) => (
+                <ServerInstance
+                  key={`mediary-config-${m.id}`}
+                  name={m.name}
+                  hostname={m.hostname}
+                  port={m.port}
+                  isSSL={m.useSsl}
+                  isDefault={m.isDefault}
+                  isMediary
+                  externalUrl={m.externalUrl}
+                  onEdit={() => setEditMediaryModal({ open: true, mediary: m })}
+                  onDelete={() =>
+                    setDeleteServerModal({
+                      open: true,
+                      serverId: m.id,
+                      type: 'mediary',
+                    })
+                  }
+                />
+              ))}
+              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
+                <div className="flex h-full w-full items-center justify-center">
+                  <Button
+                    buttonType="ghost"
+                    onClick={() =>
+                      setEditMediaryModal({ open: true, mediary: null })
+                    }
+                  >
+                    <PlusIcon />
+                    <span>{intl.formatMessage(messages.addmediary)}</span>
+                  </Button>
+                </div>
+              </li>
+            </ul>
+          </>
+        ) : null}
       </div>
       <div className="mb-6 mt-10">
         <h3 className="heading">

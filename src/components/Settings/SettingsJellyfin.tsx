@@ -62,6 +62,9 @@ const messages = defineMessages('components.Settings', {
   librariesRemaining: 'Libraries Remaining: {count}',
   startscan: 'Start Scan',
   cancelscan: 'Cancel Scan',
+  autoScan: 'Enable Automatic Scanning',
+  autoScanHelp:
+    'When disabled, scheduled library scans will not run. Scans can still be triggered manually or via Webhook.',
   validationUrl: 'You must provide a valid URL',
   validationHostnameRequired: 'You must provide a valid hostname or IP address',
   validationPortRequired: 'You must provide a valid port number',
@@ -452,6 +455,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
           jellyfinForgotPasswordUrl: data?.jellyfinForgotPasswordUrl || '',
           templateUserId: data?.jellyfinTemplateUserId || '',
           apiKey: data?.apiKey,
+          autoScan: data?.autoScan ?? true,
         }}
         validationSchema={JellyfinSettingsSchema}
         onSubmit={async (values) => {
@@ -465,6 +469,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
               jellyfinForgotPasswordUrl: values.jellyfinForgotPasswordUrl,
               jellyfinTemplateUserId: values.templateUserId || '',
               apiKey: values.apiKey,
+              autoScan: values.autoScan,
             } as JellyfinSettings);
 
             addToast(
@@ -582,6 +587,17 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
                   </div>
                 </>
               )}
+              <div className="form-row">
+                <label htmlFor="autoScan" className="checkbox-label">
+                  {intl.formatMessage(messages.autoScan)}
+                  <span className="label-tip">
+                    {intl.formatMessage(messages.autoScanHelp)}
+                  </span>
+                </label>
+                <div className="form-input-area">
+                  <Field type="checkbox" id="autoScan" name="autoScan" />
+                </div>
+              </div>
               <div className="form-row">
                 <label htmlFor="apiKey" className="text-label">
                   {intl.formatMessage(messages.apiKey)}

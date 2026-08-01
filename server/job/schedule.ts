@@ -43,6 +43,8 @@ export const startJobs = (): void => {
       job: schedule.scheduleJob(
         jobs['jellyfin-recently-added-scan'].schedule,
         () => {
+          const autoScan = getSettings().jellyfin.autoScan ?? true;
+          if (!autoScan) return;
           logger.info('Starting scheduled job: Jellyfin Recently Added Scan', {
             label: 'Jobs',
           });
@@ -61,6 +63,8 @@ export const startJobs = (): void => {
       interval: 'hours',
       cronSchedule: jobs['jellyfin-full-scan'].schedule,
       job: schedule.scheduleJob(jobs['jellyfin-full-scan'].schedule, () => {
+        const autoScan = getSettings().jellyfin.autoScan ?? true;
+        if (!autoScan) return;
         logger.info('Starting scheduled job: Jellyfin Full Scan', {
           label: 'Jobs',
         });
@@ -80,10 +84,11 @@ export const startJobs = (): void => {
       job: schedule.scheduleJob(
         jobs['mostplayed-cache-refresh'].schedule,
         () => {
-          logger.info(
-            'Starting scheduled job: Most Played Cache Refresh',
-            { label: 'Jobs' }
-          );
+          const autoScan = getSettings().jellyfin.autoScan ?? true;
+          if (!autoScan) return;
+          logger.info('Starting scheduled job: Most Played Cache Refresh', {
+            label: 'Jobs',
+          });
           refreshMostPlayedCache();
         }
       ),
