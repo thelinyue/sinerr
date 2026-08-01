@@ -438,7 +438,7 @@ describe('Jellyfin Scanner', () => {
         new Season({
           seasonNumber: 2,
           status: MediaStatus.DELETED,
-          status: MediaStatus.UNKNOWN,
+
         }),
       ];
 
@@ -497,5 +497,6 @@ describe('Jellyfin Scanner', () => {
     });
   });
 });
+
 
 
