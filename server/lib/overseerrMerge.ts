@@ -116,13 +116,6 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
       media.status = 7;
       await mediaRepository.save(media);
     }
-    const media4kToUpdate = await mediaRepository.find({
-      where: { status4k: 6 },
-    });
-    for (const media of media4kToUpdate) {
-      media.status4k = 7;
-      await mediaRepository.save(media);
-    }
   } catch (error) {
     logger.error('Failed to update Media status from Blacklisted to Deleted', {
       label: 'Sinerr Migration',
