@@ -1,3 +1,35 @@
+## [1.5.0](https://github.com/thelinyue/sinerr/compare/v1.4.5...v1.5.0) (2026-08-01)
+
+
+### Features
+
+* **Mediary:** 新增 Mediary 下载管理服务集成，可在服务设置中连接多个 Mediary 服务
+* **Seerr 版本:** 侧边栏与关于页显示上游 Seerr 版本号
+* **代理白名单:** 新增代理白名单设置，可按需绕过代理
+* **请求列表:** 新增请求卡片组件，完善错误状态展示与提示
+
+
+### Bug Fixes
+
+* **ARR 移除:** 从 ARR 移除媒体时不再删除对应请求记录
+* **ARR 移除:** 处理媒体已被移除时的错误，并添加 toast 提示
+* **UI:** 修复用户列表仅单个用户时操作按钮尺寸不稳定的问题
+* **Emby 导入:** 改用 XMLHttpRequest/sendBeacon 发送导入请求，解决浏览器端超时但 API 实际成功的问题
+* **Emby 导入:** 修复导入响应静默丢失的问题
+* **代理设置:** 修复 ProxySettings 测试对象缺少 proxyWhitelist 字段的问题
+
+
+### Performance Improvements
+
+* **Emby 导入:** 简化导入响应结构，降低 JSON 序列化开销
+
+
+### Removed
+
+* **Quick Connect:** 移除 Quick Connect 登录功能
+* **覆盖规则:** 移除覆盖规则（Override Rules）功能
+
+
 ## [1.4.5](https://github.com/thelinyue/sinerr/compare/v1.4.4...v1.4.5) (2026-07-31)
 
 
