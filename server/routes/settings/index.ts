@@ -245,7 +245,8 @@ settingsRoutes.get('/jellyfin/users', async (req, res, next) => {
       getHostname(),
       settings.jellyfin.apiKey,
       admin.jellyfinDeviceId ?? '',
-      settings.main.mediaServerType
+      settings.main.mediaServerType,
+      cacheManager.getCache('jellyfin').data
     );
 
     jellyfinClient.setUserId(admin.jellyfinUserId ?? '');

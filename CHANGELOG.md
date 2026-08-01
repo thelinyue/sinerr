@@ -1,3 +1,14 @@
+## [1.5.1](https://github.com/thelinyue/sinerr/compare/v1.5.0...v1.5.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* **Emby 导入:** 重构导入流程，将 sendBeacon 替换为 axios.post，确保可靠获取导入结果
+* **Emby 导入:** 批次化数据库查询与写入（N+1 优化为 2 次操作），大幅提升大批量用户导入速度
+* **Emby 导入:** 移除冗余的 25 秒 Promise.race 超时包装，统一使用 apiRequestTimeout
+* **Emby 导入:** 启用 60 秒 TTL 缓存，减少重复请求 Emby 用户列表
+
+
 ## [1.5.0](https://github.com/thelinyue/sinerr/compare/v1.4.5...v1.5.0) (2026-08-01)
 
 

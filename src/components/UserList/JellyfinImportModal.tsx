@@ -7,6 +7,7 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { MediaServerType } from '@server/constants/server';
 import type { UserResultsResponse } from '@server/interfaces/api/userInterfaces';
+import axios from 'axios';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
@@ -57,17 +58,19 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
     `/api/v1/user?take=${children}`
   );
 
-  const importUsers = () => {
+  const importUsers = async () => {
     if (!selectedUsers.length) return;
     setImporting(true);
 
-    const body = JSON.stringify({ jellyfinUserIds: selectedUsers });
-    const blob = new Blob([body], { type: 'application/json' });
-    
-    if (navigator.sendBeacon('/api/v1/user/import-from-jellyfin', blob)) {
+    try {
+      const response = await axios.post<{ imported: number }>(
+        '/api/v1/user/import-from-jellyfin',
+        { jellyfinUserIds: selectedUsers }
+      );
+
       addToast(
         intl.formatMessage(messages.importedfromJellyfin, {
-          userCount: selectedUsers.length,
+          userCount: response.data.imported,
           strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
@@ -77,16 +80,17 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
         { autoDismiss: true, appearance: 'success' }
       );
       if (onComplete) onComplete();
-    } else {
+    } catch {
       addToast(
         intl.formatMessage(messages.importfromJellyfinerror, {
           mediaServerName:
             settings.currentSettings.mediaServerType === MediaServerType.EMBY
               ? 'Emby'
               : 'Jellyfin',
-        }) + ' (Failed to send)',
+        }),
         { autoDismiss: true, appearance: 'error' }
       );
+      setImporting(false);
     }
   };
 

@@ -764,25 +764,13 @@ router.post(
         admin.jellyfinDeviceId ?? '',
         settings.main.mediaServerType
       );
-      const createdUsers: User[] = [];
 
       jellyfinClient.setUserId(admin.jellyfinUserId ?? '');
 
-      logger.debug('Calling Emby/Jellyfin getUsers() API', { label: 'User Import' });
-      const jellyfinUsers = await Promise.race([
-        jellyfinClient.getUsers(),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  'Emby/Jellyfin getUsers request timed out after 25 seconds'
-                )
-              ),
-            25000
-          )
-        ),
-      ]);
+      logger.debug('Calling Emby/Jellyfin getUsers() API', {
+        label: 'User Import',
+      });
+      const jellyfinUsers = await jellyfinClient.getUsers();
       logger.debug('Emby/Jellyfin getUsers() returned, processing users', {
         label: 'User Import',
         userCount: jellyfinUsers?.users?.length ?? 0,
@@ -795,21 +783,28 @@ router.post(
         ])
       );
 
-      for (const rawJellyfinUserId of body.jellyfinUserIds) {
-        const jellyfinUserId = normalizeJellyfinGuid(rawJellyfinUserId);
-        if (!jellyfinUserId) {
+      const normalizedIds = body.jellyfinUserIds
+        .map((id) => normalizeJellyfinGuid(id))
+        .filter((id): id is string => !!id);
+
+      const existingUsers = await userRepository.find({
+        select: ['id', 'jellyfinUserId'],
+        where:
+          normalizedIds.length > 0 ? { jellyfinUserId: In(normalizedIds) } : {},
+      });
+      const existingIds = new Set(existingUsers.map((u) => u.jellyfinUserId));
+
+      const newUsers: User[] = [];
+
+      for (const jellyfinUserId of normalizedIds) {
+        if (existingIds.has(jellyfinUserId)) {
           continue;
         }
 
         const jellyfinUser = jellyfinUsersById.get(jellyfinUserId);
 
-        const user = await userRepository.findOne({
-          select: ['id', 'jellyfinUserId'],
-          where: { jellyfinUserId: jellyfinUserId },
-        });
-
-        if (!user) {
-          const newUser = new User({
+        newUsers.push(
+          new User({
             jellyfinUsername: jellyfinUser?.Name,
             jellyfinUserId: jellyfinUserId,
             jellyfinDeviceId: Buffer.from(
@@ -822,13 +817,15 @@ router.post(
               settings.main.mediaServerType === MediaServerType.JELLYFIN
                 ? UserType.JELLYFIN
                 : UserType.EMBY,
-          });
-
-          await userRepository.save(newUser);
-          createdUsers.push(newUser);
-        }
+          })
+        );
       }
-      return res.status(201).json({ imported: createdUsers.length });
+
+      if (newUsers.length > 0) {
+        await userRepository.save(newUsers);
+      }
+
+      return res.status(201).json({ imported: newUsers.length });
     } catch (e) {
       logger.error('Failed to import Jellyfin users', {
         label: 'User Import',

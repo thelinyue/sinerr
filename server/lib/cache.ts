@@ -1,6 +1,6 @@
 import NodeCache from 'node-cache';
 
-export type AvailableCacheIds = 'tmdb' | 'rt' | 'tvdb';
+export type AvailableCacheIds = 'tmdb' | 'rt' | 'tvdb' | 'jellyfin';
 
 const DEFAULT_TTL = 300;
 const DEFAULT_CHECK_PERIOD = 120;
@@ -45,6 +45,10 @@ class CacheManager {
     tvdb: new Cache('tvdb', 'The TVDB API', {
       stdTtl: 21600,
       checkPeriod: 60 * 30,
+    }),
+    jellyfin: new Cache('jellyfin', 'Jellyfin/Emby API', {
+      stdTtl: 60,
+      checkPeriod: 30,
     }),
   };
 

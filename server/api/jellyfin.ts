@@ -7,6 +7,7 @@ import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { ApiError } from '@server/types/error';
 import { getAppVersion } from '@server/utils/appVersion';
+import type NodeCache from 'node-cache';
 
 export interface JellyfinUserPolicy {
   IsAdministrator: boolean;
@@ -172,7 +173,8 @@ class JellyfinAPI extends ExternalAPI {
     jellyfinHost: string,
     authToken?: string | null,
     deviceId?: string | null,
-    mediaServerType?: MediaServerType
+    mediaServerType?: MediaServerType,
+    nodeCache?: NodeCache
   ) {
     const settings = getSettings();
     const safeDeviceId =
@@ -200,6 +202,7 @@ class JellyfinAPI extends ExternalAPI {
           Connection: 'close',
         },
         timeout: settings.network.apiRequestTimeout,
+        nodeCache,
       }
     );
 
@@ -297,7 +300,11 @@ class JellyfinAPI extends ExternalAPI {
 
   public async getUsers(): Promise<JellyfinUserListResponse> {
     try {
-      const userReponse = await this.get<JellyfinUserResponse[]>(`/Users`);
+      const userReponse = await this.get<JellyfinUserResponse[]>(
+        `/Users`,
+        undefined,
+        60
+      );
 
       return { users: userReponse };
     } catch (e) {
