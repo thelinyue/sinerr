@@ -153,6 +153,7 @@ app
     });
     server.use(express.json());
     server.use(express.urlencoded({ extended: true }));
+    server.use('/api/v1/webhook', webhookRoutes);
     server.use((req, _res, next) => {
       try {
         const descriptor = Object.getOwnPropertyDescriptor(req, 'ip');
@@ -241,7 +242,6 @@ app
       };
       next();
     });
-    server.use('/api/v1/webhook', webhookRoutes);
     server.use('/api/v1', routes);
 
     // Do not set cookies so CDNs can cache them
