@@ -1296,6 +1296,8 @@
   "components.Settings.SettingsNetwork.proxyPassword": "代理密码",
   "components.Settings.SettingsNetwork.proxyPort": "代理端口",
   "components.Settings.SettingsNetwork.proxySsl": "使用 SSL 进行代理",
+  "components.Settings.SettingsNetwork.proxyWhitelist": "代理白名单",
+  "components.Settings.SettingsNetwork.proxyWhitelistTip": "仅将这些域的请求通过代理发送。使用 ',' 作为分隔符，使用 '*.' 作为子域通配符。留空则以代理发送所有请求。",
   "components.Settings.SettingsNetwork.proxyUser": "代理用户名",
   "components.Settings.SettingsNetwork.trustProxy": "启用代理支持",
   "components.Settings.SettingsNetwork.validationProxyPort": "您必须提供有效端口",

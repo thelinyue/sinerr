@@ -1086,6 +1086,8 @@
   "components.Settings.SettingsNetwork.proxyPassword": "Proxy Password",
   "components.Settings.SettingsNetwork.proxyPort": "Proxy Port",
   "components.Settings.SettingsNetwork.proxySsl": "Use SSL For Proxy",
+  "components.Settings.SettingsNetwork.proxyWhitelist": "Proxy Whitelist",
+  "components.Settings.SettingsNetwork.proxyWhitelistTip": "Only send requests to these domains through the proxy. Use ',' as a separator, and '*.' as a wildcard for subdomains. Leave empty to proxy all requests.",
   "components.Settings.SettingsNetwork.proxyUser": "Proxy Username",
   "components.Settings.SettingsNetwork.toastSettingsFailure": "Something went wrong while saving settings.",
   "components.Settings.SettingsNetwork.toastSettingsSuccess": "Settings saved successfully!",
