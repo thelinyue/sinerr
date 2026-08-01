@@ -80,6 +80,7 @@ async function loginAs(email: string, password: string) {
   } finally {
     settings.main.localLogin = priorLocalLogin;
   }
+}
 
 async function seedRequest(status = MediaRequestStatus.PENDING) {
   const userRepo = getRepository(User);
@@ -94,6 +95,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
     new Media({
       mediaType: MediaType.MOVIE,
       tmdbId: 12345,
+      status: MediaStatus.UNKNOWN,
       status: MediaStatus.UNKNOWN,
     })
   );
@@ -148,6 +150,7 @@ describe('DELETE /request/:requestId', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 54321,
         status: MediaStatus.UNKNOWN,
+        status: MediaStatus.UNKNOWN,
       })
     );
 
@@ -181,6 +184,7 @@ describe('DELETE /request/:requestId', () => {
 
     assert.strictEqual(res.status, 404);
   });
+});
 
 describe('PUT /request/:requestId (movie)', () => {
   it('persists server and root folder changes to the database', async () => {
@@ -205,6 +209,7 @@ describe('PUT /request/:requestId (movie)', () => {
     assert.strictEqual(saved.profileId, 7);
     assert.strictEqual(saved.rootFolder, '/updated/movies');
   });
+});
 
 describe('POST /request/:requestId/:status', () => {
   const cases = [
@@ -257,6 +262,7 @@ describe('POST /request/:requestId/retry', () => {
     assert.strictEqual(persisted.modifiedBy?.email, 'admin@sinerr.dev');
     assert.ok(persisted.updatedAt > failed.updatedAt);
   });
+});
 
 describe('DELETE /request/:requestId, deleted media status restoration', () => {
   async function seedDeletedMediaScenario() {
@@ -517,5 +523,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const updated = await mediaRepo.findOneOrFail({ where: { id: media.id } });
     assert.strictEqual(updated.status, MediaStatus.PARTIALLY_AVAILABLE);
   });
+});
 
 
