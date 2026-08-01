@@ -77,19 +77,6 @@ export interface DVRSettings {
   tagRequests: boolean;
 }
 
-export interface MoviePilotSettings {
-  id: number;
-  name: string;
-  hostname: string;
-  port: number;
-  apiKey: string;
-  useSsl: boolean;
-  baseUrl?: string;
-  isDefault: boolean;
-  externalUrl?: string;
-  syncEnabled: boolean;
-}
-
 export interface MediaryServerSettings {
   id: number;
   name: string;
@@ -350,7 +337,6 @@ interface JobSettings {
 }
 
 export type JobId =
-  | 'moviepilot-scan'
   | 'jellyfin-recently-added-scan'
   | 'jellyfin-full-scan'
   | 'image-cache-cleanup'
@@ -366,7 +352,6 @@ export interface AllSettings {
   main: MainSettings;
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
-  moviepilot: MoviePilotSettings[];
   mediary: MediaryServerSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
@@ -437,7 +422,6 @@ class Settings {
         tv: MetadataProviderType.TMDB,
         anime: MetadataProviderType.TMDB,
       },
-      moviepilot: [],
       mediary: [],
       public: {
         initialized: false,
@@ -565,9 +549,6 @@ class Settings {
         'jellyfin-full-scan': {
           schedule: '0 0 3 * * *',
         },
-        'moviepilot-scan': {
-          schedule: '0 30 4 * * *',
-        },
         'image-cache-cleanup': {
           schedule: '0 0 5 * * *',
         },
@@ -642,14 +623,6 @@ class Settings {
     );
   }
 
-  get moviepilot(): MoviePilotSettings[] {
-    return this.data.moviepilot;
-  }
-
-  set moviepilot(data: MoviePilotSettings[]) {
-    this.data.moviepilot = data;
-  }
-
   get mediary(): MediaryServerSettings[] {
     if (!this.data.mediary) {
       this.data.mediary = [];
@@ -681,10 +654,8 @@ class Settings {
       jellyfinExternalHost: this.data.jellyfin.externalHostname,
       jellyfinForgotPasswordUrl: this.data.jellyfin.jellyfinForgotPasswordUrl,
       movie4kEnabled:
-        this.data.moviepilot.some((mp) => mp.isDefault) ||
         this.data.mediary.some((m) => m.isDefault),
       series4kEnabled:
-        this.data.moviepilot.some((mp) => mp.isDefault) ||
         this.data.mediary.some((m) => m.isDefault),
       discoverRegion: this.data.main.discoverRegion,
       streamingRegion: this.data.main.streamingRegion,

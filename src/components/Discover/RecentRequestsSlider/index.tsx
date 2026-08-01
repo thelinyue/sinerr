@@ -32,9 +32,7 @@ const RecentRequestsSlider = () => {
     return null;
   }
 
-  const hasServiceErrors =
-    requests?.serviceErrors &&
-    (requests.serviceErrors.moviepilot?.length > 0);
+  const hasServiceErrors = false;
 
   return (
     <>
@@ -52,9 +50,7 @@ const RecentRequestsSlider = () => {
             <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0" />
             <span>
               {intl.formatMessage(messages.unableToConnect, {
-                services: [
-                  ...(requests.serviceErrors.moviepilot?.map((s: { name: string }) => s.name) ?? []),
-                ].join(', '),
+                services: '',
               })}
             </span>
           </div>

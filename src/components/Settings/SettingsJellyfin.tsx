@@ -108,7 +108,7 @@ const SettingsJellyfin: React.FC<SettingsJellyfinProps> = ({
   const { data: dataSync, mutate: revalidateSync } = useSWR<SyncStatus>(
     '/api/v1/settings/jellyfin/sync',
     {
-      refreshInterval: 1000,
+      refreshInterval: 3000,
     }
   );
   const { data: jellyfinUsers } = useSWR<{ username: string; id: string }[]>(

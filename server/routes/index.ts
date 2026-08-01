@@ -28,6 +28,10 @@ import {
 } from '@server/utils/appVersion';
 import restartFlag from '@server/utils/restartFlag';
 import { isPerson } from '@server/utils/typeHelpers';
+
+let settingsPublicCache: { data: unknown; ts: number } | null = null;
+const SETTINGS_PUBLIC_TTL = 30_000;
+
 import { Router } from 'express';
 import authRoutes from './auth';
 import blocklistRoutes from './blocklist';
@@ -67,15 +71,22 @@ router.get('/status/appdata', (_req, res) => {
 
 router.use('/user', isAuthenticated(), user);
 router.get('/settings/public', async (req, res) => {
+  const now = Date.now();
+  if (settingsPublicCache && now - settingsPublicCache.ts < SETTINGS_PUBLIC_TTL && !req.query.nocache) {
+    return res.status(200).json(settingsPublicCache.data);
+  }
+
   const settings = getSettings();
 
+  let result: unknown;
   if (!(req.user?.settings?.notificationTypes.webpush ?? true)) {
-    return res
-      .status(200)
-      .json({ ...settings.fullPublicSettings, enablePushRegistration: false });
+    result = { ...settings.fullPublicSettings, enablePushRegistration: false };
   } else {
-    return res.status(200).json(settings.fullPublicSettings);
+    result = settings.fullPublicSettings;
   }
+
+  settingsPublicCache = { data: result, ts: now };
+  return res.status(200).json(result);
 });
 router.get('/settings/discover', isAuthenticated(), async (_req, res) => {
   const sliderRepository = getRepository(DiscoverSlider);

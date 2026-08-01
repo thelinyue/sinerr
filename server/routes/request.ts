@@ -186,9 +186,7 @@ requestRoutes.get<Record<string, unknown>, RequestResultsResponse>(
           page: Math.ceil(skip / pageSize) + 1,
         },
         results: requests,
-        serviceErrors: {
-          moviepilot: [],
-        },
+        serviceErrors: {},
       });
     } catch (e) {
       next({ status: 500, message: e.message });
@@ -235,97 +233,73 @@ requestRoutes.get('/count', async (_req, res, next) => {
   const requestRepository = getRepository(MediaRequest);
 
   try {
-    const totalCount = await requestRepository
+    const result = await requestRepository
       .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .getCount();
-
-    const movieCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.type = :requestType', {
-        requestType: MediaType.MOVIE,
-      })
-      .getCount();
-
-    const tvCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.type = :requestType', {
-        requestType: MediaType.TV,
-      })
-      .getCount();
-
-    const pendingCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.PENDING,
-      })
-      .getCount();
-
-    const approvedCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.APPROVED,
-      })
-      .getCount();
-
-    const declinedCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.DECLINED,
-      })
-      .getCount();
-
-    const processingCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.APPROVED,
-      })
-      .andWhere(
-        '((request.is4k = false AND media.status != :availableStatus) OR (request.is4k = true AND media.status4k != :availableStatus))',
-        {
-          availableStatus: MediaStatus.AVAILABLE,
-        }
+      .innerJoin('request.media', 'media')
+      .select('COUNT(*)', 'total')
+      .addSelect(
+        `SUM(CASE WHEN request.type = :movieType THEN 1 ELSE 0 END)`,
+        'movie'
       )
-      .getCount();
-
-    const availableCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.APPROVED,
-      })
-      .andWhere(
-        '((request.is4k = false AND media.status = :availableStatus) OR (request.is4k = true AND media.status4k = :availableStatus))',
-        {
-          availableStatus: MediaStatus.AVAILABLE,
-        }
+      .addSelect(
+        `SUM(CASE WHEN request.type = :tvType THEN 1 ELSE 0 END)`,
+        'tv'
       )
-      .getCount();
-
-    const completedCount = await requestRepository
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media')
-      .where('request.status = :requestStatus', {
-        requestStatus: MediaRequestStatus.COMPLETED,
+      .addSelect(
+        `SUM(CASE WHEN request.status = :pending THEN 1 ELSE 0 END)`,
+        'pending'
+      )
+      .addSelect(
+        `SUM(CASE WHEN request.status = :approved THEN 1 ELSE 0 END)`,
+        'approved'
+      )
+      .addSelect(
+        `SUM(CASE WHEN request.status = :declined THEN 1 ELSE 0 END)`,
+        'declined'
+      )
+      .addSelect(
+        `SUM(CASE WHEN request.status = :approved AND ((request.is4k = false AND media.status != :availableStatus) OR (request.is4k = true AND media.status4k != :availableStatus)) THEN 1 ELSE 0 END)`,
+        'processing'
+      )
+      .addSelect(
+        `SUM(CASE WHEN request.status = :approved AND ((request.is4k = false AND media.status = :availableStatus) OR (request.is4k = true AND media.status4k = :availableStatus)) THEN 1 ELSE 0 END)`,
+        'available'
+      )
+      .addSelect(
+        `SUM(CASE WHEN request.status = :completed THEN 1 ELSE 0 END)`,
+        'completed'
+      )
+      .setParameters({
+        movieType: MediaType.MOVIE,
+        tvType: MediaType.TV,
+        pending: MediaRequestStatus.PENDING,
+        approved: MediaRequestStatus.APPROVED,
+        declined: MediaRequestStatus.DECLINED,
+        completed: MediaRequestStatus.COMPLETED,
+        availableStatus: MediaStatus.AVAILABLE,
       })
-      .getCount();
+      .getRawOne<{
+        total: string;
+        movie: string;
+        tv: string;
+        pending: string;
+        approved: string;
+        declined: string;
+        processing: string;
+        available: string;
+        completed: string;
+      }>();
 
     return res.status(200).json({
-      total: totalCount,
-      movie: movieCount,
-      tv: tvCount,
-      pending: pendingCount,
-      approved: approvedCount,
-      declined: declinedCount,
-      processing: processingCount,
-      available: availableCount,
-      completed: completedCount,
+      total: Number(result?.total ?? 0),
+      movie: Number(result?.movie ?? 0),
+      tv: Number(result?.tv ?? 0),
+      pending: Number(result?.pending ?? 0),
+      approved: Number(result?.approved ?? 0),
+      declined: Number(result?.declined ?? 0),
+      processing: Number(result?.processing ?? 0),
+      available: Number(result?.available ?? 0),
+      completed: Number(result?.completed ?? 0),
     });
   } catch (e) {
     logger.error('Something went wrong retrieving request counts', {

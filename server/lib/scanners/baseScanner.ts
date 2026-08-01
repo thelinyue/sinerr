@@ -641,22 +641,22 @@ class BaseScanner<T> {
 
     this.log('Scan starting', 'info', { sessionId });
 
-    this.enable4kMovie = settings.moviepilot.some(
-      (moviepilot) => moviepilot.isDefault
+    this.enable4kMovie = settings.mediary.some(
+      (m) => m.isDefault
     );
     if (this.enable4kMovie) {
       this.log(
-        'At least one MoviePilot server was detected. 4K movie detection is now enabled',
+        'At least one Mediary server was detected. 4K movie detection is now enabled',
         'info'
       );
     }
 
-    this.enable4kShow = settings.moviepilot.some(
-      (moviepilot) => moviepilot.isDefault
+    this.enable4kShow = settings.mediary.some(
+      (m) => m.isDefault
     );
     if (this.enable4kShow) {
       this.log(
-        'At least one MoviePilot server was detected. 4K series detection is now enabled',
+        'At least one Mediary server was detected. 4K series detection is now enabled',
         'info'
       );
     }
@@ -683,39 +683,35 @@ class BaseScanner<T> {
     processFn: (item: T) => Promise<void>,
     {
       start = 0,
-      end = this.bundleSize,
       sessionId,
     }: {
       start?: number;
-      end?: number;
       sessionId?: string;
     } = {}
   ): Promise<void> {
-    const slicedItems = this.items.slice(start, end);
+    let offset = start;
 
-    if (!this.running) {
-      throw new Error('Sync was aborted.');
-    }
+    while (offset < this.items.length) {
+      if (!this.running) {
+        throw new Error('Sync was aborted.');
+      }
 
-    if (this.sessionId !== sessionId) {
-      throw new Error('New session was started. Old session aborted.');
-    }
+      if (this.sessionId !== sessionId) {
+        throw new Error('New session was started. Old session aborted.');
+      }
 
-    if (start < this.items.length) {
-      this.progress = start;
+      const slicedItems = this.items.slice(offset, offset + this.bundleSize);
+      this.progress = offset;
+
       await this.processItems(processFn, slicedItems);
 
-      await new Promise<void>((resolve, reject) =>
-        setTimeout(() => {
-          this.loop(processFn, {
-            start: start + this.bundleSize,
-            end: end + this.bundleSize,
-            sessionId,
-          })
-            .then(() => resolve())
-            .catch((e) => reject(new Error(e.message)));
-        }, this.updateRate)
-      );
+      offset += this.bundleSize;
+
+      if (offset < this.items.length) {
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, 200)
+        );
+      }
     }
   }
 

@@ -368,46 +368,6 @@ components:
         externalUrl:
           type: string
           nullable: true
-    MoviePilotSettings:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 0
-          readOnly: true
-        name:
-          type: string
-          example: 'MoviePilot Main'
-        hostname:
-          type: string
-          example: '127.0.0.1'
-        port:
-          type: number
-          example: 3000
-        apiKey:
-          type: string
-          example: 'exampleapikey'
-        useSsl:
-          type: boolean
-          example: false
-        baseUrl:
-          type: string
-        isDefault:
-          type: boolean
-          example: false
-        externalUrl:
-          type: string
-          example: 'http://moviepilot.example.com'
-        syncEnabled:
-          type: boolean
-          example: false
-      required:
-        - name
-        - hostname
-        - port
-        - apiKey
-        - useSsl
-        - isDefault
     MediarySettings:
       type: object
       properties:
@@ -2124,123 +2084,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TautulliSettings'
-  /settings/moviepilot:
-    get:
-      summary: Get MoviePilot settings
-      description: Returns all MoviePilot settings in a JSON array.
-      tags:
-        - settings
-      responses:
-        '200':
-          description: 'Values were returned'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MoviePilotSettings'
-    post:
-      summary: Create MoviePilot instance
-      description: Creates a new MoviePilot instance from the request body.
-      tags:
-        - settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MoviePilotSettings'
-      responses:
-        '201':
-          description: 'New MoviePilot instance created'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MoviePilotSettings'
-  /settings/moviepilot/test:
-    post:
-      summary: Test MoviePilot configuration
-      description: Tests if the MoviePilot configuration is valid.
-      tags:
-        - settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                hostname:
-                  type: string
-                  example: '127.0.0.1'
-                port:
-                  type: number
-                  example: 3000
-                apiKey:
-                  type: string
-                  example: yourapikey
-                useSsl:
-                  type: boolean
-                  example: false
-                baseUrl:
-                  type: string
-              required:
-                - hostname
-                - port
-                - apiKey
-                - useSsl
-      responses:
-        '200':
-          description: Successfully connected to MoviePilot instance
-          content:
-            application/json:
-              schema:
-                type: object
-  /settings/moviepilot/{moviepilotId}:
-    put:
-      summary: Update MoviePilot instance
-      description: Updates an existing MoviePilot instance with the provided values.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: moviepilotId
-          required: true
-          schema:
-            type: integer
-          description: MoviePilot instance ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MoviePilotSettings'
-      responses:
-        '200':
-          description: 'MoviePilot instance updated'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MoviePilotSettings'
-    delete:
-      summary: Delete MoviePilot instance
-      description: Deletes an existing MoviePilot instance based on the moviepilotId parameter.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: moviepilotId
-          required: true
-          schema:
-            type: integer
-          description: MoviePilot instance ID
-      responses:
-        '200':
-          description: 'MoviePilot instance deleted'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MoviePilotSettings'
   /settings/mediary:
     get:
       summary: Get Mediary settings
@@ -6590,21 +6433,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Collection'
-  /service/moviepilot:
-    get:
-      summary: Get non-sensitive MoviePilot server list
-      description: Returns a list of MoviePilot server IDs and names in a JSON object.
-      tags:
-        - service
-      responses:
-        '200':
-          description: Request successful
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MoviePilotSettings'
   /service/mediary:
     get:
       summary: Get non-sensitive Mediary server list

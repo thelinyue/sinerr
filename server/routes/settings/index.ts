@@ -37,13 +37,11 @@ import semver from 'semver';
 
 import mediaryRoutes from './mediary';
 import metadataRoutes from './metadata';
-import moviepilotRoutes from './moviepilot';
 import notificationRoutes from './notifications';
 
 const settingsRoutes = Router();
 
 settingsRoutes.use('/notifications', notificationRoutes);
-settingsRoutes.use('/moviepilot', moviepilotRoutes);
 settingsRoutes.use('/mediary', mediaryRoutes);
 settingsRoutes.use('/discover', discoverSettingRoutes);
 settingsRoutes.use('/metadatas', metadataRoutes);
@@ -374,52 +372,79 @@ settingsRoutes.get(
     };
 
     try {
-      fs.readFileSync(logFile, 'utf-8')
-        .split('\n')
-        .forEach((line) => {
-          if (!line.length) return;
+      const stats = fs.statSync(logFile);
+      if (stats.size === 0) {
+        return res.status(200).json({
+          pageInfo: { pages: 0, pageSize, results: 0, page: 1 },
+          results: [],
+        } as LogsResultsResponse);
+      }
 
-          const logMessage = JSON.parse(line);
+      const fd = fs.openSync(logFile, 'r');
+      const bufSize = 64 * 1024;
+      const logs: LogMessage[] = [];
+      let position = stats.size;
+      let leftover = '';
+      const targetResults = skip + pageSize;
 
-          if (!filter.includes(logMessage.level)) {
-            return;
+      try {
+        while (position > 0 && logs.length < targetResults) {
+          const readSize = Math.min(bufSize, position);
+          position -= readSize;
+          const buf = Buffer.alloc(readSize);
+          fs.readSync(fd, buf, 0, readSize, position);
+          const chunk = leftover + buf.toString('utf-8');
+          leftover = '';
+
+          const lines = chunk.split('\n');
+          if (position > 0) {
+            leftover = lines.shift() ?? '';
           }
 
-          if (
-            !Object.keys(logMessage).every((key) =>
-              logMessageProperties.includes(key)
-            )
-          ) {
-            Object.keys(logMessage)
-              .filter((prop) => !logMessageProperties.includes(prop))
-              .forEach((prop) => {
-                set(logMessage, `data.${prop}`, logMessage[prop]);
-              });
-          }
-
-          if (req.query.search) {
-            if (
-              // label and data are sometimes undefined
-              !searchRegexp.test(logMessage.label ?? '') &&
-              !searchRegexp.test(logMessage.message) &&
-              !deepValueStrings(logMessage.data ?? {}).some((val) =>
-                searchRegexp.test(val)
-              )
-            ) {
-              return;
+          for (let i = lines.length - 1; i >= 0 && logs.length < targetResults; i--) {
+            const line = lines[i];
+            if (!line.length) continue;
+            try {
+              const logMessage = JSON.parse(line);
+              if (!filter.includes(logMessage.level)) continue;
+              if (
+                !Object.keys(logMessage).every((key) =>
+                  logMessageProperties.includes(key)
+                )
+              ) {
+                Object.keys(logMessage)
+                  .filter((prop) => !logMessageProperties.includes(prop))
+                  .forEach((prop) => {
+                    set(logMessage, `data.${prop}`, logMessage[prop]);
+                  });
+              }
+              if (search) {
+                if (
+                  !searchRegexp.test(logMessage.label ?? '') &&
+                  !searchRegexp.test(logMessage.message) &&
+                  !deepValueStrings(logMessage.data ?? {}).some((val) =>
+                    searchRegexp.test(val)
+                  )
+                ) continue;
+              }
+              logs.push(logMessage);
+            } catch {
+              // Skip malformed JSON lines
             }
           }
+        }
+      } finally {
+        fs.closeSync(fd);
+      }
 
-          logs.push(logMessage);
-        });
-
-      const displayedLogs = logs.reverse().slice(skip, skip + pageSize);
+      const total = logs.length;
+      const displayedLogs = logs.slice(skip, skip + pageSize);
 
       return res.status(200).json({
         pageInfo: {
-          pages: Math.ceil(logs.length / pageSize),
+          pages: Math.ceil(total / pageSize),
           pageSize,
-          results: logs.length,
+          results: total,
           page: Math.ceil(skip / pageSize) + 1,
         },
         results: displayedLogs,

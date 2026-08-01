@@ -75,15 +75,9 @@ const AdvancedRequester = ({
 }: AdvancedRequesterProps) => {
   const intl = useIntl();
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
-  const { data, error } = useSWR<ServiceCommonServer[]>(
-    `/api/v1/service/moviepilot`,
-    {
-      refreshInterval: 0,
-      refreshWhenHidden: false,
-      revalidateOnFocus: false,
-      revalidateOnMount: true,
-    }
-  );
+  const data: ServiceCommonServer[] = [];
+  const isValidating = false;
+  const serverData = null as ServiceCommonServerWithDetails | null;
   const [selectedServer, setSelectedServer] = useState<number | null>(
     defaultOverrides?.server !== undefined && defaultOverrides?.server >= 0
       ? defaultOverrides?.server
@@ -110,18 +104,6 @@ const AdvancedRequester = ({
   const isIgnoreQuotaVisible =
     currentHasPermission([Permission.MANAGE_REQUESTS]) &&
     ((type === 'movie' ? quota?.movie.limit : quota?.tv.limit) ?? 0) > 0;
-
-  const { data: serverData, isValidating } =
-    useSWR<ServiceCommonServerWithDetails>(
-      selectedServer !== null
-        ? `/api/v1/service/moviepilot/${selectedServer}`
-        : null,
-      {
-        refreshInterval: 0,
-        refreshWhenHidden: false,
-        revalidateOnFocus: false,
-      }
-    );
 
   const [selectedUser, setSelectedUser] = useState<User | null>(
     requestUser ?? null
@@ -170,90 +152,6 @@ const AdvancedRequester = ({
       setSelectedUser(nextSelectedUser);
     }
   }, [filteredUserData]);
-
-  useEffect(() => {
-    let defaultServer = data?.find(
-      (server) => server.isDefault && is4k === server.is4k
-    );
-
-    if (!defaultServer && (data ?? []).length > 0) {
-      defaultServer = data?.[0];
-    }
-
-    if (
-      defaultServer &&
-      defaultServer.id !== selectedServer &&
-      (!defaultOverrides || defaultOverrides.server === null)
-    ) {
-      setSelectedServer(defaultServer.id);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    if (serverData) {
-      const defaultProfile = serverData.profiles.find(
-        (profile) =>
-          profile.id ===
-          (isAnime && serverData.server.activeAnimeProfileId
-            ? serverData.server.activeAnimeProfileId
-            : serverData.server.activeProfileId)
-      );
-      const defaultFolder = serverData.rootFolders.find(
-        (folder) =>
-          folder.path ===
-          (isAnime && serverData.server.activeAnimeDirectory
-            ? serverData.server.activeAnimeDirectory
-            : serverData.server.activeDirectory)
-      );
-      const defaultLanguage = serverData.languageProfiles?.find(
-        (language) =>
-          language.id ===
-          (isAnime && serverData.server.activeAnimeLanguageProfileId
-            ? serverData.server.activeAnimeLanguageProfileId
-            : serverData.server.activeLanguageProfileId)
-      );
-      const defaultTags = isAnime
-        ? serverData.server.activeAnimeTags
-        : serverData.server.activeTags;
-
-      const applyOverrides =
-        defaultOverrides &&
-        ((defaultOverrides.server === null && serverData.server.isDefault) ||
-          defaultOverrides.server === serverData.server.id);
-
-      if (
-        defaultProfile &&
-        defaultProfile.id !== selectedProfile &&
-        (!applyOverrides || defaultOverrides.profile === null)
-      ) {
-        setSelectedProfile(defaultProfile.id);
-      }
-
-      if (
-        defaultFolder &&
-        defaultFolder.path !== selectedFolder &&
-        (!applyOverrides || !defaultOverrides.folder)
-      ) {
-        setSelectedFolder(defaultFolder.path ?? '');
-      }
-
-      if (
-        defaultLanguage &&
-        defaultLanguage.id !== selectedLanguage &&
-        (!applyOverrides || defaultOverrides.language === null)
-      ) {
-        setSelectedLanguage(defaultLanguage.id);
-      }
-
-      if (
-        defaultTags &&
-        !isEqual(defaultTags, selectedTags) &&
-        (!applyOverrides || defaultOverrides.tags === null)
-      ) {
-        setSelectedTags(defaultTags);
-      }
-    }
-  }, [serverData]);
 
   useEffect(() => {
     if (defaultOverrides && defaultOverrides.server != null) {
@@ -321,23 +219,7 @@ const AdvancedRequester = ({
     isIgnoreQuotaVisible,
   ]);
 
-  if (!data && !error) {
-    return (
-      <div className="mb-2 w-full">
-        <SmallLoadingSpinner />
-      </div>
-    );
-  }
-
   if (
-    (!data ||
-      selectedServer === null ||
-      (data.filter((server) => server.is4k === is4k).length < 2 &&
-        (!serverData ||
-          (serverData.profiles.length < 2 &&
-            serverData.rootFolders.length < 2 &&
-            (serverData.languageProfiles ?? []).length < 2 &&
-            !serverData.tags?.length)))) &&
     (!selectedUser || (filteredUserData ?? []).length < 2)
   ) {
     return null;

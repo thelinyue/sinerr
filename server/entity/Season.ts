@@ -11,6 +11,7 @@ import {
 import Media from './Media';
 
 @Entity()
+@Index(['media', 'seasonNumber'])
 class Season {
   @PrimaryGeneratedColumn()
   public id: number;

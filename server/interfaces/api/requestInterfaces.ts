@@ -7,9 +7,7 @@ export interface RequestResultsResponse extends PaginatedResponse {
     profileName?: string;
     canRemove?: boolean;
   })[];
-  serviceErrors: {
-    moviepilot: { id: number; name: string }[];
-  };
+  serviceErrors: Record<string, { id: number; name: string }[]>;
 }
 
 export type MediaRequestBody = {

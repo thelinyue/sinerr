@@ -37,7 +37,7 @@ const SearchByNameModal = ({
   const { data, error } = useSWR<
     { tvdbId: number; title: string; year: number; remotePoster?: string; overview?: string }[]
   >(
-    `/api/v1/service/moviepilot/lookup/${tmdbId}`
+    null
   );
 
   const handleClick = (tvdbId: number) => {

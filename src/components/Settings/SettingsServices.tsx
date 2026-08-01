@@ -1,4 +1,3 @@
-import MoviePilotLogo from '@app/assets/services/moviepilot.svg';
 import Alert from '@app/components/Common/Alert';
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
@@ -6,7 +5,6 @@ import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
 import MediaryModal from '@app/components/Settings/MediaryModal';
-import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
@@ -18,7 +16,6 @@ import {
 } from '@heroicons/react/24/solid';
 import type {
   MediaryServerSettings,
-  MoviePilotSettings,
 } from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
@@ -27,11 +24,11 @@ import useSWR, { mutate } from 'swr';
 
 const messages = defineMessages('components.Settings', {
   services: 'Services',
-  moviepilotsettings: 'MoviePilot Settings',
+
   mediarysettings: 'Mediary Settings',
   serviceSettingsDescription:
     'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only two of them can be marked as defaults (one non-4K and one 4K). Administrators are able to override the server used to process new requests prior to approval.',
-  moviepilotSettingsDescription: 'Configure MoviePilot connection settings',
+
   mediarySettingsDescription: 'Configure Mediary connection settings',
   deleteserverconfirm: 'Are you sure you want to delete this server?',
   ssl: 'SSL',
@@ -40,7 +37,7 @@ const messages = defineMessages('components.Settings', {
   is4k: '4K',
   address: 'Address',
   activeProfile: 'Active Profile',
-  addmoviepilot: 'Add MoviePilot Server',
+
   addmediary: 'Add Mediary Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
@@ -84,7 +81,7 @@ export interface DVRTestResponse {
   urlBase?: string;
 }
 
-export type MoviePilotTestResponse = DVRTestResponse;
+
 
 const ServerInstance = ({
   name,
@@ -94,7 +91,6 @@ const ServerInstance = ({
   is4k = false,
   isDefault = false,
   isSSL = false,
-  isMoviepilot = false,
   isMediary = false,
   externalUrl,
   onEdit,
@@ -166,9 +162,6 @@ const ServerInstance = ({
           rel="noopener noreferrer"
           className="opacity-50 hover:opacity-100"
         >
-          {isMoviepilot && (
-            <MoviePilotLogo className="h-10 w-10 flex-shrink-0" />
-          )}
           {isMediary && (
             <CloudIcon className="h-10 w-10 flex-shrink-0 text-indigo-500" />
           )}
@@ -203,22 +196,10 @@ const ServerInstance = ({
 const SettingsServices = () => {
   const intl = useIntl();
   const {
-    data: moviepilotData,
-    error: moviepilotError,
-    mutate: revalidateMoviePilot,
-  } = useSWR<MoviePilotSettings[]>('/api/v1/settings/moviepilot');
-  const {
     data: mediaryData,
     error: mediaryError,
     mutate: revalidateMediary,
   } = useSWR<MediaryServerSettings[]>('/api/v1/settings/mediary');
-  const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
-    open: boolean;
-    moviepilot: MoviePilotSettings | null;
-  }>({
-    open: false,
-    moviepilot: null,
-  });
   const [editMediaryModal, setEditMediaryModal] = useState<{
     open: boolean;
     mediary: MediaryServerSettings | null;
@@ -228,11 +209,11 @@ const SettingsServices = () => {
   });
   const [deleteServerModal, setDeleteServerModal] = useState<{
     open: boolean;
-    type: 'moviepilot' | 'mediary';
+    type: 'mediary';
     serverId: number | null;
   }>({
     open: false,
-    type: 'moviepilot',
+    type: 'mediary',
     serverId: null,
   });
 
@@ -240,12 +221,8 @@ const SettingsServices = () => {
     await axios.delete(
       `/api/v1/settings/${deleteServerModal.type}/${deleteServerModal.serverId}`
     );
-    setDeleteServerModal({ open: false, serverId: null, type: 'moviepilot' });
-    if (deleteServerModal.type === 'moviepilot') {
-      revalidateMoviePilot();
-    } else {
-      revalidateMediary();
-    }
+    setDeleteServerModal({ open: false, serverId: null, type: 'mediary' });
+    revalidateMediary();
     mutate('/api/v1/settings/public');
   };
 
@@ -257,19 +234,6 @@ const SettingsServices = () => {
           intl.formatMessage(globalMessages.settings),
         ]}
       />
-      {editMoviePilotModal.open && (
-        <MoviePilotModal
-          moviepilot={editMoviePilotModal.moviepilot}
-          onClose={() => {
-            setEditMoviePilotModal({ open: false, moviepilot: null });
-          }}
-          onSave={() => {
-            revalidateMoviePilot();
-            mutate('/api/v1/settings/public');
-            setEditMoviePilotModal({ open: false, moviepilot: null });
-          }}
-        />
-      )}
       {editMediaryModal.open && (
         <MediaryModal
           mediary={editMediaryModal.mediary}
@@ -301,78 +265,17 @@ const SettingsServices = () => {
             setDeleteServerModal({
               open: false,
               serverId: null,
-              type: 'moviepilot',
+              type: 'mediary',
             })
           }
           title={intl.formatMessage(messages.deleteServer, {
             serverType:
-              deleteServerModal.type === 'mediary' ? 'Mediary' : 'MoviePilot',
+              deleteServerModal.type === 'mediary' ? 'Mediary' : 'Mediary',
           })}
         >
           {intl.formatMessage(messages.deleteserverconfirm)}
         </Modal>
       </Transition>
-      <div className="mb-6 mt-10">
-        <h3 className="heading">
-          {intl.formatMessage(messages.moviepilotsettings)}
-        </h3>
-        <p className="description">
-          {intl.formatMessage(messages.moviepilotSettingsDescription)}
-        </p>
-      </div>
-      <div className="section">
-        {!moviepilotData && !moviepilotError && <LoadingSpinner />}
-        {moviepilotData && !moviepilotError && (
-          <>
-            {moviepilotData.length > 0 &&
-              !moviepilotData.some((mp) => mp.isDefault) && (
-                <Alert
-                  title={intl.formatMessage(messages.noDefaultServer, {
-                    serverType: 'MoviePilot',
-                    mediaType: intl.formatMessage(messages.mediaTypeMovie),
-                  })}
-                />
-              )}
-            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {moviepilotData.map((mp) => (
-                <ServerInstance
-                  key={`moviepilot-config-${mp.id}`}
-                  name={mp.name}
-                  hostname={mp.hostname}
-                  port={mp.port}
-                  isSSL={mp.useSsl}
-                  isDefault={mp.isDefault}
-                  isMoviepilot
-                  externalUrl={mp.externalUrl}
-                  onEdit={() =>
-                    setEditMoviePilotModal({ open: true, moviepilot: mp })
-                  }
-                  onDelete={() =>
-                    setDeleteServerModal({
-                      open: true,
-                      serverId: mp.id,
-                      type: 'moviepilot',
-                    })
-                  }
-                />
-              ))}
-              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
-                <div className="flex h-full w-full items-center justify-center">
-                  <Button
-                    buttonType="ghost"
-                    onClick={() =>
-                      setEditMoviePilotModal({ open: true, moviepilot: null })
-                    }
-                  >
-                    <PlusIcon />
-                    <span>{intl.formatMessage(messages.addmoviepilot)}</span>
-                  </Button>
-                </div>
-              </li>
-            </ul>
-          </>
-        )}
-      </div>
       <div className="mb-6 mt-10">
         <h3 className="heading">
           {intl.formatMessage(messages.mediarysettings)}

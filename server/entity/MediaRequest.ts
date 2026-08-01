@@ -40,6 +40,8 @@ type MediaRequestOptions = {
 };
 
 @Entity()
+@Index(['status', 'is4k'])
+@Index(['media', 'is4k'])
 export class MediaRequest {
   public static async request(
     requestBody: MediaRequestBody,
