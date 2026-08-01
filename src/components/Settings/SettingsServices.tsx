@@ -7,8 +7,6 @@ import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
 import MediaryModal from '@app/components/Settings/MediaryModal';
 import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
-import OverrideRuleModal from '@app/components/Settings/OverrideRule/OverrideRuleModal';
-import OverrideRuleTiles from '@app/components/Settings/OverrideRule/OverrideRuleTiles';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
@@ -18,8 +16,6 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
-import type OverrideRule from '@server/entity/OverrideRule';
-import type { OverrideRuleResultsResponse } from '@server/interfaces/api/overrideRuleInterfaces';
 import type {
   MediaryServerSettings,
   MoviePilotSettings,
@@ -55,10 +51,6 @@ const messages = defineMessages('components.Settings', {
   mediaTypeMovie: 'movie',
   mediaTypeSeries: 'series',
   deleteServer: 'Delete {serverType} Server',
-  overrideRules: 'Override Rules',
-  overrideRulesDescription:
-    'Override rules allow you to specify properties that will be replaced if a request matches the rule.',
-  addrule: 'New Override Rule',
 });
 
 interface ServerInstanceProps {
@@ -220,8 +212,6 @@ const SettingsServices = () => {
     error: mediaryError,
     mutate: revalidateMediary,
   } = useSWR<MediaryServerSettings[]>('/api/v1/settings/mediary');
-  const { data: rules, mutate: revalidate } =
-    useSWR<OverrideRuleResultsResponse>('/api/v1/overrideRule');
   const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
     open: boolean;
     moviepilot: MoviePilotSettings | null;
@@ -244,13 +234,6 @@ const SettingsServices = () => {
     open: false,
     type: 'moviepilot',
     serverId: null,
-  });
-  const [overrideRuleModal, setOverrideRuleModal] = useState<{
-    open: boolean;
-    rule: OverrideRule | null;
-  }>({
-    open: false,
-    rule: null,
   });
 
   const deleteServer = async () => {
@@ -278,8 +261,7 @@ const SettingsServices = () => {
         <MoviePilotModal
           moviepilot={editMoviePilotModal.moviepilot}
           onClose={() => {
-            if (!overrideRuleModal.open)
-              setEditMoviePilotModal({ open: false, moviepilot: null });
+            setEditMoviePilotModal({ open: false, moviepilot: null });
           }}
           onSave={() => {
             revalidateMoviePilot();
@@ -453,58 +435,6 @@ const SettingsServices = () => {
           </>
         ) : null}
       </div>
-      <div className="mb-6 mt-10">
-        <h3 className="heading">
-          {intl.formatMessage(messages.overrideRules)}
-        </h3>
-        <p className="description">
-          {intl.formatMessage(messages.overrideRulesDescription, {
-            serverType: 'MoviePilot',
-          })}
-        </p>
-      </div>
-      <div className="section">
-        <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {rules && moviepilotData && (
-            <OverrideRuleTiles
-              rules={rules}
-              moviepilotServices={moviepilotData}
-              setOverrideRuleModal={setOverrideRuleModal}
-              revalidate={revalidate}
-            />
-          )}
-          <li className="min-h-[8rem] rounded-lg border-2 border-dashed border-gray-400 shadow sm:min-h-[11rem]">
-            <div className="flex h-full w-full items-center justify-center">
-              <Button
-                buttonType="ghost"
-                disabled={!moviepilotData?.length}
-                onClick={() =>
-                  setOverrideRuleModal({
-                    open: true,
-                    rule: null,
-                  })
-                }
-              >
-                <PlusIcon />
-                <span>{intl.formatMessage(messages.addrule)}</span>
-              </Button>
-            </div>
-          </li>
-        </ul>
-      </div>
-      {overrideRuleModal.open && moviepilotData && (
-        <OverrideRuleModal
-          rule={overrideRuleModal.rule}
-          onClose={() => {
-            setOverrideRuleModal({
-              open: false,
-              rule: null,
-            });
-            revalidate();
-          }}
-          moviepilotServices={moviepilotData}
-        />
-      )}
     </>
   );
 };

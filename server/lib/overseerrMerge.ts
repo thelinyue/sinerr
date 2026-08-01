@@ -20,7 +20,6 @@ const checkOverseerrMerge = async (): Promise<boolean> => {
     [1699901142442, 'AddBlacklist1699901142442'],
     [1727907530757, 'AddUserSettingsStreamingRegion1727907530757'],
     [1734287582736, 'AddTelegramMessageThreadId1734287582736'],
-    [1734805733535, 'AddOverrideRules1734805733535'],
     [1737320080282, 'AddBlacklistTagsColumn1737320080282'],
     [1743023610704, 'UpdateWebPush1743023610704'],
     [1743107645301, 'AddUserAvatarCacheFields1743107645301'],
@@ -184,9 +183,6 @@ class SinerrMigration1759769291608 implements MigrationInterface {
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_6bbafa28411e6046421991ea21" ON "blacklist" ("tmdbId") `
-    );
-    await queryRunner.query(
-      `CREATE TABLE "override_rule" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "users" varchar, "genre" varchar, "language" varchar, "keywords" varchar, "profileId" integer, "rootFolder" varchar, "tags" varchar, "createdAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP), "updatedAt" datetime NOT NULL DEFAULT (CURRENT_TIMESTAMP))`
     );
     await queryRunner.query(
       `CREATE TABLE "temporary_user_settings" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "notificationTypes" text, "discordId" varchar, "userId" integer, "originalLanguage" varchar, "telegramChatId" varchar, "telegramSendSilently" boolean, "pgpKey" varchar, "locale" varchar NOT NULL DEFAULT (''), "pushbulletAccessToken" varchar, "pushoverApplicationToken" varchar, "pushoverUserKey" varchar, "pushoverSound" varchar, CONSTRAINT "UQ_986a2b6d3c05eb4091bb8066f78" UNIQUE ("userId"), CONSTRAINT "FK_986a2b6d3c05eb4091bb8066f78" FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE CASCADE ON UPDATE NO ACTION)`
@@ -508,7 +504,6 @@ class SinerrMigration1759769291608 implements MigrationInterface {
     );
     await queryRunner.query(`DROP TABLE "temporary_user_settings"`);
 
-    await queryRunner.query(`DROP TABLE "override_rule"`);
     await queryRunner.query(`DROP INDEX "IDX_6bbafa28411e6046421991ea21"`);
     await queryRunner.query(`DROP TABLE "blacklist"`);
     await queryRunner.query(

@@ -15,14 +15,17 @@ import deprecatedRoute from '@server/middleware/deprecation';
 import { mapProductionCompany } from '@server/models/Movie';
 import { mapNetwork } from '@server/models/Tv';
 import { mapWatchProviderDetails } from '@server/models/common';
-import overrideRuleRoutes from '@server/routes/overrideRule';
 import settingsRoutes from '@server/routes/settings';
 import {
   appDataPath,
   appDataPermissions,
   appDataStatus,
 } from '@server/utils/appDataVolume';
-import { getAppVersion, getCommitTag, getSeerrVersion } from '@server/utils/appVersion';
+import {
+  getAppVersion,
+  getCommitTag,
+  getSeerrVersion,
+} from '@server/utils/appVersion';
 import restartFlag from '@server/utils/restartFlag';
 import { isPerson } from '@server/utils/typeHelpers';
 import { Router } from 'express';
@@ -130,11 +133,6 @@ router.use('/service', isAuthenticated(), serviceRoutes);
 router.use('/issue', isAuthenticated(), issueRoutes);
 router.use('/issueComment', isAuthenticated(), issueCommentRoutes);
 router.use('/auth', authRoutes);
-router.use(
-  '/overrideRule',
-  isAuthenticated(Permission.ADMIN),
-  overrideRuleRoutes
-);
 
 router.get('/regions', isAuthenticated(), async (req, res, next) => {
   const tmdb = new TheMovieDb();

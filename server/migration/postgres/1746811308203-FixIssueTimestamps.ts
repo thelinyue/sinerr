@@ -15,16 +15,6 @@ export class FixIssueTimestamps1746811308203 implements MigrationInterface {
         USING "updatedAt" AT TIME ZONE 'UTC'
       `);
     await queryRunner.query(`
-        ALTER TABLE "override_rule"
-        ALTER COLUMN "createdAt" TYPE TIMESTAMP WITH TIME ZONE
-        USING "createdAt" AT TIME ZONE 'UTC'
-      `);
-    await queryRunner.query(`
-        ALTER TABLE "override_rule"
-        ALTER COLUMN "updatedAt" TYPE TIMESTAMP WITH TIME ZONE
-        USING "updatedAt" AT TIME ZONE 'UTC'
-      `);
-    await queryRunner.query(`
         ALTER TABLE "season_request"
         ALTER COLUMN "createdAt" TYPE TIMESTAMP WITH TIME ZONE
         USING "createdAt" AT TIME ZONE 'UTC'
@@ -204,16 +194,6 @@ export class FixIssueTimestamps1746811308203 implements MigrationInterface {
       `);
     await queryRunner.query(`
         ALTER TABLE "season_request"
-        ALTER COLUMN "createdAt" TYPE TIMESTAMP
-        USING "createdAt" AT TIME ZONE 'UTC'
-      `);
-    await queryRunner.query(`
-        ALTER TABLE "override_rule"
-        ALTER COLUMN "updatedAt" TYPE TIMESTAMP
-        USING "updatedAt" AT TIME ZONE 'UTC'
-      `);
-    await queryRunner.query(`
-        ALTER TABLE "override_rule"
         ALTER COLUMN "createdAt" TYPE TIMESTAMP
         USING "createdAt" AT TIME ZONE 'UTC'
       `);
