@@ -106,11 +106,18 @@ class NotificationManager {
       subject: payload.subject,
     });
 
-    this.activeAgents.forEach((agent) => {
+    for (const agent of this.activeAgents) {
       if (agent.shouldSend()) {
-        agent.send(type, payload);
+        agent.send(type, payload).catch((e) => {
+          logger.error('Notification agent failed to send', {
+            label: 'Notifications',
+            agent: agent.constructor.name,
+            type: Notification[type],
+            message: e instanceof Error ? e.message : 'Unknown error',
+          });
+        });
       }
-    });
+    }
   }
 }
 

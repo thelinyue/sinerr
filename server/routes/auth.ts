@@ -31,7 +31,7 @@ authRoutes.get('/me', isAuthenticated(), async (req, res) => {
     where: { id: req.user.id },
   });
 
-  return res.status(200).json(user);
+  return res.status(200).json(user.filter());
 });
 
 function getUserAvatarUrl(user: User): string {
@@ -422,7 +422,11 @@ authRoutes.post('/local', async (req, res, next) => {
       .where('user.username = :username', { username: body.username })
       .getOne();
 
-    if (!user || !(await user.passwordMatch(body.password))) {
+    const passwordValid = user
+      ? await user.passwordMatch(body.password)
+      : await User.dummyPasswordMatch();
+
+    if (!user || !passwordValid) {
       logger.warn('Failed sign-in attempt using invalid Sinerr password', {
         label: 'API',
         ip: req.ip,
@@ -456,80 +460,62 @@ authRoutes.post('/local', async (req, res, next) => {
 });
 
 authRoutes.post('/logout', async (req, res, next) => {
-  try {
-    const userId = req.session?.userId;
-    if (!userId) {
-      return res.status(200).json({ status: 'ok' });
-    }
+  const userId = req.session?.userId;
+  if (!userId) {
+    return res.status(200).json({ status: 'ok' });
+  }
 
-    const settings = getSettings();
-    const isJellyfinOrEmby =
-      settings.main.mediaServerType === MediaServerType.JELLYFIN ||
-      settings.main.mediaServerType === MediaServerType.EMBY;
+  const settings = getSettings();
+  const isJellyfinOrEmby =
+    settings.main.mediaServerType === MediaServerType.JELLYFIN ||
+    settings.main.mediaServerType === MediaServerType.EMBY;
 
-    if (isJellyfinOrEmby) {
-      const user = await getRepository(User)
-        .createQueryBuilder('user')
-        .addSelect(['user.jellyfinUserId', 'user.jellyfinDeviceId'])
-        .where('user.id = :id', { id: userId })
-        .getOne();
+  if (isJellyfinOrEmby) {
+    const user = await getRepository(User)
+      .createQueryBuilder('user')
+      .addSelect(['user.jellyfinUserId', 'user.jellyfinDeviceId'])
+      .where('user.id = :id', { id: userId })
+      .getOne();
 
-      if (user?.jellyfinUserId && user.jellyfinDeviceId) {
-        try {
-          const baseUrl = getHostname();
-          try {
-            await axios.delete(`${baseUrl}/Devices`, {
-              params: { Id: user.jellyfinDeviceId },
-              headers: {
-                'X-Emby-Authorization': `MediaBrowser Client="Sinerr", Device="Sinerr", DeviceId="sinerr", Version="${
-                  settings.main.mediaServerType === MediaServerType.EMBY
-                    ? '1.0.0'
-                    : getAppVersion()
-                }", Token="${settings.jellyfin.apiKey}"`,
-              },
-            });
-          } catch (error) {
-            logger.error('Failed to delete Jellyfin device', {
-              label: 'Auth',
-              error: error instanceof Error ? error.message : 'Unknown error',
-              userId: user.id,
-              jellyfinUserId: user.jellyfinUserId,
-            });
-          }
-        } catch (error) {
+    if (user?.jellyfinUserId && user.jellyfinDeviceId) {
+      const baseUrl = getHostname();
+      axios
+        .delete(`${baseUrl}/Devices`, {
+          params: { Id: user.jellyfinDeviceId },
+          headers: {
+            'X-Emby-Authorization': `MediaBrowser Client="Sinerr", Device="Sinerr", DeviceId="sinerr", Version="${
+              settings.main.mediaServerType === MediaServerType.EMBY
+                ? '1.0.0'
+                : getAppVersion()
+            }", Token="${settings.jellyfin.apiKey}"`,
+          },
+        })
+        .catch((error) => {
           logger.error('Failed to delete Jellyfin device', {
             label: 'Auth',
             error: error instanceof Error ? error.message : 'Unknown error',
             userId: user.id,
             jellyfinUserId: user.jellyfinUserId,
           });
-        }
-      }
-    }
-
-    req.session?.destroy((err: Error | null) => {
-      if (err) {
-        logger.error('Failed to destroy session', {
-          label: 'Auth',
-          error: err.message,
-          userId,
         });
-        return next({ status: 500, message: 'Failed to destroy session.' });
-      }
-      logger.debug('Successfully logged out user', {
+    }
+  }
+
+  req.session?.destroy((err: Error | null) => {
+    if (err) {
+      logger.error('Failed to destroy session', {
         label: 'Auth',
+        error: err.message,
         userId,
       });
-      res.status(200).json({ status: 'ok' });
-    });
-  } catch (error) {
-    logger.error('Error during logout process', {
+      return next({ status: 500, message: 'Failed to destroy session.' });
+    }
+    logger.debug('Successfully logged out user', {
       label: 'Auth',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      userId: req.session?.userId,
+      userId,
     });
-    next({ status: 500, message: 'Error during logout process.' });
-  }
+    res.status(200).json({ status: 'ok' });
+  });
 });
 
 authRoutes.post('/reset-password', async (req, res, next) => {

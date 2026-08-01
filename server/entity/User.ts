@@ -171,6 +171,14 @@ export class User {
     });
   }
 
+  public static async dummyPasswordMatch(): Promise<boolean> {
+    await bcrypt.compare(
+      'placeholder',
+      '$2b$12$LJ3m4ys3Lk0TSwHCpNqrYeV5Fh5sJq3nHqUx0FzT5yV3QnMj0U7rq'
+    );
+    return false;
+  }
+
   public async setPassword(password: string): Promise<void> {
     const hashedPassword = await bcrypt.hash(password, 12);
     this.password = hashedPassword;

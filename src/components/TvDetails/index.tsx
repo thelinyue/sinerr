@@ -839,7 +839,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                             )}
                           {((!mSeason4k &&
                             request4k?.status === MediaRequestStatus.PENDING) ||
-                            mSeason?.status4k === MediaStatus.PENDING) &&
+                            mSeason4k?.status4k === MediaStatus.PENDING) &&
                             show4k && (
                               <>
                                 <div className="hidden md:flex">

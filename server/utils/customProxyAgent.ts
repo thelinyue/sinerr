@@ -181,6 +181,8 @@ export default async function createCustomProxyAgent(
       'Failed to connect to the proxy: ' + e.message + ': ' + e.cause,
       { label: 'Proxy' }
     );
+    setGlobalDispatcher(defaultAgent);
+    proxyState = null;
   }
 }
 

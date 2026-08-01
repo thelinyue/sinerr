@@ -211,7 +211,7 @@ requestRoutes.post<never, MediaRequest, MediaRequestBody>(
       return res.status(201).json(request);
     } catch (error) {
       if (!(error instanceof Error)) {
-        return;
+        return next({ status: 500, message: 'Unknown error occurred.' });
       }
 
       switch (error.constructor) {
@@ -235,43 +235,54 @@ requestRoutes.get('/count', async (_req, res, next) => {
   const requestRepository = getRepository(MediaRequest);
 
   try {
-    const query = requestRepository
+    const totalCount = await requestRepository
       .createQueryBuilder('request')
-      .innerJoinAndSelect('request.media', 'media');
+      .innerJoinAndSelect('request.media', 'media')
+      .getCount();
 
-    const totalCount = await query.getCount();
-
-    const movieCount = await query
+    const movieCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.type = :requestType', {
         requestType: MediaType.MOVIE,
       })
       .getCount();
 
-    const tvCount = await query
+    const tvCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.type = :requestType', {
         requestType: MediaType.TV,
       })
       .getCount();
 
-    const pendingCount = await query
+    const pendingCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.PENDING,
       })
       .getCount();
 
-    const approvedCount = await query
+    const approvedCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.APPROVED,
       })
       .getCount();
 
-    const declinedCount = await query
+    const declinedCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.DECLINED,
       })
       .getCount();
 
-    const processingCount = await query
+    const processingCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.APPROVED,
       })
@@ -283,7 +294,9 @@ requestRoutes.get('/count', async (_req, res, next) => {
       )
       .getCount();
 
-    const availableCount = await query
+    const availableCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.APPROVED,
       })
@@ -295,7 +308,9 @@ requestRoutes.get('/count', async (_req, res, next) => {
       )
       .getCount();
 
-    const completedCount = await query
+    const completedCount = await requestRepository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.media', 'media')
       .where('request.status = :requestStatus', {
         requestStatus: MediaRequestStatus.COMPLETED,
       })
@@ -509,7 +524,7 @@ requestRoutes.delete('/:requestId', async (req, res, next) => {
         request.status !== MediaRequestStatus.PENDING)
     ) {
       return next({
-        status: 401,
+        status: 403,
         message: 'You do not have permission to delete this request.',
       });
     }

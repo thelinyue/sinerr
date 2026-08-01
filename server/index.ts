@@ -1,8 +1,8 @@
 import csurf from '@dr.pogodin/csurf';
+import { MediaServerType } from '@server/constants/server';
 import dataSource, { getRepository, isPgsql } from '@server/datasource';
 import DiscoverSlider from '@server/entity/DiscoverSlider';
 import { Session } from '@server/entity/Session';
-import { User } from '@server/entity/User';
 import { initI18n } from '@server/i18n';
 import { startJobs } from '@server/job/schedule';
 import notificationManager from '@server/lib/notifications';
@@ -55,8 +55,9 @@ const handle = app.getRequestHandler();
 
 if (!appDataPermissions()) {
   logger.error(
-    'Something went wrong while checking config folder! Please ensure the config folder is set up properly.\nhttps://docs.sinerr.dev/getting-started'
+    'Something went wrong while checking config folder! Please ensure the config folder has read/write permissions.\nhttps://docs.sinerr.dev/getting-started'
   );
+  process.exit(1);
 }
 
 app
@@ -119,9 +120,11 @@ app
       new WebPushAgent(),
     ]);
 
-    const userRepository = getRepository(User);
-    const totalUsers = await userRepository.count();
-    if (totalUsers > 0) {
+    const mediaServerType = settings.main.mediaServerType;
+    if (
+      mediaServerType === MediaServerType.JELLYFIN ||
+      mediaServerType === MediaServerType.EMBY
+    ) {
       startJobs();
     } else {
       logger.info(
@@ -177,7 +180,7 @@ app
         csurf({
           cookie: {
             httpOnly: true,
-            sameSite: true,
+            sameSite: 'strict',
             secure: !dev,
             key: '_csrf',
             path: '/',
@@ -186,7 +189,7 @@ app
       );
       server.use((req, res, next) => {
         res.cookie('XSRF-TOKEN', req.csrfToken(), {
-          sameSite: true,
+          sameSite: 'strict',
           secure: !dev,
         });
         next();
@@ -258,6 +261,12 @@ app
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _next: NextFunction
       ) => {
+        logger.error('Express error handler caught an error', {
+          label: 'Server',
+          status: err.status,
+          message: err.message,
+          errors: err.errors,
+        });
         // format error
         res.status(err.status || 500).json({
           message: err.message,
@@ -289,6 +298,27 @@ app
       });
       process.exit(1);
     });
+
+    const shutdown = async (signal: string) => {
+      logger.info(`Received ${signal}, gracefully shutting down...`, {
+        label: 'Server',
+      });
+      httpServer.close(async () => {
+        try {
+          await dataSource.destroy();
+          logger.info('Database connection closed', { label: 'Server' });
+        } catch (e) {
+          logger.error('Error closing database connection', {
+            label: 'Server',
+            message: (e as Error).message,
+          });
+        }
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   })
   .catch((err) => {
     logger.error(err.stack);

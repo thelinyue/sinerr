@@ -114,11 +114,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
   const [showBlocklistModal, setShowBlocklistModal] = useState(false);
   const { addToast } = useToasts();
 
+  const movieId = router.query.movieId;
   const {
     data,
     error,
     mutate: revalidate,
-  } = useSWR<MovieDetailsType>(`/api/v1/movie/${router.query.movieId}`, {
+  } = useSWR<MovieDetailsType>(movieId ? `/api/v1/movie/${movieId}` : null, {
     fallbackData: movie,
     refreshInterval: refreshIntervalHelper(
       {
@@ -130,7 +131,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
   });
 
   const { data: ratingData } = useSWR<RatingResponse>(
-    `/api/v1/movie/${router.query.movieId}/ratingscombined`
+    movieId ? `/api/v1/movie/${movieId}/ratingscombined` : null
   );
 
   const sortedCrew = useMemo(
@@ -287,16 +288,16 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
 
     try {
       await axios.post('/api/v1/blocklist', {
-        tmdbId: movie?.id,
+        tmdbId: data?.id,
         mediaType: 'movie',
-        title: movie?.title,
+        title: data?.title,
         user: user?.id,
       });
 
       addToast(
         <span>
           {intl.formatMessage(globalMessages.blocklistSuccess, {
-            title: movie?.title,
+            title: data?.title,
             strong: (msg: React.ReactNode) => <strong>{msg}</strong>,
           })}
         </span>,

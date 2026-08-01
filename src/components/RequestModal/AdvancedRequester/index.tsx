@@ -635,12 +635,13 @@ const AdvancedRequester = ({
                           <span className="ml-3 block">
                             {selectedUser.displayName}
                           </span>
-                          {selectedUser.displayName.toLowerCase() !==
-                            selectedUser.email && (
-                            <span className="ml-1 truncate text-gray-400">
-                              ({selectedUser.email})
-                            </span>
-                          )}
+                          {selectedUser.email &&
+                            selectedUser.displayName.toLowerCase() !==
+                              selectedUser.email.toLowerCase() && (
+                              <span className="ml-1 truncate text-gray-400">
+                                ({selectedUser.email})
+                              </span>
+                            )}
                         </span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-500">
                           <ChevronDownIcon className="h-5 w-5" />
@@ -688,12 +689,13 @@ const AdvancedRequester = ({
                                   <span className="ml-3 block flex-shrink-0">
                                     {user.displayName}
                                   </span>
-                                  {user.displayName.toLowerCase() !==
-                                    user.email && (
-                                    <span className="ml-1 truncate text-gray-400">
-                                      ({user.email})
-                                    </span>
-                                  )}
+                                  {user.email &&
+                                    user.displayName.toLowerCase() !==
+                                      user.email.toLowerCase() && (
+                                      <span className="ml-1 truncate text-gray-400">
+                                        ({user.email})
+                                      </span>
+                                    )}
                                 </span>
                                 {selected && (
                                   <span

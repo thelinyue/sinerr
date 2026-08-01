@@ -58,7 +58,7 @@ type NextAppComponentType = typeof App;
 type MessagesType = Record<string, string>;
 
 interface ExtendedAppProps extends AppProps {
-  user: User;
+  user: User | undefined;
   messages: MessagesType;
   locale: AvailableLocale;
   currentSettings: PublicSettingsResponse;
@@ -227,14 +227,14 @@ CoreApp.getInitialProps = async (initialProps) => {
         if (!router.pathname.match(/(setup)/)) {
           ctx.res.writeHead(307, { Location: '/setup' });
           ctx.res.end();
-          return {
-            pageProps: {},
-            user,
-            messages: {},
-            locale: 'en' as AvailableLocale,
-            currentSettings,
-          };
         }
+        return {
+          pageProps: {},
+          user,
+          messages: {},
+          locale: 'en' as AvailableLocale,
+          currentSettings,
+        };
       }
 
       try {
@@ -253,17 +253,38 @@ CoreApp.getInitialProps = async (initialProps) => {
         if (router.pathname.match(/(setup|login)/)) {
           ctx.res.writeHead(307, { Location: '/' });
           ctx.res.end();
+          return {
+            pageProps: {},
+            user,
+            messages: {},
+            locale: 'en' as AvailableLocale,
+            currentSettings,
+          };
         }
       } catch {
         if (!router.pathname.match(/(login|setup|resetpassword)/)) {
           ctx.res.writeHead(307, { Location: '/login' });
           ctx.res.end();
+          return {
+            pageProps: {},
+            user,
+            messages: {},
+            locale: 'en' as AvailableLocale,
+            currentSettings,
+          };
         }
       }
     } catch {
       if (!router.pathname.match(/(setup)/)) {
         ctx.res.writeHead(307, { Location: '/setup' });
         ctx.res.end();
+        return {
+          pageProps: {},
+          user,
+          messages: {},
+          locale: 'en' as AvailableLocale,
+          currentSettings,
+        };
       }
     }
   }

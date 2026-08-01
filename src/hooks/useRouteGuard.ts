@@ -8,13 +8,14 @@ const useRouteGuard = (
   options?: PermissionCheckOptions
 ): void => {
   const router = useRouter();
-  const { user, hasPermission } = useUser();
+  const { user, hasPermission, loading } = useUser();
 
   useEffect(() => {
-    if (user && !hasPermission(permission, options)) {
+    if (loading) return;
+    if (!user || !hasPermission(permission, options)) {
       router.push('/');
     }
-  }, [user, permission, router, hasPermission, options]);
+  }, [user, loading, permission, router, hasPermission, options]);
 };
 
 export default useRouteGuard;

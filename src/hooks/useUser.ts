@@ -3,6 +3,7 @@ import type { PermissionCheckOptions } from '@server/lib/permissions';
 import { hasPermission, Permission } from '@server/lib/permissions';
 import type { NotificationAgentKey } from '@server/lib/settings';
 import { useRouter } from 'next/router';
+import { useCallback } from 'react';
 import type { MutatorCallback } from 'swr';
 import useSWR from 'swr';
 
@@ -54,9 +55,9 @@ export const useUser = ({
   initialData,
 }: { id?: number; initialData?: User } = {}): UserHookResponse => {
   const router = useRouter();
-  const isAuthPage = /^\/(login|setup|resetpassword(?:\/|$))/.test(
-    router.pathname
-  );
+  const isAuthPage = router.pathname
+    ? /^\/(login|setup|resetpassword(?:\/|$))/.test(router.pathname)
+    : false;
 
   const {
     data,
@@ -72,12 +73,15 @@ export const useUser = ({
     shouldRetryOnError: false,
   });
 
-  const checkPermission = (
-    permission: Permission | Permission[],
-    options?: PermissionCheckOptions
-  ): boolean => {
-    return hasPermission(permission, data?.permissions ?? 0, options);
-  };
+  const checkPermission = useCallback(
+    (
+      permission: Permission | Permission[],
+      options?: PermissionCheckOptions
+    ): boolean => {
+      return hasPermission(permission, data?.permissions ?? 0, options);
+    },
+    [data?.permissions]
+  );
 
   return {
     user: data,

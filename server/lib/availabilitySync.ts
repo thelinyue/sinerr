@@ -317,6 +317,7 @@ class AvailabilitySync {
         where: whereOptions,
         skip: offset,
         take: pageSize,
+        relations: { seasons: true },
       }));
       offset += pageSize;
     } while (mediaPage.length > 0);
@@ -467,7 +468,7 @@ class AvailabilitySync {
     const ratingKey = media.jellyfinMediaId;
     const ratingKey4k = media.jellyfinMediaId4k;
     let existsInJellyfin = false;
-    let preventSeasonSearch = false;
+    const preventSeasonSearch = false;
 
     // Check each jellyfin instance to see if the media still exists
     // If found, we will assume the media exists and prevent removal
@@ -497,19 +498,15 @@ class AvailabilitySync {
         existsInJellyfin = true;
       }
     } catch (ex) {
-      if (!ex.message.includes('404') && !ex.message.includes('500')) {
-        existsInJellyfin = true;
-        preventSeasonSearch = true;
-        logger.debug(
-          `Failure retrieving the ${is4k ? '4K' : 'non-4K'} ${
-            media.mediaType === 'tv' ? 'show' : 'movie'
-          } [TMDB ID ${media.tmdbId}] from Jellyfin.`,
-          {
-            errorMessage: ex.message,
-            label: 'AvailabilitySync',
-          }
-        );
-      }
+      logger.debug(
+        `Failure retrieving the ${is4k ? '4K' : 'non-4K'} ${
+          media.mediaType === 'tv' ? 'show' : 'movie'
+        } [TMDB ID ${media.tmdbId}] from Jellyfin.`,
+        {
+          errorMessage: ex.message,
+          label: 'AvailabilitySync',
+        }
+      );
     }
 
     // Here we check each season in jellyfin for availability

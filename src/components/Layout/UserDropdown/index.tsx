@@ -143,7 +143,7 @@ const UserDropdown = () => {
                         ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white'
                         : ''
                     }`}
-                    data-testid="user-menu-settings"
+                    data-testid="user-menu-requests"
                   >
                     <ClockIcon className="mr-2 inline h-5 w-5" />
                     <span>{intl.formatMessage(messages.requests)}</span>
@@ -192,7 +192,13 @@ const UserDropdown = () => {
                         ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white'
                         : ''
                     }`}
-                    onClick={() => logout()}
+                    onClick={async () => {
+                      try {
+                        await logout();
+                      } catch {
+                        // Error already logged in axios interceptor
+                      }
+                    }}
                   >
                     <ArrowRightOnRectangleIcon className="mr-2 inline h-5 w-5" />
                     <span>{intl.formatMessage(messages.signout)}</span>

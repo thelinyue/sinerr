@@ -42,13 +42,26 @@ export const startJobs = (): void => {
       cronSchedule: jobs['jellyfin-recently-added-scan'].schedule,
       job: schedule.scheduleJob(
         jobs['jellyfin-recently-added-scan'].schedule,
-        () => {
+        async () => {
           const autoScan = getSettings().jellyfin.autoScan ?? true;
           if (!autoScan) return;
+          if (jellyfinRecentScanner.status().running) {
+            logger.info('Skipping Jellyfin Recently Added Scan: already running', {
+              label: 'Jobs',
+            });
+            return;
+          }
           logger.info('Starting scheduled job: Jellyfin Recently Added Scan', {
             label: 'Jobs',
           });
-          jellyfinRecentScanner.run();
+          try {
+            await jellyfinRecentScanner.run();
+          } catch (e) {
+            logger.error('Error during Jellyfin Recently Added Scan', {
+              label: 'Jobs',
+              message: e instanceof Error ? e.message : 'Unknown error',
+            });
+          }
         }
       ),
       running: () => jellyfinRecentScanner.status().running,
@@ -62,13 +75,26 @@ export const startJobs = (): void => {
       type: 'process',
       interval: 'hours',
       cronSchedule: jobs['jellyfin-full-scan'].schedule,
-      job: schedule.scheduleJob(jobs['jellyfin-full-scan'].schedule, () => {
+      job: schedule.scheduleJob(jobs['jellyfin-full-scan'].schedule, async () => {
         const autoScan = getSettings().jellyfin.autoScan ?? true;
         if (!autoScan) return;
+        if (jellyfinFullScanner.status().running) {
+          logger.info('Skipping Jellyfin Full Scan: already running', {
+            label: 'Jobs',
+          });
+          return;
+        }
         logger.info('Starting scheduled job: Jellyfin Full Scan', {
           label: 'Jobs',
         });
-        jellyfinFullScanner.run();
+        try {
+          await jellyfinFullScanner.run();
+        } catch (e) {
+          logger.error('Error during Jellyfin Full Scan', {
+            label: 'Jobs',
+            message: e instanceof Error ? e.message : 'Unknown error',
+          });
+        }
       }),
       running: () => jellyfinFullScanner.status().running,
       cancelFn: () => jellyfinFullScanner.cancel(),
@@ -83,13 +109,20 @@ export const startJobs = (): void => {
       cronSchedule: jobs['mostplayed-cache-refresh'].schedule,
       job: schedule.scheduleJob(
         jobs['mostplayed-cache-refresh'].schedule,
-        () => {
+        async () => {
           const autoScan = getSettings().jellyfin.autoScan ?? true;
           if (!autoScan) return;
           logger.info('Starting scheduled job: Most Played Cache Refresh', {
             label: 'Jobs',
           });
-          refreshMostPlayedCache();
+          try {
+            await refreshMostPlayedCache();
+          } catch (e) {
+            logger.error('Error during Most Played Cache Refresh', {
+              label: 'Jobs',
+              message: e instanceof Error ? e.message : 'Unknown error',
+            });
+          }
         }
       ),
     });
@@ -102,11 +135,24 @@ export const startJobs = (): void => {
     type: 'process',
     interval: 'hours',
     cronSchedule: jobs['availability-sync'].schedule,
-    job: schedule.scheduleJob(jobs['availability-sync'].schedule, () => {
+    job: schedule.scheduleJob(jobs['availability-sync'].schedule, async () => {
+      if (availabilitySync.running) {
+        logger.info('Skipping Media Availability Sync: already running', {
+          label: 'Jobs',
+        });
+        return;
+      }
       logger.info('Starting scheduled job: Media Availability Sync', {
         label: 'Jobs',
       });
-      availabilitySync.run();
+      try {
+        await availabilitySync.run();
+      } catch (e) {
+        logger.error('Error during Media Availability Sync', {
+          label: 'Jobs',
+          message: e instanceof Error ? e.message : 'Unknown error',
+        });
+      }
     }),
     running: () => availabilitySync.running,
     cancelFn: () => availabilitySync.cancel(),
@@ -119,15 +165,19 @@ export const startJobs = (): void => {
     type: 'process',
     interval: 'hours',
     cronSchedule: jobs['image-cache-cleanup'].schedule,
-    job: schedule.scheduleJob(jobs['image-cache-cleanup'].schedule, () => {
+    job: schedule.scheduleJob(jobs['image-cache-cleanup'].schedule, async () => {
       logger.info('Starting scheduled job: Image Cache Cleanup', {
         label: 'Jobs',
       });
-      // Clean TMDB image cache
-      ImageProxy.clearCache('tmdb');
-
-      // Clean users avatar image cache
-      ImageProxy.clearCache('avatar');
+      try {
+        await ImageProxy.clearCache('tmdb');
+        await ImageProxy.clearCache('avatar');
+      } catch (e) {
+        logger.error('Error during Image Cache Cleanup', {
+          label: 'Jobs',
+          message: e instanceof Error ? e.message : 'Unknown error',
+        });
+      }
     }),
   });
 
@@ -137,11 +187,24 @@ export const startJobs = (): void => {
     type: 'process',
     interval: 'days',
     cronSchedule: jobs['process-blocklisted-tags'].schedule,
-    job: schedule.scheduleJob(jobs['process-blocklisted-tags'].schedule, () => {
+    job: schedule.scheduleJob(jobs['process-blocklisted-tags'].schedule, async () => {
+      if (blocklistedTagsProcessor.status().running) {
+        logger.info('Skipping Process Blocklisted Tags: already running', {
+          label: 'Jobs',
+        });
+        return;
+      }
       logger.info('Starting scheduled job: Process Blocklisted Tags', {
         label: 'Jobs',
       });
-      blocklistedTagsProcessor.run();
+      try {
+        await blocklistedTagsProcessor.run();
+      } catch (e) {
+        logger.error('Error during Process Blocklisted Tags', {
+          label: 'Jobs',
+          message: e instanceof Error ? e.message : 'Unknown error',
+        });
+      }
     }),
     running: () => blocklistedTagsProcessor.status().running,
     cancelFn: () => blocklistedTagsProcessor.cancel(),

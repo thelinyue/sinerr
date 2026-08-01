@@ -71,7 +71,8 @@ const Discover = () => {
     }
   }, [discoverData, isEditing]);
 
-  const hasChanged = () => !Object.is(discoverData, sliders);
+  const hasChanged = () =>
+    JSON.stringify(discoverData) !== JSON.stringify(sliders);
 
   const updateSliders = async () => {
     try {
@@ -81,8 +82,8 @@ const Discover = () => {
         appearance: 'success',
         autoDismiss: true,
       });
+      await mutate();
       setIsEditing(false);
-      mutate();
     } catch {
       addToast(intl.formatMessage(messages.updatefailed), {
         appearance: 'error',
@@ -421,7 +422,10 @@ const Discover = () => {
               }}
               onEnable={() => {
                 const tempSliders = sliders.slice();
-                tempSliders[index].enabled = !tempSliders[index].enabled;
+                tempSliders[index] = {
+                  ...tempSliders[index],
+                  enabled: !tempSliders[index].enabled,
+                };
                 setSliders(tempSliders);
               }}
               onPositionUpdate={(updatedItemId, position, hasClickedArrows) => {
@@ -478,7 +482,11 @@ const ConnectionGuide = () => {
   const [showDemo, setShowDemo] = useState(false);
 
   useEffect(() => {
-    setDismissed(localStorage.getItem('connection-guide-dismissed') === 'true');
+    try {
+      setDismissed(localStorage.getItem('connection-guide-dismissed') === 'true');
+    } catch {
+      setDismissed(true);
+    }
   }, []);
 
   const serverUrl =
@@ -493,7 +501,11 @@ const ConnectionGuide = () => {
   }
 
   const dismiss = () => {
-    localStorage.setItem('connection-guide-dismissed', 'true');
+    try {
+      localStorage.setItem('connection-guide-dismissed', 'true');
+    } catch {
+      // localStorage may not be available
+    }
     setDismissed(true);
   };
 
@@ -582,7 +594,9 @@ const ConnectionGuide = () => {
                   </code>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(serverUrl);
+                      navigator.clipboard.writeText(serverUrl).catch(() => {
+                        // clipboard permission denied
+                      });
                     }}
                     className="flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500"
                   >
@@ -676,7 +690,7 @@ const ConnectionGuide = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <input
                     type="checkbox"
-                    checked
+                    defaultChecked
                     readOnly
                     className="rounded border-gray-600"
                   />

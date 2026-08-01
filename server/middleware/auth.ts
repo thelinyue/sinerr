@@ -10,14 +10,16 @@ export const checkUser: Middleware = async (req, _res, next) => {
   const settings = getSettings();
   let user: User | undefined | null;
 
-  if (req.header('X-API-Key') === settings.main.apiKey) {
+  if (settings.main.apiKey && req.header('X-API-Key') === settings.main.apiKey) {
     const userRepository = getRepository(User);
 
-    let userId = 1; // Work on original administrator account
+    let userId = 1;
 
-    // If a User ID is provided, we will act on that user's behalf
     if (req.header('X-API-User')) {
-      userId = Number(req.header('X-API-User'));
+      const headerUserId = Number(req.header('X-API-User'));
+      if (!Number.isNaN(headerUserId)) {
+        userId = headerUserId;
+      }
     }
 
     user = await userRepository.findOne({ where: { id: userId } });
@@ -45,14 +47,21 @@ export const isAuthenticated = (
   options?: PermissionCheckOptions
 ): Middleware => {
   const authMiddleware: Middleware = (req, res, next) => {
-    if (!req.user || !req.user.hasPermission(permissions ?? 0, options)) {
+    if (!req.user) {
       res.status(403).json({
         status: 403,
         error: 'You do not have permission to access this endpoint',
       });
-    } else {
-      next();
+      return;
     }
+    if (permissions !== undefined && !req.user.hasPermission(permissions, options)) {
+      res.status(403).json({
+        status: 403,
+        error: 'You do not have permission to access this endpoint',
+      });
+      return;
+    }
+    next();
   };
   return authMiddleware;
 };
