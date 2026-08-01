@@ -96,7 +96,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
       mediaType: MediaType.MOVIE,
       tmdbId: 12345,
       status: MediaStatus.UNKNOWN,
-      status4k: MediaStatus.UNKNOWN,
+      status: MediaStatus.UNKNOWN,
     })
   );
 
@@ -106,7 +106,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
       status,
       media,
       requestedBy,
-      is4k: false,
+      # 4K removed,
       updatedAt: new Date('2025-03-01T00:00:00.000Z'),
     })
   );
@@ -151,7 +151,7 @@ describe('DELETE /request/:requestId', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 54321,
         status: MediaStatus.UNKNOWN,
-        status4k: MediaStatus.UNKNOWN,
+        status: MediaStatus.UNKNOWN,
       })
     );
 
@@ -161,7 +161,7 @@ describe('DELETE /request/:requestId', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: owner,
-        is4k: false,
+        # 4K removed,
       })
     );
 
@@ -281,7 +281,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99001,
         status: MediaStatus.DELETED,
-        status4k: MediaStatus.UNKNOWN,
+        status: MediaStatus.UNKNOWN,
       })
     );
 
@@ -291,7 +291,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        is4k: false,
+        # 4K removed,
         isAutoRequest: true,
       })
     );
@@ -305,7 +305,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        is4k: false,
+        # 4K removed,
       })
     );
 
@@ -325,7 +325,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(updated.status, MediaStatus.DELETED);
   });
 
-  it('restores media status4k to DELETED when the re-request is deleted and a stale completed request remains', async () => {
+  it('restores media status to DELETED when the re-request is deleted and a stale completed request remains', async () => {
     const userRepo = getRepository(User);
     const mediaRepo = getRepository(Media);
     const requestRepo = getRepository(MediaRequest);
@@ -339,7 +339,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99003,
         status: MediaStatus.UNKNOWN,
-        status4k: MediaStatus.DELETED,
+        status: MediaStatus.DELETED,
       })
     );
 
@@ -349,12 +349,12 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        is4k: true,
+        # 4K removed,
         isAutoRequest: true,
       })
     );
 
-    media.status4k = MediaStatus.PENDING;
+    media.status = MediaStatus.PENDING;
     await mediaRepo.save(media);
 
     const newRequest = await requestRepo.save(
@@ -363,7 +363,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        is4k: true,
+        # 4K removed,
       })
     );
 
@@ -373,7 +373,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(res.status, 204);
 
     const updated = await mediaRepo.findOneOrFail({ where: { id: media.id } });
-    assert.strictEqual(updated.status4k, MediaStatus.DELETED);
+    assert.strictEqual(updated.status, MediaStatus.DELETED);
   });
 
   it('resets media status to UNKNOWN when the stale completed request is also deleted', async () => {
@@ -398,7 +398,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(remaining.length, 0);
   });
 
-  it('resets media status4k to UNKNOWN when the stale completed 4K request is also deleted', async () => {
+  it('resets media status to UNKNOWN when the stale completed 4K request is also deleted', async () => {
     const userRepo = getRepository(User);
     const mediaRepo = getRepository(Media);
     const requestRepo = getRepository(MediaRequest);
@@ -412,7 +412,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99004,
         status: MediaStatus.UNKNOWN,
-        status4k: MediaStatus.DELETED,
+        status: MediaStatus.DELETED,
       })
     );
 
@@ -422,12 +422,12 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        is4k: true,
+        # 4K removed,
         isAutoRequest: true,
       })
     );
 
-    media.status4k = MediaStatus.PENDING;
+    media.status = MediaStatus.PENDING;
     await mediaRepo.save(media);
 
     const newRequest = await requestRepo.save(
@@ -436,7 +436,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        is4k: true,
+        # 4K removed,
       })
     );
 
@@ -448,7 +448,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(res.status, 204);
 
     const updated = await mediaRepo.findOneOrFail({ where: { id: media.id } });
-    assert.strictEqual(updated.status4k, MediaStatus.UNKNOWN);
+    assert.strictEqual(updated.status, MediaStatus.UNKNOWN);
   });
 
   it('does not reset media status when other active requests still exist', async () => {
@@ -465,7 +465,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99002,
         status: MediaStatus.PENDING,
-        status4k: MediaStatus.UNKNOWN,
+        status: MediaStatus.UNKNOWN,
       })
     );
 
@@ -475,7 +475,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-        is4k: false,
+        # 4K removed,
       })
     );
 
@@ -485,7 +485,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-        is4k: false,
+        # 4K removed,
       })
     );
 
@@ -512,7 +512,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99005,
         status: MediaStatus.PARTIALLY_AVAILABLE,
-        status4k: MediaStatus.UNKNOWN,
+        status: MediaStatus.UNKNOWN,
       })
     );
 
@@ -522,7 +522,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        is4k: false,
+        # 4K removed,
       })
     );
 
@@ -535,3 +535,4 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(updated.status, MediaStatus.PARTIALLY_AVAILABLE);
   });
 });
+
