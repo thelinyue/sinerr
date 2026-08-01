@@ -258,12 +258,10 @@ describe('Jellyfin Scanner', () => {
         new Season({
           seasonNumber: 1,
           status: MediaStatus.AVAILABLE,
-          status: MediaStatus.UNKNOWN,
         }),
         new Season({
           seasonNumber: 2,
           status: MediaStatus.AVAILABLE,
-          status: MediaStatus.UNKNOWN,
         }),
         new Season({
           seasonNumber: 3,
@@ -360,7 +358,6 @@ describe('Jellyfin Scanner', () => {
         new Season({
           seasonNumber: 1,
           status: MediaStatus.AVAILABLE,
-          status: MediaStatus.UNKNOWN,
         }),
         // Not present in the TMDB season list below
         new Season({
@@ -437,7 +434,6 @@ describe('Jellyfin Scanner', () => {
         new Season({
           seasonNumber: 1,
           status: MediaStatus.AVAILABLE,
-          status: MediaStatus.UNKNOWN,
         }),
         new Season({
           seasonNumber: 2,
@@ -501,4 +497,5 @@ describe('Jellyfin Scanner', () => {
     });
   });
 });
+
 

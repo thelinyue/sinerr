@@ -89,7 +89,7 @@ async function seedMedia() {
       mediaType: MediaType.MOVIE,
       tmdbId: 12345,
       status: MediaStatus.AVAILABLE,
-      status: MediaStatus.UNKNOWN,
+
     })
   );
 }
@@ -206,4 +206,5 @@ describe('POST /issue', () => {
     assert.strictEqual(res.body.message, 'Issue user not found');
   });
 });
+
 
