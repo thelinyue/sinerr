@@ -68,9 +68,8 @@ const RequestCardError = ({ requestData }: RequestCardErrorProps) => {
   const { hasPermission } = useUser();
   const intl = useIntl();
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
-    mediaUrl4k: requestData?.media?.mediaUrl4k,
   });
 
   const deleteRequest = async () => {
@@ -142,36 +141,15 @@ const RequestCardError = ({ requestData }: RequestCardErrorProps) => {
                     </Badge>
                   ) : (
                     <StatusBadge
-                      status={
-                        requestData.media[
-                          requestData.is4k ? 'status4k' : 'status'
-                        ]
-                      }
-                      downloadItem={
-                        requestData.media[
-                          requestData.is4k
-                            ? 'downloadStatus4k'
-                            : 'downloadStatus'
-                        ]
-                      }
+                      status={requestData.media.status}
+                      downloadItem={requestData.media.downloadStatus}
                       title={intl.formatMessage(messages.unknowntitle)}
                       inProgress={
-                        (
-                          requestData.media[
-                            requestData.is4k
-                              ? 'downloadStatus4k'
-                              : 'downloadStatus'
-                          ] ?? []
-                        ).length > 0
+                        (requestData.media.downloadStatus ?? []).length > 0
                       }
-                      is4k={requestData.is4k}
                       mediaType={requestData.type}
-                      mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
-                      serviceUrl={
-                        requestData.is4k
-                          ? requestData.media.serviceUrl4k
-                          : requestData.media.serviceUrl
-                      }
+                      mediaUrl={mediaUrl}
+                      serviceUrl={requestData.media.serviceUrl}
                     />
                   )}
                 </div>
@@ -248,16 +226,14 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
       refreshInterval: refreshIntervalHelper(
         {
           downloadStatus: request.media.downloadStatus,
-          downloadStatus4k: request.media.downloadStatus4k,
         },
         15000
       ),
     }
   );
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
-    mediaUrl4k: requestData?.media?.mediaUrl4k,
   });
 
   const modifyRequest = async (type: 'approve' | 'decline') => {
@@ -329,7 +305,6 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
         show={showEditModal}
         tmdbId={request.media.tmdbId}
         type={request.type}
-        is4k={request.is4k}
         editRequest={request}
         onCancel={() => setShowEditModal(false)}
         onComplete={() => {
@@ -440,8 +415,7 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
                 {intl.formatMessage(globalMessages.failed)}
               </Badge>
             ) : requestData.status === MediaRequestStatus.PENDING &&
-              requestData.media[requestData.is4k ? 'status4k' : 'status'] ===
-                MediaStatus.DELETED ? (
+              requestData.media.status === MediaStatus.DELETED ? (
               <Badge
                 badgeType="warning"
                 href={`/${requestData.type}/${requestData.media.tmdbId}?manage=1`}
@@ -450,31 +424,14 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
               </Badge>
             ) : (
               <StatusBadge
-                status={
-                  requestData.media[requestData.is4k ? 'status4k' : 'status']
-                }
-                downloadItem={
-                  requestData.media[
-                    requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
-                  ]
-                }
+                status={requestData.media.status}
+                downloadItem={requestData.media.downloadStatus}
                 title={isMovie(title) ? title.title : title.name}
-                inProgress={
-                  (
-                    requestData.media[
-                      requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
-                    ] ?? []
-                  ).length > 0
-                }
-                is4k={requestData.is4k}
+                inProgress={(requestData.media.downloadStatus ?? []).length > 0}
                 tmdbId={requestData.media.tmdbId}
                 mediaType={requestData.type}
-                mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
-                serviceUrl={
-                  requestData.is4k
-                    ? requestData.media.serviceUrl4k
-                    : requestData.media.serviceUrl
-                }
+                mediaUrl={mediaUrl}
+                serviceUrl={requestData.media.serviceUrl}
               />
             )}
           </div>

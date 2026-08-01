@@ -8,7 +8,6 @@ import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import MediaRequest from '@server/entity/MediaRequest';
 import Season from '@server/entity/Season';
-import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import AsyncLock from '@server/utils/asyncLock';
 import { randomUUID } from 'crypto';
@@ -35,7 +34,6 @@ export interface MediaIds {
 }
 
 interface ProcessOptions {
-  is4k?: boolean;
   mediaAddedAt?: Date;
   jellyfinMediaId?: string;
   imdbId?: string;
@@ -50,8 +48,6 @@ export interface ProcessableSeason {
   seasonNumber: number;
   totalEpisodes: number;
   episodes: number;
-  episodes4k: number;
-  is4kOverride?: boolean;
   processing?: boolean;
 }
 
@@ -62,8 +58,6 @@ class BaseScanner<T> {
   protected items: T[] = [];
   protected totalSize?: number = 0;
   protected scannerName: string;
-  protected enable4kMovie = false;
-  protected enable4kShow = false;
   protected sessionId: string;
   protected running = false;
   readonly asyncLock = new AsyncLock();
@@ -97,7 +91,6 @@ class BaseScanner<T> {
   protected async processMovie(
     tmdbId: number,
     {
-      is4k = false,
       mediaAddedAt,
       jellyfinMediaId,
       imdbId,
@@ -116,11 +109,10 @@ class BaseScanner<T> {
       if (existing) {
         let changedExisting = false;
 
-        if (existing[is4k ? 'status4k' : 'status'] !== MediaStatus.AVAILABLE) {
-          const statusField = is4k ? 'status4k' : 'status';
-          const previousStatus = existing[statusField];
+        if (existing.status !== MediaStatus.AVAILABLE) {
+          const previousStatus = existing.status;
 
-          existing[statusField] =
+          existing.status =
             !processing && hasFile
               ? MediaStatus.AVAILABLE
               : !processing &&
@@ -133,7 +125,7 @@ class BaseScanner<T> {
                     : MediaStatus.PROCESSING
                   : previousStatus;
 
-          if (existing[statusField] !== previousStatus) {
+          if (existing.status !== previousStatus) {
             if (mediaAddedAt) {
               existing.mediaAddedAt = mediaAddedAt;
             }
@@ -146,13 +138,8 @@ class BaseScanner<T> {
           changedExisting = true;
         }
 
-        if (
-          jellyfinMediaId &&
-          existing[is4k ? 'jellyfinMediaId4k' : 'jellyfinMediaId'] !==
-            jellyfinMediaId
-        ) {
-          existing[is4k ? 'jellyfinMediaId4k' : 'jellyfinMediaId'] =
-            jellyfinMediaId;
+        if (jellyfinMediaId && existing.jellyfinMediaId !== jellyfinMediaId) {
+          existing.jellyfinMediaId = jellyfinMediaId;
           changedExisting = true;
         }
 
@@ -161,31 +148,24 @@ class BaseScanner<T> {
           changedExisting = true;
         }
 
-        if (
-          serviceId !== undefined &&
-          existing[is4k ? 'serviceId4k' : 'serviceId'] !== serviceId
-        ) {
-          existing[is4k ? 'serviceId4k' : 'serviceId'] = serviceId;
+        if (serviceId !== undefined && existing.serviceId !== serviceId) {
+          existing.serviceId = serviceId;
           changedExisting = true;
         }
 
         if (
           externalServiceId !== undefined &&
-          existing[is4k ? 'externalServiceId4k' : 'externalServiceId'] !==
-            externalServiceId
+          existing.externalServiceId !== externalServiceId
         ) {
-          existing[is4k ? 'externalServiceId4k' : 'externalServiceId'] =
-            externalServiceId;
+          existing.externalServiceId = externalServiceId;
           changedExisting = true;
         }
 
         if (
           externalServiceSlug !== undefined &&
-          existing[is4k ? 'externalServiceSlug4k' : 'externalServiceSlug'] !==
-            externalServiceSlug
+          existing.externalServiceSlug !== externalServiceSlug
         ) {
-          existing[is4k ? 'externalServiceSlug4k' : 'externalServiceSlug'] =
-            externalServiceSlug;
+          existing.externalServiceSlug = externalServiceSlug;
           changedExisting = true;
         }
 
@@ -207,34 +187,22 @@ class BaseScanner<T> {
         newMedia.tmdbId = tmdbId;
         newMedia.imdbId = imdbId;
 
-        newMedia.status =
-          !is4k && !processing
-            ? MediaStatus.AVAILABLE
-            : !is4k && processing
-              ? MediaStatus.PROCESSING
-              : MediaStatus.UNKNOWN;
-        newMedia.status4k =
-          is4k && this.enable4kMovie && !processing
-            ? MediaStatus.AVAILABLE
-            : is4k && this.enable4kMovie && processing
-              ? MediaStatus.PROCESSING
-              : MediaStatus.UNKNOWN;
+        newMedia.status = !processing
+          ? MediaStatus.AVAILABLE
+          : processing
+            ? MediaStatus.PROCESSING
+            : MediaStatus.UNKNOWN;
         newMedia.mediaType = MediaType.MOVIE;
-        newMedia.serviceId = !is4k ? serviceId : undefined;
-        newMedia.serviceId4k = is4k ? serviceId : undefined;
-        newMedia.externalServiceId = !is4k ? externalServiceId : undefined;
-        newMedia.externalServiceId4k = is4k ? externalServiceId : undefined;
-        newMedia.externalServiceSlug = !is4k ? externalServiceSlug : undefined;
-        newMedia.externalServiceSlug4k = is4k ? externalServiceSlug : undefined;
+        newMedia.serviceId = serviceId;
+        newMedia.externalServiceId = externalServiceId;
+        newMedia.externalServiceSlug = externalServiceSlug;
 
         if (mediaAddedAt) {
           newMedia.mediaAddedAt = mediaAddedAt;
         }
 
         if (jellyfinMediaId) {
-          newMedia.jellyfinMediaId = !is4k ? jellyfinMediaId : undefined;
-          newMedia.jellyfinMediaId4k =
-            is4k && this.enable4kMovie ? jellyfinMediaId : undefined;
+          newMedia.jellyfinMediaId = jellyfinMediaId;
         }
 
         await mediaRepository.save(newMedia);
@@ -243,16 +211,6 @@ class BaseScanner<T> {
     });
   }
 
-  /**
-   * processShow takes a TMDB ID and an array of ProcessableSeasons, which
-   * should include the total episodes a sesaon has + the total available
-   * episodes that each season currently has. Unlike processMovie, this method
-   * does not take an `is4k` option. We handle both the 4k _and_ non 4k status
-   * in one method.
-   *
-   * Note: If 4k is not enable, ProcessableSeasons should combine their episode counts
-   * into the normal episodes properties and avoid using the 4k properties.
-   */
   protected async processShow(
     tmdbId: number,
     tvdbId: number | undefined,
@@ -263,7 +221,6 @@ class BaseScanner<T> {
       serviceId,
       externalServiceId,
       externalServiceSlug,
-      is4k = false,
     }: ProcessOptions = {}
   ): Promise<void> {
     const mediaRepository = getRepository(Media);
@@ -276,12 +233,6 @@ class BaseScanner<T> {
       const currentStandardSeasonsAvailable = (
         media?.seasons.filter(
           (season) => season.status === MediaStatus.AVAILABLE
-        ) ?? []
-      ).length;
-
-      const current4kSeasonsAvailable = (
-        media?.seasons.filter(
-          (season) => season.status4k === MediaStatus.AVAILABLE
         ) ?? []
       ).length;
 
@@ -298,55 +249,21 @@ class BaseScanner<T> {
           media.jellyfinMediaId = jellyfinMediaId;
         }
 
-        if (
-          media &&
-          season.episodes4k > 0 &&
-          this.enable4kShow &&
-          media.jellyfinMediaId4k !== jellyfinMediaId
-        ) {
-          media.jellyfinMediaId4k = jellyfinMediaId;
-        }
-
         if (existingSeason) {
-          // Here we update seasons if they already exist.
-          // If the season is already marked as available, we
-          // force it to stay available (to avoid competing scanners)
           existingSeason.status =
             (season.totalEpisodes === season.episodes && season.episodes > 0) ||
             existingSeason.status === MediaStatus.AVAILABLE
               ? MediaStatus.AVAILABLE
               : season.episodes > 0
                 ? MediaStatus.PARTIALLY_AVAILABLE
-                : !season.is4kOverride &&
-                    season.processing &&
+                : season.processing &&
                     existingSeason.status !== MediaStatus.DELETED
                   ? MediaStatus.PROCESSING
-                  : !season.is4kOverride &&
-                      !season.processing &&
+                  : !season.processing &&
                       season.episodes === 0 &&
                       existingSeason.status === MediaStatus.PROCESSING
                     ? MediaStatus.UNKNOWN
                     : existingSeason.status;
-
-          // Same thing here, except we only do updates if 4k is enabled
-          existingSeason.status4k =
-            (this.enable4kShow &&
-              season.episodes4k === season.totalEpisodes &&
-              season.episodes4k > 0) ||
-            existingSeason.status4k === MediaStatus.AVAILABLE
-              ? MediaStatus.AVAILABLE
-              : this.enable4kShow && season.episodes4k > 0
-                ? MediaStatus.PARTIALLY_AVAILABLE
-                : season.is4kOverride &&
-                    season.processing &&
-                    existingSeason.status4k !== MediaStatus.DELETED
-                  ? MediaStatus.PROCESSING
-                  : season.is4kOverride &&
-                      !season.processing &&
-                      season.episodes4k === 0 &&
-                      existingSeason.status4k === MediaStatus.PROCESSING
-                    ? MediaStatus.UNKNOWN
-                    : existingSeason.status4k;
         } else {
           newSeasons.push(
             new Season({
@@ -356,17 +273,7 @@ class BaseScanner<T> {
                   ? MediaStatus.AVAILABLE
                   : season.episodes > 0
                     ? MediaStatus.PARTIALLY_AVAILABLE
-                    : !season.is4kOverride && season.processing
-                      ? MediaStatus.PROCESSING
-                      : MediaStatus.UNKNOWN,
-              status4k:
-                this.enable4kShow &&
-                season.totalEpisodes === season.episodes4k &&
-                season.episodes4k > 0
-                  ? MediaStatus.AVAILABLE
-                  : this.enable4kShow && season.episodes4k > 0
-                    ? MediaStatus.PARTIALLY_AVAILABLE
-                    : season.is4kOverride && season.processing
+                    : season.processing
                       ? MediaStatus.PROCESSING
                       : MediaStatus.UNKNOWN,
             })
@@ -383,19 +290,11 @@ class BaseScanner<T> {
           ) ?? []
         ).length;
 
-        const new4kSeasonsAvailable = (
-          media.seasons.filter(
-            (season) => season.status4k === MediaStatus.AVAILABLE
-          ) ?? []
-        ).length;
-
-        // If at least one new season has become available, update
-        // the lastSeasonChange field so we can trigger notifications
         if (newStandardSeasonsAvailable > currentStandardSeasonsAvailable) {
           this.log(
             `Detected ${
               newStandardSeasonsAvailable - currentStandardSeasonsAvailable
-            } new standard season(s)`,
+            } new season(s)`,
             'debug'
           );
           media.lastSeasonChange = new Date();
@@ -405,44 +304,27 @@ class BaseScanner<T> {
           }
         }
 
-        if (new4kSeasonsAvailable > current4kSeasonsAvailable) {
-          this.log(
-            `Detected ${
-              new4kSeasonsAvailable - current4kSeasonsAvailable
-            } new 4K season(s)`,
-            'debug'
-          );
-          media.lastSeasonChange = new Date();
-        }
-
         if (!media.mediaAddedAt && mediaAddedAt) {
           media.mediaAddedAt = mediaAddedAt;
         }
 
         if (serviceId !== undefined) {
-          media[is4k ? 'serviceId4k' : 'serviceId'] = serviceId;
+          media.serviceId = serviceId;
         }
 
         if (externalServiceId !== undefined) {
-          media[is4k ? 'externalServiceId4k' : 'externalServiceId'] =
-            externalServiceId;
+          media.externalServiceId = externalServiceId;
         }
 
         if (externalServiceSlug !== undefined) {
-          media[is4k ? 'externalServiceSlug4k' : 'externalServiceSlug'] =
-            externalServiceSlug;
+          media.externalServiceSlug = externalServiceSlug;
         }
 
         const nonSpecialSeasons = media.seasons.filter(
           (s) => s.seasonNumber !== 0
         );
 
-        // DB-only seasons block the rollup unless UNKNOWN (orphan placeholders
-        // can never be revisited by a scan and would pin the show forever).
-        const countsTowardsRollup = (
-          s: Season,
-          statusKey: 'status' | 'status4k'
-        ): boolean => {
+        const countsTowardsRollup = (s: Season): boolean => {
           const scannedSeason = seasons.find(
             (season) => season.seasonNumber === s.seasonNumber
           );
@@ -451,24 +333,17 @@ class BaseScanner<T> {
             return scannedSeason.totalEpisodes > 0;
           }
 
-          return s[statusKey] !== MediaStatus.UNKNOWN;
+          return s.status !== MediaStatus.UNKNOWN;
         };
 
         const standardSeasonsForRollup = nonSpecialSeasons.filter((s) =>
-          countsTowardsRollup(s, 'status')
+          countsTowardsRollup(s)
         );
         const isAllStandardSeasonsAvailable =
           standardSeasonsForRollup.length > 0 &&
           standardSeasonsForRollup.every(
             (s) => s.status === MediaStatus.AVAILABLE
           );
-
-        const seasons4kForRollup = nonSpecialSeasons.filter((s) =>
-          countsTowardsRollup(s, 'status4k')
-        );
-        const isAll4kSeasonsAvailable =
-          seasons4kForRollup.length > 0 &&
-          seasons4kForRollup.every((s) => s.status4k === MediaStatus.AVAILABLE);
 
         media.status = isAllStandardSeasonsAvailable
           ? MediaStatus.AVAILABLE
@@ -486,29 +361,9 @@ class BaseScanner<T> {
               : media.status === MediaStatus.DELETED
                 ? MediaStatus.DELETED
                 : MediaStatus.UNKNOWN;
-        media.status4k =
-          isAll4kSeasonsAvailable && this.enable4kShow
-            ? MediaStatus.AVAILABLE
-            : this.enable4kShow &&
-                media.seasons.some(
-                  (season) =>
-                    season.status4k === MediaStatus.PARTIALLY_AVAILABLE ||
-                    season.status4k === MediaStatus.AVAILABLE
-                )
-              ? MediaStatus.PARTIALLY_AVAILABLE
-              : (!seasons.length && media.status4k !== MediaStatus.DELETED) ||
-                  media.seasons.some(
-                    (season) => season.status4k === MediaStatus.PROCESSING
-                  )
-                ? MediaStatus.PROCESSING
-                : media.status4k === MediaStatus.DELETED
-                  ? MediaStatus.DELETED
-                  : MediaStatus.UNKNOWN;
         await mediaRepository.save(media);
         this.log(`Updating existing title`);
       } else {
-        // For new media, check actual newSeasons objects instead of scanner
-        // input to determine overall availability status
         const nonSpecialNewSeasons = newSeasons.filter(
           (s) => s.seasonNumber !== 0
         );
@@ -522,24 +377,15 @@ class BaseScanner<T> {
           newSeasonsForRollup.length > 0 &&
           newSeasonsForRollup.every((s) => s.status === MediaStatus.AVAILABLE);
 
-        const isAll4kSeasonsAvailable =
-          newSeasonsForRollup.length > 0 &&
-          newSeasonsForRollup.every(
-            (s) => s.status4k === MediaStatus.AVAILABLE
-          );
-
         const newMedia = new Media({
           mediaType: MediaType.TV,
           seasons: newSeasons,
           tmdbId,
           tvdbId,
           mediaAddedAt,
-          serviceId: !is4k ? serviceId : undefined,
-          serviceId4k: is4k ? serviceId : undefined,
-          externalServiceId: !is4k ? externalServiceId : undefined,
-          externalServiceId4k: is4k ? externalServiceId : undefined,
-          externalServiceSlug: !is4k ? externalServiceSlug : undefined,
-          externalServiceSlug4k: is4k ? externalServiceSlug : undefined,
+          serviceId,
+          externalServiceId,
+          externalServiceSlug,
           jellyfinMediaId: newSeasons.some(
             (sn) =>
               sn.status === MediaStatus.PARTIALLY_AVAILABLE ||
@@ -547,15 +393,6 @@ class BaseScanner<T> {
           )
             ? jellyfinMediaId
             : undefined,
-          jellyfinMediaId4k:
-            this.enable4kShow &&
-            newSeasons.some(
-              (sn) =>
-                sn.status4k === MediaStatus.PARTIALLY_AVAILABLE ||
-                sn.status4k === MediaStatus.AVAILABLE
-            )
-              ? jellyfinMediaId
-              : undefined,
           status: isAllStandardSeasonsAvailable
             ? MediaStatus.AVAILABLE
             : newSeasons.some(
@@ -569,21 +406,6 @@ class BaseScanner<T> {
                   )
                 ? MediaStatus.PROCESSING
                 : MediaStatus.UNKNOWN,
-          status4k:
-            isAll4kSeasonsAvailable && this.enable4kShow
-              ? MediaStatus.AVAILABLE
-              : this.enable4kShow &&
-                  newSeasons.some(
-                    (season) =>
-                      season.status4k === MediaStatus.PARTIALLY_AVAILABLE ||
-                      season.status4k === MediaStatus.AVAILABLE
-                  )
-                ? MediaStatus.PARTIALLY_AVAILABLE
-                : newSeasons.some(
-                      (season) => season.status4k === MediaStatus.PROCESSING
-                    )
-                  ? MediaStatus.PROCESSING
-                  : MediaStatus.UNKNOWN,
         });
         await mediaRepository.save(newMedia);
         this.log(`Saved new series`);
@@ -591,15 +413,7 @@ class BaseScanner<T> {
     });
   }
 
-  /**
-   * Declines APPROVED requests bound to media that has been orphaned before completion.
-   * DECLINED clears the duplicate-request guard so the user can re-request it.
-   * Callers must load the requests relation on the media.
-   */
-  protected async declineOrphanedRequests(
-    media: Media,
-    is4k: boolean
-  ): Promise<void> {
+  protected async declineOrphanedRequests(media: Media): Promise<void> {
     if (media.requests === undefined) {
       throw new Error(
         `declineOrphanedRequests called for media ${media.id} without the 'requests' relation loaded`
@@ -609,14 +423,11 @@ class BaseScanner<T> {
     const requestRepository = getRepository(MediaRequest);
 
     const orphanedRequests = (media.requests ?? []).filter(
-      (request) =>
-        request.is4k === is4k && request.status === MediaRequestStatus.APPROVED
+      (request) => request.status === MediaRequestStatus.APPROVED
     );
 
     for (const request of orphanedRequests) {
       request.status = MediaRequestStatus.DECLINED;
-      // Ensure that the media relation is set so the AfterUpdate
-      // notification hook can resolve it
       request.media = media;
       await requestRepository.save(request);
       this.log(
@@ -628,47 +439,17 @@ class BaseScanner<T> {
     }
   }
 
-  /**
-   * Call startRun from child class whenever a run is starting to
-   * ensure required values are set
-   *
-   * Returns the session ID which is requried for the cleanup method
-   */
   protected startRun(): string {
-    const settings = getSettings();
     const sessionId = randomUUID();
     this.sessionId = sessionId;
 
     this.log('Scan starting', 'info', { sessionId });
-
-    this.enable4kMovie = settings.mediary.some(
-      (m) => m.isDefault
-    );
-    if (this.enable4kMovie) {
-      this.log(
-        'At least one Mediary server was detected. 4K movie detection is now enabled',
-        'info'
-      );
-    }
-
-    this.enable4kShow = settings.mediary.some(
-      (m) => m.isDefault
-    );
-    if (this.enable4kShow) {
-      this.log(
-        'At least one Mediary server was detected. 4K series detection is now enabled',
-        'info'
-      );
-    }
 
     this.running = true;
 
     return sessionId;
   }
 
-  /**
-   * Call at end of run loop to perform cleanup
-   */
   protected endRun(sessionId: string): void {
     if (this.sessionId === sessionId) {
       this.running = false;
@@ -708,9 +489,7 @@ class BaseScanner<T> {
       offset += this.bundleSize;
 
       if (offset < this.items.length) {
-        await new Promise<void>((resolve) =>
-          setTimeout(resolve, 200)
-        );
+        await new Promise<void>((resolve) => setTimeout(resolve, 200));
       }
     }
   }

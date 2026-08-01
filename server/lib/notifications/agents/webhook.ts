@@ -29,12 +29,9 @@ const KeyMap: Record<string, string | KeyMapFunction> = {
   media_tmdbid: 'media.tmdbId',
   media_tvdbid: 'media.tvdbId',
   media_type: 'media.mediaType',
-  media_jellyfinMediaId: (payload) =>
-    payload.media?.jellyfinMediaId ?? payload.media?.jellyfinMediaId4k ?? '',
+  media_jellyfinMediaId: (payload) => payload.media?.jellyfinMediaId ?? '',
   media_status: (payload) =>
     payload.media ? MediaStatus[payload.media.status] : '',
-  media_status4k: (payload) =>
-    payload.media ? MediaStatus[payload.media.status4k] : '',
   request_id: 'request.id',
   requestedBy_jellyfinUserId: 'request.requestedBy.jellyfinUserId',
   requestedBy_username: 'request.requestedBy.displayName',

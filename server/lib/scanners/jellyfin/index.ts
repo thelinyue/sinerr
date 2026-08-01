@@ -127,43 +127,15 @@ class JellyfinScanner
 
       const { tmdbId, imdbId, metadata } = extracted;
 
-      const has4k = metadata.MediaSources?.some((MediaSource) => {
-        return MediaSource.MediaStreams.filter(
-          (MediaStream) => MediaStream.Type === 'Video'
-        ).some((MediaStream) => {
-          return (MediaStream.Width ?? 0) > 2000;
-        });
-      });
-
-      const hasOtherResolution = metadata.MediaSources?.some((MediaSource) => {
-        return MediaSource.MediaStreams.filter(
-          (MediaStream) => MediaStream.Type === 'Video'
-        ).some((MediaStream) => {
-          return (MediaStream.Width ?? 0) <= 2000;
-        });
-      });
-
       const mediaAddedAt = metadata.DateCreated
         ? new Date(metadata.DateCreated)
         : undefined;
 
-      if (hasOtherResolution || (!this.enable4kMovie && has4k)) {
-        await this.processMovie(tmdbId, {
-          is4k: false,
-          mediaAddedAt,
-          jellyfinMediaId: metadata.Id,
-          imdbId,
-        });
-      }
-
-      if (has4k && this.enable4kMovie) {
-        await this.processMovie(tmdbId, {
-          is4k: true,
-          mediaAddedAt,
-          jellyfinMediaId: metadata.Id,
-          imdbId,
-        });
-      }
+      await this.processMovie(tmdbId, {
+        mediaAddedAt,
+        jellyfinMediaId: metadata.Id,
+        imdbId,
+      });
     } catch (e) {
       this.log(
         `Failed to process Jellyfin item, id: ${jellyfinitem.Id}`,
@@ -305,75 +277,23 @@ class JellyfinScanner
 
           // Check if we found the matching season and it has all the available episodes
           if (matchedJellyfinSeason) {
+            const episodes = await this.jfClient.getEpisodes(
+              Id,
+              matchedJellyfinSeason.Id
+            );
             let totalStandard = 0;
-            let total4k = 0;
 
-            if (!this.enable4kShow) {
-              const episodes = await this.jfClient.getEpisodes(
-                Id,
-                matchedJellyfinSeason.Id
-              );
+            for (const episode of episodes) {
+              let episodeCount = 1;
 
-              for (const episode of episodes) {
-                let episodeCount = 1;
-
-                // count number of combined episodes
-                if (
-                  episode.IndexNumber !== undefined &&
-                  episode.IndexNumberEnd !== undefined
-                ) {
-                  episodeCount =
-                    episode.IndexNumberEnd - episode.IndexNumber + 1;
-                }
-
-                totalStandard += episodeCount;
+              if (
+                episode.IndexNumber !== undefined &&
+                episode.IndexNumberEnd !== undefined
+              ) {
+                episodeCount = episode.IndexNumberEnd - episode.IndexNumber + 1;
               }
-            } else {
-              // 4K detection enabled - request media info to check resolution
-              const episodes = await this.jfClient.getEpisodes(
-                Id,
-                matchedJellyfinSeason.Id,
-                { includeMediaInfo: true }
-              );
 
-              for (const episode of episodes) {
-                let episodeCount = 1;
-
-                // count number of combined episodes
-                if (
-                  episode.IndexNumber !== undefined &&
-                  episode.IndexNumberEnd !== undefined
-                ) {
-                  episodeCount =
-                    episode.IndexNumberEnd - episode.IndexNumber + 1;
-                }
-
-                const has4k = episode.MediaSources?.some((MediaSource) =>
-                  MediaSource.MediaStreams.some(
-                    (MediaStream) =>
-                      MediaStream.Type === 'Video' &&
-                      (MediaStream.Width ?? 0) > 2000
-                  )
-                );
-
-                const hasStandard = episode.MediaSources?.some((MediaSource) =>
-                  MediaSource.MediaStreams.some(
-                    (MediaStream) =>
-                      MediaStream.Type === 'Video' &&
-                      (MediaStream.Width ?? 0) <= 2000
-                  )
-                );
-
-                // Count in both if episode has both versions
-                // TODO: Make this more robust in the future
-                // Currently, this detection is based solely on file resolution. If a 4K
-                // request results in 1080p files (no 4K release available yet), those files
-                // will be counted as "standard" even though they're in the 4K library. This
-                // can cause non-4K users to see content as "available" when they can't access
-                // it. See issue https://github.com/thelinyue/sinerr/issues/1744 for details.
-                if (hasStandard) totalStandard += episodeCount;
-                if (has4k) total4k += episodeCount;
-              }
+              totalStandard += episodeCount;
             }
 
             // With AniDB we can have multiple shows for one season, so we need to save
@@ -396,14 +316,12 @@ class JellyfinScanner
               seasonNumber: season.season_number,
               totalEpisodes: season.episode_count,
               episodes: totalStandard,
-              episodes4k: total4k,
             });
           } else {
             processableSeasons.push({
               seasonNumber: season.season_number,
               totalEpisodes: season.episode_count,
               episodes: 0,
-              episodes4k: 0,
             });
           }
         }

@@ -73,9 +73,8 @@ const RequestItemError = ({
     mutate('/api/v1/request/count');
   };
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
-    mediaUrl4k: requestData?.media?.mediaUrl4k,
   });
 
   return (
@@ -132,34 +131,15 @@ const RequestItemError = ({
                   </Badge>
                 ) : (
                   <StatusBadge
-                    status={
-                      requestData.media[
-                        requestData.is4k ? 'status4k' : 'status'
-                      ]
-                    }
-                    downloadItem={
-                      requestData.media[
-                        requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
-                      ]
-                    }
+                    status={requestData.media.status}
+                    downloadItem={requestData.media.downloadStatus}
                     title={intl.formatMessage(messages.unknowntitle)}
                     inProgress={
-                      (
-                        requestData.media[
-                          requestData.is4k
-                            ? 'downloadStatus4k'
-                            : 'downloadStatus'
-                        ] ?? []
-                      ).length > 0
+                      (requestData.media.downloadStatus ?? []).length > 0
                     }
-                    is4k={requestData.is4k}
                     mediaType={requestData.type}
-                    mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
-                    serviceUrl={
-                      requestData.is4k
-                        ? requestData.media.serviceUrl4k
-                        : requestData.media.serviceUrl
-                    }
+                    mediaUrl={mediaUrl}
+                    serviceUrl={requestData.media.serviceUrl}
                   />
                 )}
               </div>
@@ -316,7 +296,6 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
     refreshInterval: refreshIntervalHelper(
       {
         downloadStatus: request.media.downloadStatus,
-        downloadStatus4k: request.media.downloadStatus4k,
       },
       15000
     ),
@@ -354,9 +333,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
   const deleteMediaFile = async () => {
     if (request.media) {
       try {
-        await axios.delete(
-          `/api/v1/media/${request.media.id}/file?is4k=${request.is4k}`
-        );
+        await axios.delete(`/api/v1/media/${request.media.id}/file`);
         await axios.delete(`/api/v1/media/${request.media.id}`);
       } catch (e) {
         if (!axios.isAxiosError(e) || e.response?.status !== 404) {
@@ -388,9 +365,8 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
     }
   };
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
-    mediaUrl4k: requestData?.media?.mediaUrl4k,
   });
 
   if (!title && !error) {
@@ -417,7 +393,6 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
         show={showEditModal}
         tmdbId={request.media.tmdbId}
         type={request.type}
-        is4k={request.is4k}
         editRequest={request}
         onCancel={() => setShowEditModal(false)}
         onComplete={() => {
@@ -524,8 +499,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                   {intl.formatMessage(globalMessages.failed)}
                 </Badge>
               ) : requestData.status === MediaRequestStatus.PENDING &&
-                requestData.media[requestData.is4k ? 'status4k' : 'status'] ===
-                  MediaStatus.DELETED ? (
+                requestData.media.status === MediaStatus.DELETED ? (
                 <Badge
                   badgeType="warning"
                   href={`/${requestData.type}/${requestData.media.tmdbId}?manage=1`}
@@ -534,31 +508,16 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                 </Badge>
               ) : (
                 <StatusBadge
-                  status={
-                    requestData.media[requestData.is4k ? 'status4k' : 'status']
-                  }
-                  downloadItem={
-                    requestData.media[
-                      requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
-                    ]
-                  }
+                  status={requestData.media.status}
+                  downloadItem={requestData.media.downloadStatus}
                   title={isMovie(title) ? title.title : title.name}
                   inProgress={
-                    (
-                      requestData.media[
-                        requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
-                      ] ?? []
-                    ).length > 0
+                    (requestData.media.downloadStatus ?? []).length > 0
                   }
-                  is4k={requestData.is4k}
                   tmdbId={requestData.media.tmdbId}
                   mediaType={requestData.type}
-                  mediaUrl={requestData.is4k ? mediaUrl4k : mediaUrl}
-                  serviceUrl={
-                    requestData.is4k
-                      ? requestData.media.serviceUrl4k
-                      : requestData.media.serviceUrl
-                  }
+                  mediaUrl={mediaUrl}
+                  serviceUrl={requestData.media.serviceUrl}
                 />
               )}
             </div>

@@ -23,12 +23,10 @@ const messages = defineMessages('components.RequestModal', {
   requestSuccess: '<strong>{title}</strong> requested successfully!',
   requestCancel: 'Request for <strong>{title}</strong> canceled.',
   requestmovietitle: 'Request Movie',
-  requestmovie4ktitle: 'Request Movie in 4K',
   edit: 'Edit Request',
   approve: 'Approve Request',
   cancel: 'Cancel Request',
   pendingrequest: 'Pending Movie Request',
-  pending4krequest: 'Pending 4K Movie Request',
   requestfrom: "{username}'s request is pending approval.",
   errorediting: 'Something went wrong while editing the request.',
   requestedited: 'Request for <strong>{title}</strong> edited successfully!',
@@ -39,7 +37,6 @@ const messages = defineMessages('components.RequestModal', {
 
 interface RequestModalProps extends React.HTMLAttributes<HTMLDivElement> {
   tmdbId: number;
-  is4k?: boolean;
   editRequest?: NonFunctionProperties<MediaRequest>;
   onCancel?: () => void;
   onComplete?: (newStatus: MediaStatus) => void;
@@ -52,7 +49,6 @@ const MovieRequestModal = ({
   tmdbId,
   onUpdating,
   editRequest,
-  is4k = false,
 }: RequestModalProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [requestOverrides, setRequestOverrides] =
@@ -93,7 +89,6 @@ const MovieRequestModal = ({
       const response = await axios.post<MediaRequest>('/api/v1/request', {
         mediaId: data?.id,
         mediaType: 'movie',
-        is4k,
         ignoreQuota: requestOverrides?.ignoreQuota,
         ...overrideParams,
       });
@@ -103,14 +98,8 @@ const MovieRequestModal = ({
       if (response.data) {
         if (onComplete) {
           onComplete(
-            hasPermission(
-              is4k ? Permission.AUTO_APPROVE_4K : Permission.AUTO_APPROVE
-            ) ||
-              hasPermission(
-                is4k
-                  ? Permission.AUTO_APPROVE_4K_MOVIE
-                  : Permission.AUTO_APPROVE_MOVIE
-              )
+            hasPermission(Permission.AUTO_APPROVE) ||
+              hasPermission(Permission.AUTO_APPROVE_MOVIE)
               ? MediaStatus.PROCESSING
               : MediaStatus.PENDING
           );
@@ -137,7 +126,6 @@ const MovieRequestModal = ({
     requestOverrides,
     data?.id,
     data?.title,
-    is4k,
     onComplete,
     addToast,
     intl,
@@ -231,9 +219,7 @@ const MovieRequestModal = ({
         loading={!data && !error}
         backgroundClickable
         onCancel={onCancel}
-        title={intl.formatMessage(
-          is4k ? messages.pending4krequest : messages.pendingrequest
-        )}
+        title={intl.formatMessage(messages.pendingrequest)}
         subTitle={data?.title}
         onOk={() =>
           hasPermission(Permission.MANAGE_REQUESTS)
@@ -289,7 +275,6 @@ const MovieRequestModal = ({
           hasPermission(Permission.MANAGE_REQUESTS)) && (
           <AdvancedRequester
             type="movie"
-            is4k={is4k}
             requestUser={editRequest.requestedBy}
             defaultOverrides={{
               folder: editRequest.rootFolder,
@@ -309,8 +294,8 @@ const MovieRequestModal = ({
   const hasAutoApprove = hasPermission(
     [
       Permission.MANAGE_REQUESTS,
-      is4k ? Permission.AUTO_APPROVE_4K : Permission.AUTO_APPROVE,
-      is4k ? Permission.AUTO_APPROVE_4K_MOVIE : Permission.AUTO_APPROVE_MOVIE,
+      Permission.AUTO_APPROVE,
+      Permission.AUTO_APPROVE_MOVIE,
     ],
     { type: 'or' }
   );
@@ -325,16 +310,12 @@ const MovieRequestModal = ({
         isUpdating ||
         (quota?.movie.restricted && !requestOverrides?.ignoreQuota)
       }
-      title={intl.formatMessage(
-        is4k ? messages.requestmovie4ktitle : messages.requestmovietitle
-      )}
+      title={intl.formatMessage(messages.requestmovietitle)}
       subTitle={data?.title}
       okText={
         isUpdating
           ? intl.formatMessage(globalMessages.requesting)
-          : intl.formatMessage(
-              is4k ? globalMessages.request4k : globalMessages.request
-            )
+          : intl.formatMessage(globalMessages.request)
       }
       okButtonType={'primary'}
       backdrop={`https://image.tmdb.org/t/p/w1920_and_h800_multi_faces/${data?.backdropPath}`}
@@ -362,7 +343,6 @@ const MovieRequestModal = ({
         hasPermission(Permission.MANAGE_REQUESTS)) && (
         <AdvancedRequester
           type="movie"
-          is4k={is4k}
           quota={quota}
           onChange={(overrides) => {
             setRequestOverrides(overrides);

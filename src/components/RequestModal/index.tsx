@@ -10,7 +10,6 @@ interface RequestModalProps {
   show: boolean;
   type: 'movie' | 'tv' | 'collection';
   tmdbId: number;
-  is4k?: boolean;
   editRequest?: NonFunctionProperties<MediaRequest>;
   onComplete?: (newStatus: MediaStatus) => void;
   onCancel?: () => void;
@@ -21,7 +20,6 @@ const RequestModal = ({
   type,
   show,
   tmdbId,
-  is4k,
   editRequest,
   onComplete,
   onUpdating,
@@ -44,7 +42,6 @@ const RequestModal = ({
           onCancel={onCancel}
           tmdbId={tmdbId}
           onUpdating={onUpdating}
-          is4k={is4k}
           editRequest={editRequest}
         />
       ) : type === 'tv' ? (
@@ -53,7 +50,6 @@ const RequestModal = ({
           onCancel={onCancel}
           tmdbId={tmdbId}
           onUpdating={onUpdating}
-          is4k={is4k}
           editRequest={editRequest}
         />
       ) : (
@@ -62,7 +58,6 @@ const RequestModal = ({
           onCancel={onCancel}
           tmdbId={tmdbId}
           onUpdating={onUpdating}
-          is4k={is4k}
         />
       )}
     </Transition>

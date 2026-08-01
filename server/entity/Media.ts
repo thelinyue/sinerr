@@ -109,10 +109,6 @@ class Media {
   @Index()
   public status: MediaStatus;
 
-  @Column({ type: 'int', default: MediaStatus.UNKNOWN })
-  @Index()
-  public status4k: MediaStatus;
-
   @OneToMany(() => MediaRequest, (request) => request.media, {
     cascade: ['insert', 'remove'],
   })
@@ -162,54 +158,30 @@ class Media {
   public serviceId?: number | null;
 
   @Column({ nullable: true, type: 'int' })
-  public serviceId4k?: number | null;
-
-  @Column({ nullable: true, type: 'int' })
   public externalServiceId?: number | null;
-
-  @Column({ nullable: true, type: 'int' })
-  public externalServiceId4k?: number | null;
 
   @Column({ nullable: true, type: 'varchar' })
   public externalServiceSlug?: string | null;
 
   @Column({ nullable: true, type: 'varchar' })
-  public externalServiceSlug4k?: string | null;
-
-  @Column({ nullable: true, type: 'varchar' })
   public jellyfinMediaId?: string | null;
 
-  @Column({ nullable: true, type: 'varchar' })
-  public jellyfinMediaId4k?: string | null;
-
   public serviceUrl?: string;
-  public serviceUrl4k?: string;
   public downloadStatus?: DownloadingItem[] = [];
-  public downloadStatus4k?: DownloadingItem[] = [];
 
   public mediaUrl?: string;
-  public mediaUrl4k?: string;
 
   public tautulliUrl?: string;
-  public tautulliUrl4k?: string;
 
   constructor(init?: Partial<Media>) {
     Object.assign(this, init);
   }
 
-  public resetServiceData(is4k?: boolean): void {
-    if (is4k === undefined || !is4k) {
-      this.serviceId = null;
-      this.externalServiceId = null;
-      this.externalServiceSlug = null;
-      this.jellyfinMediaId = null;
-    }
-    if (is4k === undefined || is4k) {
-      this.serviceId4k = null;
-      this.externalServiceId4k = null;
-      this.externalServiceSlug4k = null;
-      this.jellyfinMediaId4k = null;
-    }
+  public resetServiceData(): void {
+    this.serviceId = null;
+    this.externalServiceId = null;
+    this.externalServiceSlug = null;
+    this.jellyfinMediaId = null;
   }
 
   @AfterLoad()
@@ -226,9 +198,6 @@ class Media {
 
     if (this.jellyfinMediaId) {
       this.mediaUrl = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId}&context=home&serverId=${serverId}`;
-    }
-    if (this.jellyfinMediaId4k) {
-      this.mediaUrl4k = `${jellyfinHost}/web/index.html#!/${pageName}?id=${this.jellyfinMediaId4k}&context=home&serverId=${serverId}`;
     }
   }
 

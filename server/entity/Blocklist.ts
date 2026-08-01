@@ -89,7 +89,6 @@ export class Blocklist implements BlocklistItem {
       media = new Media({
         tmdbId: blocklistRequest.tmdbId,
         status: MediaStatus.BLOCKLISTED,
-        status4k: MediaStatus.BLOCKLISTED,
         mediaType: blocklistRequest.mediaType,
         blocklist: Promise.resolve(blocklist),
       });
@@ -98,7 +97,6 @@ export class Blocklist implements BlocklistItem {
     } else {
       media.blocklist = Promise.resolve(blocklist);
       media.status = MediaStatus.BLOCKLISTED;
-      media.status4k = MediaStatus.BLOCKLISTED;
 
       await mediaRepository.save(media);
     }

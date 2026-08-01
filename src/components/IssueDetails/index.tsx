@@ -47,9 +47,7 @@ const messages = defineMessages('components.IssueDetails', {
   reopenissueandcomment: 'Reopen with Comment',
   issuepagetitle: 'Issue',
   playonmediaserver: 'Play on {mediaServerName}',
-  play4konserver: 'Play in 4K on {mediaServerName}',
   openinarr: 'Open in {arr}',
-  openin4karr: 'Open in 4K {arr}',
   toasteditdescriptionsuccess: 'Issue description edited successfully!',
   toasteditdescriptionfailed:
     'Something went wrong while editing the issue description.',
@@ -92,9 +90,8 @@ const IssueDetails = () => {
       : null
   );
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
-    mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
   });
 
   const CommentSchema = Yup.object().shape({
@@ -403,49 +400,9 @@ const IssueDetails = () => {
                   >
                     <ServerIcon />
                     <span>
-                    {intl.formatMessage(messages.openinarr, {
-                      arr: 'MoviePilot',
-                    })}
-                    </span>
-                  </Button>
-                )}
-              {issueData?.media.mediaUrl4k && (
-                <Button
-                  as="a"
-                  href={mediaUrl4k}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full"
-                  buttonType="ghost"
-                >
-                  <PlayIcon />
-                  <span>
-                    {settings.currentSettings.mediaServerType ===
-                    MediaServerType.EMBY
-                      ? intl.formatMessage(messages.play4konserver, {
-                          mediaServerName: 'Emby',
-                        })
-                      : intl.formatMessage(messages.play4konserver, {
-                          mediaServerName: 'Jellyfin',
-                        })}
-                  </span>
-                </Button>
-              )}
-              {issueData?.media.serviceUrl4k &&
-                hasPermission(Permission.ADMIN) && (
-                  <Button
-                    as="a"
-                    href={issueData?.media.serviceUrl4k}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="w-full"
-                    buttonType="ghost"
-                  >
-                    <ServerIcon />
-                    <span>
-                {intl.formatMessage(messages.openin4karr, {
-                  arr: 'MoviePilot',
-                })}
+                      {intl.formatMessage(messages.openinarr, {
+                        arr: 'MoviePilot',
+                      })}
                     </span>
                   </Button>
                 )}
@@ -652,52 +609,12 @@ const IssueDetails = () => {
               >
                 <ServerIcon />
                 <span>
-                {intl.formatMessage(messages.openinarr, {
-                  arr: 'MoviePilot',
-                })}
-                </span>
-              </Button>
-            )}
-            {issueData?.media.mediaUrl4k && (
-              <Button
-                as="a"
-                href={mediaUrl4k}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full"
-                buttonType="ghost"
-              >
-                <PlayIcon />
-                <span>
-                  {settings.currentSettings.mediaServerType ===
-                  MediaServerType.EMBY
-                    ? intl.formatMessage(messages.play4konserver, {
-                        mediaServerName: 'Emby',
-                      })
-                    : intl.formatMessage(messages.play4konserver, {
-                        mediaServerName: 'Jellyfin',
-                      })}
-                </span>
-              </Button>
-            )}
-            {issueData?.media.serviceUrl4k &&
-              hasPermission(Permission.ADMIN) && (
-                <Button
-                  as="a"
-                  href={issueData?.media.serviceUrl4k}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full"
-                  buttonType="ghost"
-                >
-                  <ServerIcon />
-                  <span>
-                  {intl.formatMessage(messages.openin4karr, {
+                  {intl.formatMessage(messages.openinarr, {
                     arr: 'MoviePilot',
                   })}
-                  </span>
-                </Button>
-              )}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

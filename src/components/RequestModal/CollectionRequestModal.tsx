@@ -23,17 +23,13 @@ const messages = defineMessages('components.RequestModal', {
   requestadmin: 'This request will be approved automatically.',
   requestSuccess: '<strong>{title}</strong> requested successfully!',
   requestcollectiontitle: 'Request Collection',
-  requestcollection4ktitle: 'Request Collection in 4K',
   requesterror: 'Something went wrong while submitting the request.',
   selectmovies: 'Select Movie(s)',
   requestmovies: 'Request {count} {count, plural, one {Movie} other {Movies}}',
-  requestmovies4k:
-    'Request {count} {count, plural, one {Movie} other {Movies}} in 4K',
 });
 
 interface RequestModalProps extends React.HTMLAttributes<HTMLDivElement> {
   tmdbId: number;
-  is4k?: boolean;
   onCancel?: () => void;
   onComplete?: (newStatus: MediaStatus) => void;
   onUpdating?: (isUpdating: boolean) => void;
@@ -44,7 +40,6 @@ const CollectionRequestModal = ({
   onComplete,
   tmdbId,
   onUpdating,
-  is4k = false,
 }: RequestModalProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [requestOverrides, setRequestOverrides] =
@@ -80,7 +75,6 @@ const CollectionRequestModal = ({
           ...(part.mediaInfo?.requests ?? [])
             .filter(
               (request) =>
-                request.is4k === is4k &&
                 request.status !== MediaRequestStatus.DECLINED &&
                 request.status !== MediaRequestStatus.COMPLETED
             )
@@ -94,10 +88,8 @@ const CollectionRequestModal = ({
       .filter(
         (part) =>
           part.mediaInfo &&
-          (part.mediaInfo[is4k ? 'status4k' : 'status'] ===
-            MediaStatus.AVAILABLE ||
-            part.mediaInfo[is4k ? 'status4k' : 'status'] ===
-              MediaStatus.PROCESSING) &&
+          (part.mediaInfo.status === MediaStatus.AVAILABLE ||
+            part.mediaInfo.status === MediaStatus.PROCESSING) &&
           !requestedParts.includes(part.id)
       )
       .map((part) => part.id);
@@ -109,12 +101,10 @@ const CollectionRequestModal = ({
     selectedParts.includes(tmdbId);
 
   const togglePart = (tmdbId: number): void => {
-    // If this part already has a pending request, don't allow it to be toggled
     if (getAllRequestedParts().includes(tmdbId)) {
       return;
     }
 
-    // If there are no more remaining requests available, block toggle
     if (
       quota?.movie.limit &&
       currentlyRemaining <= 0 &&
@@ -135,7 +125,6 @@ const CollectionRequestModal = ({
   );
 
   const toggleAllParts = (): void => {
-    // If the user has a quota and not enough requests for all parts, block toggleAllParts
     if (
       quota?.movie.limit &&
       (quota?.movie.remaining ?? 0) < unrequestedParts.length
@@ -171,7 +160,6 @@ const CollectionRequestModal = ({
 
     return (part?.mediaInfo?.requests ?? []).find(
       (request) =>
-        request.is4k === is4k &&
         request.status !== MediaRequestStatus.DECLINED &&
         request.status !== MediaRequestStatus.COMPLETED
     );
@@ -205,7 +193,6 @@ const CollectionRequestModal = ({
           await axios.post<MediaRequest>('/api/v1/request', {
             mediaId: part.id,
             mediaType: 'movie',
-            is4k,
             ...overrideParams,
           });
         })
@@ -245,14 +232,13 @@ const CollectionRequestModal = ({
     addToast,
     intl,
     selectedParts,
-    is4k,
   ]);
 
   const hasAutoApprove = hasPermission(
     [
       Permission.MANAGE_REQUESTS,
-      is4k ? Permission.AUTO_APPROVE_4K : Permission.AUTO_APPROVE,
-      is4k ? Permission.AUTO_APPROVE_4K_MOVIE : Permission.AUTO_APPROVE_MOVIE,
+      Permission.AUTO_APPROVE,
+      Permission.AUTO_APPROVE_MOVIE,
     ],
     { type: 'or' }
   );
@@ -268,23 +254,16 @@ const CollectionRequestModal = ({
       backgroundClickable
       onCancel={onCancel}
       onOk={sendRequest}
-      title={intl.formatMessage(
-        is4k
-          ? messages.requestcollection4ktitle
-          : messages.requestcollectiontitle
-      )}
+      title={intl.formatMessage(messages.requestcollectiontitle)}
       subTitle={data?.name}
       okText={
         isUpdating
           ? intl.formatMessage(globalMessages.requesting)
           : selectedParts.length === 0
             ? intl.formatMessage(messages.selectmovies)
-            : intl.formatMessage(
-                is4k ? messages.requestmovies4k : messages.requestmovies,
-                {
-                  count: selectedParts.length,
-                }
-              )
+            : intl.formatMessage(messages.requestmovies, {
+                count: selectedParts.length,
+              })
       }
       okDisabled={selectedParts.length === 0}
       okButtonType={'primary'}
@@ -370,10 +349,8 @@ const CollectionRequestModal = ({
                       const partRequest = getPartRequest(part.id);
                       const partMedia =
                         part.mediaInfo &&
-                        part.mediaInfo[is4k ? 'status4k' : 'status'] !==
-                          MediaStatus.UNKNOWN &&
-                        part.mediaInfo[is4k ? 'status4k' : 'status'] !==
-                          MediaStatus.DELETED
+                        part.mediaInfo.status !== MediaStatus.UNKNOWN &&
+                        part.mediaInfo.status !== MediaStatus.DELETED
                           ? part.mediaInfo
                           : undefined;
 
@@ -490,14 +467,12 @@ const CollectionRequestModal = ({
                             {((!partMedia &&
                               partRequest?.status ===
                                 MediaRequestStatus.APPROVED) ||
-                              partMedia?.[is4k ? 'status4k' : 'status'] ===
-                                MediaStatus.PROCESSING) && (
+                              partMedia?.status === MediaStatus.PROCESSING) && (
                               <Badge badgeType="primary">
                                 {intl.formatMessage(globalMessages.requested)}
                               </Badge>
                             )}
-                            {partMedia?.[is4k ? 'status4k' : 'status'] ===
-                              MediaStatus.AVAILABLE && (
+                            {partMedia?.status === MediaStatus.AVAILABLE && (
                               <Badge badgeType="success">
                                 {intl.formatMessage(globalMessages.available)}
                               </Badge>
@@ -521,7 +496,6 @@ const CollectionRequestModal = ({
         hasPermission(Permission.MANAGE_REQUESTS)) && (
         <AdvancedRequester
           type="movie"
-          is4k={is4k}
           onChange={(overrides) => {
             setRequestOverrides(overrides);
           }}

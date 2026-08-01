@@ -13,17 +13,9 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Bars4Icon, ServerIcon } from '@heroicons/react/24/outline';
-import {
-  CheckCircleIcon,
-  DocumentMinusIcon,
-  TrashIcon,
-} from '@heroicons/react/24/solid';
+import { CheckCircleIcon, DocumentMinusIcon } from '@heroicons/react/24/solid';
 import { IssueStatus } from '@server/constants/issue';
-import {
-  MediaRequestStatus,
-  MediaStatus,
-  MediaType,
-} from '@server/constants/media';
+import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import type { MediaWatchDataResponse } from '@server/interfaces/api/mediaInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
@@ -65,7 +57,6 @@ const messages = defineMessages('components.ManageSlideOver', {
   manageModalIssues: 'Open Issues',
   manageModalRequests: 'Requests',
   manageModalMedia: 'Media',
-  manageModalMedia4k: '4K Media',
   manageModalAdvanced: 'Advanced',
   manageModalNoRequests: 'No requests.',
   manageModalClearMedia: 'Clear Data',
@@ -75,15 +66,11 @@ const messages = defineMessages('components.ManageSlideOver', {
     '* This will irreversibly remove this {mediaType} from {arr}, including all files.',
   openarr: 'Open in {arr}',
   removearr: 'Remove from {arr}',
-  openarr4k: 'Open in 4K {arr}',
-  removearr4k: 'Remove from 4K {arr}',
   clearmediadataerror: 'Something went wrong while clearing the media data.',
   removemediaerror: 'Something went wrong while removing the media.',
   downloadstatus: 'Downloads',
   markavailable: 'Mark as Available',
-  mark4kavailable: 'Mark as Available in 4K',
   markallseasonsavailable: 'Mark All Seasons as Available',
-  markallseasons4kavailable: 'Mark All Seasons as Available in 4K',
   opentautulli: 'Open in Tautulli',
   plays:
     '<strong>{playCount, number}</strong> {playCount, plural, one {play} other {plays}}',
@@ -99,7 +86,6 @@ const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
 };
 
 interface ManageSlideOverProps {
-  // mediaType: 'movie' | 'tv';
   show?: boolean;
   onClose: () => void;
   revalidate: () => void;
@@ -147,31 +133,9 @@ const ManageSlideOver = ({
     }
   };
 
-  const deleteMediaFile = async (is4k = false) => {
-    if (data.mediaInfo) {
-      try {
-        await axios.delete(
-          `/api/v1/media/${data.mediaInfo.id}/file?is4k=${is4k}`
-        );
-      } catch (e) {
-        if (!axios.isAxiosError(e) || e.response?.status !== 404) {
-          addToast(intl.formatMessage(messages.removemediaerror), {
-            appearance: 'error',
-            autoDismiss: true,
-          });
-          revalidate();
-          return;
-        }
-      }
-      revalidate();
-      onClose();
-    }
-  };
-
-  const markAvailable = async (is4k = false) => {
+  const markAvailable = async () => {
     if (data.mediaInfo) {
       await axios.post(`/api/v1/media/${data.mediaInfo?.id}/available`, {
-        is4k,
         ...(mediaType === 'tv' && {
           seasons: data.seasons.filter((season) => season.seasonNumber !== 0),
         }),
@@ -215,8 +179,7 @@ const ManageSlideOver = ({
       subText={isMovie(data) ? data.title : data.name}
     >
       <div className="space-y-6">
-        {((data?.mediaInfo?.downloadStatus ?? []).length > 0 ||
-          (data?.mediaInfo?.downloadStatus4k ?? []).length > 0) && (
+        {(data?.mediaInfo?.downloadStatus ?? []).length > 0 && (
           <div>
             <h3 className="mb-2 text-xl font-bold">
               {intl.formatMessage(messages.downloadstatus)}
@@ -231,18 +194,6 @@ const ManageSlideOver = ({
                     >
                       <li className="border-b border-gray-700 last:border-b-0">
                         <DownloadBlock downloadItem={status} />
-                      </li>
-                    </Tooltip>
-                  )
-                )}
-                {filterDuplicateDownloads(data.mediaInfo?.downloadStatus4k).map(
-                  (status, index) => (
-                    <Tooltip
-                      key={`dl-status-4k-${status.externalId}-${index}`}
-                      content={status.title}
-                    >
-                      <li className="border-b border-gray-700 last:border-b-0">
-                        <DownloadBlock downloadItem={status} is4k />
                       </li>
                     </Tooltip>
                   )
@@ -437,134 +388,6 @@ const ManageSlideOver = ({
             </div>
           )}
         {hasPermission(Permission.ADMIN) &&
-          (data.mediaInfo?.serviceUrl4k ||
-            data.mediaInfo?.tautulliUrl4k ||
-            watchData?.data4k) && (
-            <div>
-              <h3 className="mb-2 text-xl font-bold">
-                {intl.formatMessage(messages.manageModalMedia4k)}
-              </h3>
-              <div className="space-y-2">
-                {(watchData?.data4k || data.mediaInfo?.tautulliUrl4k) && (
-                  <div>
-                    {watchData?.data4k && (
-                      <div
-                        className={`grid grid-cols-1 divide-y divide-gray-700 overflow-hidden border-gray-700 text-sm text-gray-300 shadow ${
-                          data.mediaInfo?.tautulliUrl4k
-                            ? 'rounded-t-md border-x border-t'
-                            : 'rounded-md border'
-                        }`}
-                      >
-                        <div className="grid grid-cols-3 divide-x divide-gray-700">
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.pastdays, {
-                                days: 7,
-                              })}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(watchData.data4k.playCount7Days)}
-                            </div>
-                          </div>
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.pastdays, {
-                                days: 30,
-                              })}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(
-                                watchData.data4k.playCount30Days
-                              )}
-                            </div>
-                          </div>
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.alltime)}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(watchData.data4k.playCount)}
-                            </div>
-                          </div>
-                        </div>
-                        {!!watchData.data4k.users.length && (
-                          <div className="flex flex-row space-x-2 px-4 pb-2 pt-3">
-                            <span className="shrink-0 font-bold leading-8">
-                              {intl.formatMessage(messages.playedby)}
-                            </span>
-                            <span className="flex flex-row flex-wrap">
-                              {watchData.data4k.users.map((user) => (
-                                <Link
-                                  href={
-                                    currentUser?.id === user.id
-                                      ? '/profile'
-                                      : `/users/${user.id}`
-                                  }
-                                  key={`watch-user-${user.id}`}
-                                  className="z-0 -mr-2 mb-1 shrink-0 hover:z-50"
-                                >
-                                  <Tooltip
-                                    key={`watch-user-${user.id}`}
-                                    content={user.displayName}
-                                  >
-                                    <CachedImage
-                                      type="avatar"
-                                      src={user.avatar}
-                                      alt={user.displayName}
-                                      className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
-                                      width={32}
-                                      height={32}
-                                    />
-                                  </Tooltip>
-                                </Link>
-                              ))}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {data.mediaInfo?.tautulliUrl4k && (
-                      <a
-                        href={data.mediaInfo.tautulliUrl4k}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Button
-                          buttonType="ghost"
-                          className={`w-full ${
-                            watchData?.data4k ? 'rounded-t-none' : ''
-                          }`}
-                        >
-                          <Bars4Icon />
-                          <span>
-                            {intl.formatMessage(messages.opentautulli)}
-                          </span>
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                )}
-                {data?.mediaInfo?.serviceUrl4k && (
-                  <a
-                    href={data?.mediaInfo?.serviceUrl4k}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <Button buttonType="ghost" className="w-full">
-                      <ServerIcon />
-                      <span>
-                        {intl.formatMessage(messages.openarr4k, {
-                          arr: 'MoviePilot',
-                        })}
-                      </span>
-                    </Button>
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-        {hasPermission(Permission.ADMIN) &&
           data?.mediaInfo &&
           data.mediaInfo.status !== MediaStatus.BLOCKLISTED && (
             <div>
@@ -588,23 +411,6 @@ const ManageSlideOver = ({
                     </span>
                   </Button>
                 )}
-                {data?.mediaInfo.status4k !== MediaStatus.AVAILABLE &&
-                  settings.currentSettings.series4kEnabled && (
-                    <Button
-                      onClick={() => markAvailable(true)}
-                      className="w-full"
-                      buttonType="success"
-                    >
-                      <CheckCircleIcon />
-                      <span>
-                        {intl.formatMessage(
-                          mediaType === 'movie'
-                            ? messages.mark4kavailable
-                            : messages.markallseasons4kavailable
-                        )}
-                      </span>
-                    </Button>
-                  )}
                 <div>
                   <ConfirmButton
                     onClick={() => deleteMedia()}

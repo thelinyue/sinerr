@@ -76,7 +76,6 @@ class MediaryAgent
                 imdbId: payload.media.imdbId,
                 mediaType: payload.media.mediaType,
                 status: payload.media.status,
-                status4k: payload.media.status4k,
               }
             : undefined,
           request: payload.request

@@ -234,13 +234,11 @@ blocklistRoutes.post(
               media = new Media({
                 tmdbId: part.id,
                 status: MediaStatus.BLOCKLISTED,
-                status4k: MediaStatus.BLOCKLISTED,
                 mediaType: MediaType.MOVIE,
                 blocklist: Promise.resolve(blocklist),
               });
             } else {
               media.status = MediaStatus.BLOCKLISTED;
-              media.status4k = MediaStatus.BLOCKLISTED;
               media.blocklist = Promise.resolve(blocklist);
             }
 

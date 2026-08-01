@@ -1,9 +1,7 @@
 import Button from '@app/components/Common/Button';
 import Modal from '@app/components/Common/Modal';
 import { issueOptions } from '@app/components/IssueModal/constants';
-import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
-import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { RadioGroup } from '@headlessui/react';
@@ -59,8 +57,6 @@ const CreateIssueModal = ({
   tmdbId,
 }: CreateIssueModalProps) => {
   const intl = useIntl();
-  const settings = useSettings();
-  const { hasPermission } = useUser();
   const { addToast } = useToasts();
   const { data, error } = useSWR<MovieDetails | TvDetails>(
     tmdbId ? `/api/v1/${mediaType}/${tmdbId}` : null
@@ -74,13 +70,7 @@ const CreateIssueModal = ({
     .filter(
       (season) =>
         season.status === MediaStatus.AVAILABLE ||
-        season.status === MediaStatus.PARTIALLY_AVAILABLE ||
-        (settings.currentSettings.series4kEnabled &&
-          hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_TV], {
-            type: 'or',
-          }) &&
-          (season.status4k === MediaStatus.AVAILABLE ||
-            season.status4k === MediaStatus.PARTIALLY_AVAILABLE))
+        season.status === MediaStatus.PARTIALLY_AVAILABLE
     )
     .map((season) => season.seasonNumber);
 

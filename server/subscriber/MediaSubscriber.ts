@@ -14,7 +14,7 @@ import { EventSubscriber, In } from 'typeorm';
 
 @EventSubscriber()
 export class MediaSubscriber implements EntitySubscriberInterface<Media> {
-  private async updateChildRequestStatus(event: Media, is4k: boolean) {
+  private async updateChildRequestStatus(event: Media) {
     const requestRepository = getRepository(MediaRequest);
 
     const requests = await requestRepository.find({
@@ -22,21 +22,14 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
     });
 
     for (const request of requests) {
-      if (
-        request.is4k === is4k &&
-        request.status === MediaRequestStatus.PENDING
-      ) {
+      if (request.status === MediaRequestStatus.PENDING) {
         request.status = MediaRequestStatus.APPROVED;
         await requestRepository.save(request);
       }
     }
   }
 
-  private async updateRelatedMediaRequest(
-    event: Media,
-    databaseEvent: Media,
-    is4k: boolean
-  ) {
+  private async updateRelatedMediaRequest(event: Media, databaseEvent: Media) {
     const requestRepository = getRepository(MediaRequest);
     const seasonRequestRepository = getRepository(SeasonRequest);
 
@@ -47,12 +40,9 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
       where: {
         media: { id: event.id },
         status: In([MediaRequestStatus.APPROVED, MediaRequestStatus.FAILED]),
-        is4k,
       },
     });
 
-    // Check the media entity status and if available
-    // or deleted, set the related request to completed
     if (relatedRequests.length > 0) {
       const completedRequests: MediaRequest[] = [];
 
@@ -60,10 +50,8 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
         let shouldComplete = false;
 
         if (
-          (event[request.is4k ? 'status4k' : 'status'] ===
-            MediaStatus.AVAILABLE ||
-            event[request.is4k ? 'status4k' : 'status'] ===
-              MediaStatus.DELETED) &&
+          (event.status === MediaStatus.AVAILABLE ||
+            event.status === MediaStatus.DELETED) &&
           event.mediaType === MediaType.MOVIE
         ) {
           shouldComplete = true;
@@ -83,10 +71,8 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
                 return false;
               }
 
-              const currentSeasonStatus =
-                matchingSeason[request.is4k ? 'status4k' : 'status'];
-              const previousSeasonStatus =
-                matchingOldSeason?.[request.is4k ? 'status4k' : 'status'];
+              const currentSeasonStatus = matchingSeason.status;
+              const previousSeasonStatus = matchingOldSeason?.status;
 
               const hasStatusChanged =
                 currentSeasonStatus !== previousSeasonStatus;
@@ -132,7 +118,7 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
         event.entity.status === MediaStatus.AVAILABLE &&
         event.databaseEntity?.status === MediaStatus.PENDING
       ) {
-        await this.updateChildRequestStatus(event.entity as Media, false);
+        await this.updateChildRequestStatus(event.entity as Media);
       }
     } catch (e) {
       logger.error(
@@ -140,33 +126,11 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
         {
           label: 'Media',
           mediaId: event.entity.id,
-          is4k: false,
           errorMessage: e instanceof Error ? e.message : String(e),
         }
       );
     }
 
-    try {
-      if (
-        event.entity.status4k === MediaStatus.AVAILABLE &&
-        event.databaseEntity?.status4k === MediaStatus.PENDING
-      ) {
-        await this.updateChildRequestStatus(event.entity as Media, true);
-      }
-    } catch (e) {
-      logger.error(
-        'Error while updating child request status in beforeUpdate subscriber',
-        {
-          label: 'Media',
-          mediaId: event.entity.id,
-          is4k: true,
-          errorMessage: e instanceof Error ? e.message : String(e),
-        }
-      );
-    }
-
-    // Manually load related seasons into databaseEntity
-    // for seasonStatusCheck in afterUpdate
     const seasons = await event.manager
       .getRepository(Season)
       .createQueryBuilder('season')
@@ -188,28 +152,23 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
       MediaStatus.DELETED,
     ];
 
-    const seasonStatusCheck = (is4k: boolean) => {
+    const seasonStatusCheck = () => {
       return event.entity?.seasons?.some((season: Season, index: number) => {
         const previousSeason = event.databaseEntity.seasons[index];
 
-        return (
-          season[is4k ? 'status4k' : 'status'] !==
-          previousSeason?.[is4k ? 'status4k' : 'status']
-        );
+        return season.status !== previousSeason?.status;
       });
     };
 
     try {
       if (
         (event.entity.status !== event.databaseEntity?.status ||
-          (event.entity.mediaType === MediaType.TV &&
-            seasonStatusCheck(false))) &&
+          (event.entity.mediaType === MediaType.TV && seasonStatusCheck())) &&
         validStatuses.includes(event.entity.status)
       ) {
         await this.updateRelatedMediaRequest(
           event.entity as Media,
-          event.databaseEntity as Media,
-          false
+          event.databaseEntity as Media
         );
       }
     } catch (e) {
@@ -218,32 +177,6 @@ export class MediaSubscriber implements EntitySubscriberInterface<Media> {
         {
           label: 'Media',
           mediaId: event.entity.id,
-          is4k: false,
-          errorMessage: e instanceof Error ? e.message : String(e),
-        }
-      );
-    }
-
-    try {
-      if (
-        (event.entity.status4k !== event.databaseEntity?.status4k ||
-          (event.entity.mediaType === MediaType.TV &&
-            seasonStatusCheck(true))) &&
-        validStatuses.includes(event.entity.status4k)
-      ) {
-        await this.updateRelatedMediaRequest(
-          event.entity as Media,
-          event.databaseEntity as Media,
-          true
-        );
-      }
-    } catch (e) {
-      logger.error(
-        'Error while updating related requests in afterUpdate subscriber',
-        {
-          label: 'Media',
-          mediaId: event.entity.id,
-          is4k: true,
           errorMessage: e instanceof Error ? e.message : String(e),
         }
       );

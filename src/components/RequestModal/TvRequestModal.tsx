@@ -27,17 +27,13 @@ const messages = defineMessages('components.RequestModal', {
   requestadmin: 'This request will be approved automatically.',
   requestSuccess: '<strong>{title}</strong> requested successfully!',
   requestseriestitle: 'Request Series',
-  requestseries4ktitle: 'Request Series in 4K',
   edit: 'Edit Request',
   approve: 'Approve Request',
   cancel: 'Cancel Request',
   pendingrequest: 'Pending Request',
-  pending4krequest: 'Pending 4K Request',
   requestfrom: "{username}'s request is pending approval.",
   requestseasons:
     'Request {seasonCount} {seasonCount, plural, one {Season} other {Seasons}}',
-  requestseasons4k:
-    'Request {seasonCount} {seasonCount, plural, one {Season} other {Seasons}} in 4K',
   alreadyrequested: 'Already Requested',
   selectseason: 'Select Season(s)',
   season: 'Season',
@@ -57,7 +53,6 @@ interface RequestModalProps extends React.HTMLAttributes<HTMLDivElement> {
   onCancel?: () => void;
   onComplete?: (newStatus: MediaStatus) => void;
   onUpdating?: (isUpdating: boolean) => void;
-  is4k?: boolean;
   editRequest?: NonFunctionProperties<MediaRequest>;
 }
 
@@ -67,7 +62,6 @@ const TvRequestModal = ({
   tmdbId,
   onUpdating,
   editRequest,
-  is4k = false,
 }: RequestModalProps) => {
   const settings = useSettings();
   const { addToast } = useToasts();
@@ -198,7 +192,6 @@ const TvRequestModal = ({
         mediaId: data?.id,
         tvdbId: tvdbId ?? data?.externalIds.tvdbId,
         mediaType: 'tv',
-        is4k,
         ignoreQuota: requestOverrides?.ignoreQuota,
         seasons: settings.currentSettings.partialRequestsEnabled
           ? selectedSeasons.sort((a, b) => a - b)
@@ -249,7 +242,6 @@ const TvRequestModal = ({
     const requestedSeasons = (data?.mediaInfo?.requests ?? [])
       .filter(
         (request) =>
-          request.is4k === is4k &&
           request.status !== MediaRequestStatus.DECLINED &&
           request.status !== MediaRequestStatus.COMPLETED
       )
@@ -265,10 +257,9 @@ const TvRequestModal = ({
     const availableSeasons = (data?.mediaInfo?.seasons ?? [])
       .filter(
         (season) =>
-          (season[is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE ||
-            season[is4k ? 'status4k' : 'status'] ===
-              MediaStatus.PARTIALLY_AVAILABLE ||
-            season[is4k ? 'status4k' : 'status'] === MediaStatus.PROCESSING) &&
+          (season.status === MediaStatus.AVAILABLE ||
+            season.status === MediaStatus.PARTIALLY_AVAILABLE ||
+            season.status === MediaStatus.PROCESSING) &&
           !requestedSeasons.includes(season.seasonNumber)
       )
       .map((season) => season.seasonNumber);
@@ -280,12 +271,10 @@ const TvRequestModal = ({
     selectedSeasons.includes(seasonNumber);
 
   const toggleSeason = (seasonNumber: number): void => {
-    // If this season already has a pending request, don't allow it to be toggled
     if (getAllRequestedSeasons().includes(seasonNumber)) {
       return;
     }
 
-    // If there are no more remaining requests available, block toggle
     if (
       quota?.tv.limit &&
       currentlyRemaining <= 0 &&
@@ -308,7 +297,6 @@ const TvRequestModal = ({
   );
 
   const toggleAllSeasons = (): void => {
-    // If the user has a quota and not enough requests for all seasons, block toggleAllSeasons
     if (
       quota?.tv.limit &&
       (quota?.tv.remaining ?? 0) < unrequestedSeasons.length
@@ -348,7 +336,6 @@ const TvRequestModal = ({
       data?.mediaInfo &&
       (data.mediaInfo.requests || []).filter(
         (request) =>
-          request.is4k === is4k &&
           request.status !== MediaRequestStatus.DECLINED &&
           request.status !== MediaRequestStatus.COMPLETED
       ).length > 0
@@ -356,7 +343,6 @@ const TvRequestModal = ({
       data.mediaInfo.requests
         .filter(
           (request) =>
-            request.is4k === is4k &&
             request.status !== MediaRequestStatus.DECLINED &&
             request.status !== MediaRequestStatus.COMPLETED
         )
@@ -382,9 +368,7 @@ const TvRequestModal = ({
       setTvdbId={setTvdbId}
       closeModal={() => setSearchModal({ show: false })}
       onCancel={onCancel}
-      modalTitle={intl.formatMessage(
-        is4k ? messages.requestseries4ktitle : messages.requestseriestitle
-      )}
+      modalTitle={intl.formatMessage(messages.requestseriestitle)}
       modalSubTitle={data.name}
       tmdbId={tmdbId}
       backdrop={`https://image.tmdb.org/t/p/w1920_and_h800_multi_faces/${data?.backdropPath}`}
@@ -402,13 +386,7 @@ const TvRequestModal = ({
           : sendRequest()
       }
       title={intl.formatMessage(
-        editRequest
-          ? is4k
-            ? messages.pending4krequest
-            : messages.pendingrequest
-          : is4k
-            ? messages.requestseries4ktitle
-            : messages.requestseriestitle
+        editRequest ? messages.pendingrequest : messages.requestseriestitle
       )}
       subTitle={data?.name}
       okText={
@@ -421,17 +399,12 @@ const TvRequestModal = ({
           : getAllRequestedSeasons().length >= getAllSeasons().length
             ? intl.formatMessage(messages.alreadyrequested)
             : !settings.currentSettings.partialRequestsEnabled
-              ? intl.formatMessage(
-                  is4k ? globalMessages.request4k : globalMessages.request
-                )
+              ? intl.formatMessage(globalMessages.request)
               : selectedSeasons.length === 0
                 ? intl.formatMessage(messages.selectseason)
-                : intl.formatMessage(
-                    is4k ? messages.requestseasons4k : messages.requestseasons,
-                    {
-                      seasonCount: selectedSeasons.length,
-                    }
-                  )
+                : intl.formatMessage(messages.requestseasons, {
+                    seasonCount: selectedSeasons.length,
+                  })
       }
       okDisabled={
         editRequest
@@ -474,8 +447,8 @@ const TvRequestModal = ({
       {hasPermission(
         [
           Permission.MANAGE_REQUESTS,
-          is4k ? Permission.AUTO_APPROVE_4K : Permission.AUTO_APPROVE,
-          is4k ? Permission.AUTO_APPROVE_4K_TV : Permission.AUTO_APPROVE_TV,
+          Permission.AUTO_APPROVE,
+          Permission.AUTO_APPROVE_TV,
         ],
         { type: 'or' }
       ) &&
@@ -587,10 +560,8 @@ const TvRequestModal = ({
                       const mediaSeason = data?.mediaInfo?.seasons.find(
                         (sn) =>
                           sn.seasonNumber === season.seasonNumber &&
-                          sn[is4k ? 'status4k' : 'status'] !==
-                            MediaStatus.UNKNOWN &&
-                          sn[is4k ? 'status4k' : 'status'] !==
-                            MediaStatus.DELETED
+                          sn.status !== MediaStatus.UNKNOWN &&
+                          sn.status !== MediaStatus.DELETED
                       );
                       return (
                         <tr key={`season-${season.id}`}>
@@ -684,13 +655,13 @@ const TvRequestModal = ({
                             {((!mediaSeason &&
                               seasonRequest?.status ===
                                 MediaRequestStatus.APPROVED) ||
-                              mediaSeason?.[is4k ? 'status4k' : 'status'] ===
+                              mediaSeason?.status ===
                                 MediaStatus.PROCESSING) && (
                               <Badge badgeType="primary">
                                 {intl.formatMessage(globalMessages.requested)}
                               </Badge>
                             )}
-                            {mediaSeason?.[is4k ? 'status4k' : 'status'] ===
+                            {mediaSeason?.status ===
                               MediaStatus.PARTIALLY_AVAILABLE && (
                               <Badge badgeType="success">
                                 {intl.formatMessage(
@@ -698,8 +669,7 @@ const TvRequestModal = ({
                                 )}
                               </Badge>
                             )}
-                            {mediaSeason?.[is4k ? 'status4k' : 'status'] ===
-                              MediaStatus.AVAILABLE && (
+                            {mediaSeason?.status === MediaStatus.AVAILABLE && (
                               <Badge badgeType="success">
                                 {intl.formatMessage(globalMessages.available)}
                               </Badge>
@@ -718,7 +688,6 @@ const TvRequestModal = ({
         hasPermission(Permission.MANAGE_REQUESTS)) && (
         <AdvancedRequester
           type="tv"
-          is4k={is4k}
           isAnime={data?.keywords.some(
             (keyword) => keyword.id === ANIME_KEYWORD_ID
           )}

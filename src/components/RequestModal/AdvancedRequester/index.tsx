@@ -1,6 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import CachedImage from '@app/components/Common/CachedImage';
-import { SmallLoadingSpinner } from '@app/components/Common/LoadingSpinner';
 import SlideCheckbox from '@app/components/Common/SlideCheckbox';
 import type { User } from '@app/hooks/useUser';
 import { Permission, useUser } from '@app/hooks/useUser';
@@ -15,7 +14,6 @@ import type {
 } from '@server/interfaces/api/serviceInterfaces';
 import type { UserResultsResponse } from '@server/interfaces/api/userInterfaces';
 import { hasPermission } from '@server/lib/permissions';
-import { isEqual } from 'lodash';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
 import Select from 'react-select';
@@ -56,7 +54,6 @@ export type RequestOverrides = {
 
 interface AdvancedRequesterProps {
   type: 'movie' | 'tv';
-  is4k: boolean;
   isAnime?: boolean;
   defaultOverrides?: RequestOverrides;
   requestUser?: User;
@@ -66,7 +63,6 @@ interface AdvancedRequesterProps {
 
 const AdvancedRequester = ({
   type,
-  is4k = false,
   isAnime = false,
   defaultOverrides,
   requestUser,
@@ -120,19 +116,10 @@ const AdvancedRequester = ({
     () =>
       userData?.results.filter((user) =>
         hasPermission(
-          is4k
-            ? [
-                Permission.REQUEST_4K,
-                type === 'movie'
-                  ? Permission.REQUEST_4K_MOVIE
-                  : Permission.REQUEST_4K_TV,
-              ]
-            : [
-                Permission.REQUEST,
-                type === 'movie'
-                  ? Permission.REQUEST_MOVIE
-                  : Permission.REQUEST_TV,
-              ],
+          [
+            Permission.REQUEST,
+            type === 'movie' ? Permission.REQUEST_MOVIE : Permission.REQUEST_TV,
+          ],
           user.permissions,
           { type: 'or' }
         )
@@ -219,9 +206,7 @@ const AdvancedRequester = ({
     isIgnoreQuotaVisible,
   ]);
 
-  if (
-    (!selectedUser || (filteredUserData ?? []).length < 2)
-  ) {
+  if (!selectedUser || (filteredUserData ?? []).length < 2) {
     return null;
   }
 
@@ -233,7 +218,7 @@ const AdvancedRequester = ({
       <div className="rounded-md">
         {!!data && selectedServer !== null && (
           <div className="flex flex-col md:flex-row">
-            {data.filter((server) => server.is4k === is4k).length > 1 && (
+            {data.length > 1 && (
               <div className="mb-3 w-full flex-shrink-0 flex-grow last:pr-0 md:w-1/4 md:pr-4">
                 <label htmlFor="server">
                   {intl.formatMessage(messages.destinationserver)}
@@ -246,20 +231,15 @@ const AdvancedRequester = ({
                   onBlur={(e) => setSelectedServer(Number(e.target.value))}
                   className="border-gray-700 bg-gray-800"
                 >
-                  {data
-                    .filter((server) => server.is4k === is4k)
-                    .map((server) => (
-                      <option
-                        key={`server-list-${server.id}`}
-                        value={server.id}
-                      >
-                        {server.isDefault
-                          ? intl.formatMessage(messages.default, {
-                              name: server.name,
-                            })
-                          : server.name}
-                      </option>
-                    ))}
+                  {data.map((server) => (
+                    <option key={`server-list-${server.id}`} value={server.id}>
+                      {server.isDefault
+                        ? intl.formatMessage(messages.default, {
+                            name: server.name,
+                          })
+                        : server.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}

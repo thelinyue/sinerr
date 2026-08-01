@@ -1,8 +1,6 @@
-
 export interface ServiceCommonServer {
   id: number;
   name: string;
-  is4k: boolean;
   isDefault: boolean;
   activeProfileId: number;
   activeDirectory: string;
@@ -17,7 +15,12 @@ export interface ServiceCommonServer {
 export interface ServiceCommonServerWithDetails {
   server: ServiceCommonServer;
   profiles: { id: number; name: string }[];
-  rootFolders: { id: number; freeSpace?: number; path: string; totalSpace?: number }[];
+  rootFolders: {
+    id: number;
+    freeSpace?: number;
+    path: string;
+    totalSpace?: number;
+  }[];
   languageProfiles?: any[];
   tags: { id: number; label: string }[];
 }

@@ -40,8 +40,8 @@ type MediaRequestOptions = {
 };
 
 @Entity()
-@Index(['status', 'is4k'])
-@Index(['media', 'is4k'])
+@Index(['status'])
+@Index(['media'])
 export class MediaRequest {
   public static async request(
     requestBody: MediaRequestBody,
@@ -79,34 +79,23 @@ export class MediaRequest {
     if (
       requestBody.mediaType === MediaType.MOVIE &&
       !requestUser.hasPermission(
-        requestBody.is4k
-          ? [Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE]
-          : [Permission.REQUEST, Permission.REQUEST_MOVIE],
+        [Permission.REQUEST, Permission.REQUEST_MOVIE],
         {
           type: 'or',
         }
       )
     ) {
       throw new RequestPermissionError(
-        `You do not have permission to make ${
-          requestBody.is4k ? '4K ' : ''
-        }movie requests.`
+        'You do not have permission to make movie requests.'
       );
     } else if (
       requestBody.mediaType === MediaType.TV &&
-      !requestUser.hasPermission(
-        requestBody.is4k
-          ? [Permission.REQUEST_4K, Permission.REQUEST_4K_TV]
-          : [Permission.REQUEST, Permission.REQUEST_TV],
-        {
-          type: 'or',
-        }
-      )
+      !requestUser.hasPermission([Permission.REQUEST, Permission.REQUEST_TV], {
+        type: 'or',
+      })
     ) {
       throw new RequestPermissionError(
-        `You do not have permission to make ${
-          requestBody.is4k ? '4K ' : ''
-        }series requests.`
+        'You do not have permission to make series requests.'
       );
     }
 
@@ -155,8 +144,7 @@ export class MediaRequest {
       media = new Media({
         tmdbId: tmdbMedia.id,
         tvdbId: requestBody.tvdbId ?? tmdbMedia.external_ids.tvdb_id,
-        status: !requestBody.is4k ? MediaStatus.PENDING : MediaStatus.UNKNOWN,
-        status4k: requestBody.is4k ? MediaStatus.PENDING : MediaStatus.UNKNOWN,
+        status: MediaStatus.PENDING,
         mediaType: requestBody.mediaType,
       });
     } else {
@@ -171,19 +159,10 @@ export class MediaRequest {
       }
 
       if (
-        (media.status === MediaStatus.UNKNOWN ||
-          media.status === MediaStatus.DELETED) &&
-        !requestBody.is4k
+        media.status === MediaStatus.UNKNOWN ||
+        media.status === MediaStatus.DELETED
       ) {
         media.status = MediaStatus.PENDING;
-      }
-
-      if (
-        (media.status4k === MediaStatus.UNKNOWN ||
-          media.status4k === MediaStatus.DELETED) &&
-        requestBody.is4k
-      ) {
-        media.status4k = MediaStatus.PENDING;
       }
     }
 
@@ -191,15 +170,13 @@ export class MediaRequest {
       .createQueryBuilder('request')
       .leftJoinAndSelect('request.media', 'media')
       .leftJoinAndSelect('request.requestedBy', 'user')
-      .where('request.is4k = :is4k', { is4k: requestBody.is4k })
-      .andWhere('media.tmdbId = :tmdbId', { tmdbId: tmdbMedia.id })
+      .where('media.tmdbId = :tmdbId', { tmdbId: tmdbMedia.id })
       .andWhere('media.mediaType = :mediaType', {
         mediaType: requestBody.mediaType,
       })
       .getMany();
 
     if (existing && existing.length > 0) {
-      // If there is an existing movie request that isn't declined, don't allow a new one.
       if (
         requestBody.mediaType === MediaType.MOVIE &&
         existing[0].status !== MediaRequestStatus.DECLINED &&
@@ -208,7 +185,6 @@ export class MediaRequest {
         logger.warn('Duplicate request for media blocked', {
           tmdbId: tmdbMedia.id,
           mediaType: requestBody.mediaType,
-          is4k: requestBody.is4k,
           label: 'Media Request',
         });
 
@@ -217,15 +193,12 @@ export class MediaRequest {
         );
       }
 
-      // If an existing auto-request for this media exists from the same user,
-      // don't allow a new one.
-      const statusKey = requestBody.is4k ? 'status4k' : 'status';
       if (
         existing.find(
           (r) =>
             r.requestedBy.id === requestUser.id &&
             r.isAutoRequest &&
-            r.media?.[statusKey] !== MediaStatus.DELETED
+            r.media?.status !== MediaStatus.DELETED
         )
       ) {
         throw new DuplicateMediaRequestError(
@@ -234,9 +207,9 @@ export class MediaRequest {
       }
     }
 
-    let rootFolder = requestBody.rootFolder;
-    let profileId = requestBody.profileId;
-    let tags = requestBody.tags;
+    const rootFolder = requestBody.rootFolder;
+    const profileId = requestBody.profileId;
+    const tags = requestBody.tags;
 
     if (requestBody.mediaType === MediaType.MOVIE) {
       await mediaRepository.save(media);
@@ -245,15 +218,10 @@ export class MediaRequest {
         type: MediaType.MOVIE,
         media,
         requestedBy: requestUser,
-        // If the user is an admin or has the "auto approve" permission, automatically approve the request
         status: user.hasPermission(
           [
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K
-              : Permission.AUTO_APPROVE,
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K_MOVIE
-              : Permission.AUTO_APPROVE_MOVIE,
+            Permission.AUTO_APPROVE,
+            Permission.AUTO_APPROVE_MOVIE,
             Permission.MANAGE_REQUESTS,
           ],
           { type: 'or' }
@@ -262,19 +230,14 @@ export class MediaRequest {
           : MediaRequestStatus.PENDING,
         modifiedBy: user.hasPermission(
           [
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K
-              : Permission.AUTO_APPROVE,
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K_MOVIE
-              : Permission.AUTO_APPROVE_MOVIE,
+            Permission.AUTO_APPROVE,
+            Permission.AUTO_APPROVE_MOVIE,
             Permission.MANAGE_REQUESTS,
           ],
           { type: 'or' }
         )
           ? user
           : undefined,
-        is4k: requestBody.is4k,
         serverId: requestBody.serverId,
         profileId: profileId,
         rootFolder: rootFolder,
@@ -301,14 +264,10 @@ export class MediaRequest {
 
       let existingSeasons: number[] = [];
 
-      // We need to check existing requests on this title to make sure we don't double up on seasons that were
-      // already requested. In the case they were, we just throw out any duplicates but still approve the request.
-      // (Unless there are no seasons, in which case we abort)
       if (media.requests) {
         existingSeasons = media.requests
           .filter(
             (request) =>
-              request.is4k === requestBody.is4k &&
               request.status !== MediaRequestStatus.DECLINED &&
               request.status !== MediaRequestStatus.COMPLETED
           )
@@ -321,17 +280,14 @@ export class MediaRequest {
           }, [] as number[]);
       }
 
-      // We should also check seasons that are available/partially available but don't have existing requests
       if (media.seasons) {
         existingSeasons = [
           ...existingSeasons,
           ...media.seasons
             .filter(
               (season) =>
-                season[requestBody.is4k ? 'status4k' : 'status'] !==
-                  MediaStatus.UNKNOWN &&
-                season[requestBody.is4k ? 'status4k' : 'status'] !==
-                  MediaStatus.DELETED
+                season.status !== MediaStatus.UNKNOWN &&
+                season.status !== MediaStatus.DELETED
             )
             .map((season) => season.seasonNumber),
         ];
@@ -357,15 +313,10 @@ export class MediaRequest {
         type: MediaType.TV,
         media,
         requestedBy: requestUser,
-        // If the user is an admin or has the "auto approve" permission, automatically approve the request
         status: user.hasPermission(
           [
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K
-              : Permission.AUTO_APPROVE,
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K_TV
-              : Permission.AUTO_APPROVE_TV,
+            Permission.AUTO_APPROVE,
+            Permission.AUTO_APPROVE_TV,
             Permission.MANAGE_REQUESTS,
           ],
           { type: 'or' }
@@ -374,19 +325,14 @@ export class MediaRequest {
           : MediaRequestStatus.PENDING,
         modifiedBy: user.hasPermission(
           [
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K
-              : Permission.AUTO_APPROVE,
-            requestBody.is4k
-              ? Permission.AUTO_APPROVE_4K_TV
-              : Permission.AUTO_APPROVE_TV,
+            Permission.AUTO_APPROVE,
+            Permission.AUTO_APPROVE_TV,
             Permission.MANAGE_REQUESTS,
           ],
           { type: 'or' }
         )
           ? user
           : undefined,
-        is4k: requestBody.is4k,
         serverId: requestBody.serverId,
         profileId: profileId,
         rootFolder: rootFolder,
@@ -398,12 +344,8 @@ export class MediaRequest {
               seasonNumber: sn,
               status: user.hasPermission(
                 [
-                  requestBody.is4k
-                    ? Permission.AUTO_APPROVE_4K
-                    : Permission.AUTO_APPROVE,
-                  requestBody.is4k
-                    ? Permission.AUTO_APPROVE_4K_TV
-                    : Permission.AUTO_APPROVE_TV,
+                  Permission.AUTO_APPROVE,
+                  Permission.AUTO_APPROVE_TV,
                   Permission.MANAGE_REQUESTS,
                 ],
                 { type: 'or' }
@@ -470,9 +412,6 @@ export class MediaRequest {
     cascade: true,
   })
   public seasons: SeasonRequest[];
-
-  @Column({ default: false })
-  public is4k: boolean;
 
   @Column({ nullable: true })
   public serverId: number;
@@ -582,7 +521,7 @@ export class MediaRequest {
 
       if (
         this.status === MediaRequestStatus.APPROVED &&
-        media[this.is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE
+        media.status === MediaStatus.AVAILABLE
       ) {
         logger.info(
           'Media is already available. Sending availability notification instead of approval.',
@@ -649,34 +588,30 @@ export class MediaRequest {
 
       switch (type) {
         case Notification.MEDIA_AVAILABLE:
-          event = `${entity.is4k ? '4K ' : ''}${mediaType} Now Available`;
+          event = `${mediaType} Now Available`;
           notifyAdmin = false;
           break;
         case Notification.MEDIA_APPROVED:
-          event = `${entity.is4k ? '4K ' : ''}${mediaType} Request Approved`;
+          event = `${mediaType} Request Approved`;
           notifyAdmin = false;
           break;
         case Notification.MEDIA_DECLINED:
-          event = `${entity.is4k ? '4K ' : ''}${mediaType} Request Declined`;
+          event = `${mediaType} Request Declined`;
           notifyAdmin = false;
           break;
         case Notification.MEDIA_PENDING:
-          event = `New ${entity.is4k ? '4K ' : ''}${mediaType} Request`;
+          event = `New ${mediaType} Request`;
           break;
         case Notification.MEDIA_AUTO_REQUESTED:
-          event = `${
-            entity.is4k ? '4K ' : ''
-          }${mediaType} Request Automatically Submitted`;
+          event = `${mediaType} Request Automatically Submitted`;
           notifyAdmin = false;
           notifySystem = false;
           break;
         case Notification.MEDIA_AUTO_APPROVED:
-          event = `${
-            entity.is4k ? '4K ' : ''
-          }${mediaType} Request Automatically Approved`;
+          event = `${mediaType} Request Automatically Approved`;
           break;
         case Notification.MEDIA_FAILED:
-          event = `${entity.is4k ? '4K ' : ''}${mediaType} Request Failed`;
+          event = `${mediaType} Request Failed`;
           break;
       }
 

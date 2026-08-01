@@ -107,11 +107,9 @@ mediaRoutes.post<
       return next({ status: 404, message: 'Media does not exist.' });
     }
 
-    const is4k = String(req.body.is4k) === 'true';
-
     switch (req.params.status) {
       case 'available':
-        media[is4k ? 'status4k' : 'status'] = MediaStatus.AVAILABLE;
+        media.status = MediaStatus.AVAILABLE;
 
         if (media.mediaType === MediaType.TV) {
           const expectedSeasons = req.body.seasons ?? [];
@@ -122,14 +120,13 @@ mediaRoutes.post<
             );
 
             if (!season) {
-              // Create the season if it doesn't exist
               season = seasonRepository.create({
                 seasonNumber: expectedSeason?.seasonNumber,
               });
               media.seasons.push(season);
             }
 
-            season[is4k ? 'status4k' : 'status'] = MediaStatus.AVAILABLE;
+            season.status = MediaStatus.AVAILABLE;
           }
         }
         break;
@@ -140,16 +137,16 @@ mediaRoutes.post<
             message: 'Only series can be set to be partially available',
           });
         }
-        media[is4k ? 'status4k' : 'status'] = MediaStatus.PARTIALLY_AVAILABLE;
+        media.status = MediaStatus.PARTIALLY_AVAILABLE;
         break;
       case 'processing':
-        media[is4k ? 'status4k' : 'status'] = MediaStatus.PROCESSING;
+        media.status = MediaStatus.PROCESSING;
         break;
       case 'pending':
-        media[is4k ? 'status4k' : 'status'] = MediaStatus.PENDING;
+        media.status = MediaStatus.PENDING;
         break;
       case 'unknown':
-        media[is4k ? 'status4k' : 'status'] = MediaStatus.UNKNOWN;
+        media.status = MediaStatus.UNKNOWN;
     }
 
     await mediaRepository.save(media);
@@ -190,6 +187,5 @@ mediaRoutes.delete(
     }
   }
 );
-
 
 export default mediaRoutes;

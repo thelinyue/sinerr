@@ -1,4 +1,3 @@
-import useSettings from '@app/hooks/useSettings';
 import type { User } from '@app/hooks/useUser';
 import { Permission } from '@app/hooks/useUser';
 import { hasPermission } from '@server/lib/permissions';
@@ -34,30 +33,21 @@ const PermissionOption = ({
   onUpdate,
   parent,
 }: PermissionOptionProps) => {
-  const settings = useSettings();
-
   const autoApprovePermissions = [
     Permission.AUTO_APPROVE,
     Permission.AUTO_APPROVE_MOVIE,
     Permission.AUTO_APPROVE_TV,
-    Permission.AUTO_APPROVE_4K,
-    Permission.AUTO_APPROVE_4K_MOVIE,
-    Permission.AUTO_APPROVE_4K_TV,
   ];
 
   let disabled = false;
   let checked = hasPermission(option.permission, currentPermission);
 
   if (
-    // Permissions for user ID 1 (server owner) cannot be changed
     (currentUser && currentUser.id === 1) ||
-    // Admin permission automatically bypasses/grants all other permissions
     (option.permission !== Permission.ADMIN &&
       hasPermission(Permission.ADMIN, currentPermission)) ||
-    // Manage Requests permission automatically grants all Auto-Approve permissions
     (autoApprovePermissions.includes(option.permission) &&
       hasPermission(Permission.MANAGE_REQUESTS, currentPermission)) ||
-    // Selecting a parent permission automatically selects all children
     (!!parent?.permission &&
       hasPermission(parent.permission, currentPermission))
   ) {
@@ -65,35 +55,17 @@ const PermissionOption = ({
     checked = true;
   }
 
-  if (
-    // Only the owner can modify the Admin permission
-    actingUser?.id !== 1 &&
-    option.permission === Permission.ADMIN
-  ) {
+  if (actingUser?.id !== 1 && option.permission === Permission.ADMIN) {
     disabled = true;
   }
 
   if (
-    // Some permissions are dependent on others; check requirements are fulfilled
-    (option.requires &&
-      !option.requires.every((requirement) =>
-        hasPermission(requirement.permissions, currentPermission, {
-          type: requirement.type ?? 'and',
-        })
-      )) ||
-    // Request 4K and Auto-Approve 4K require both 4K movie & 4K series requests to be enabled
-    ((option.permission === Permission.REQUEST_4K ||
-      option.permission === Permission.AUTO_APPROVE_4K) &&
-      (!settings.currentSettings.movie4kEnabled ||
-        !settings.currentSettings.series4kEnabled)) ||
-    // Request 4K Movie and Auto-Approve 4K Movie require 4K movie requests to be enabled
-    ((option.permission === Permission.REQUEST_4K_MOVIE ||
-      option.permission === Permission.AUTO_APPROVE_4K_MOVIE) &&
-      !settings.currentSettings.movie4kEnabled) ||
-    // Request 4K Series and Auto-Approve 4K Series require 4K series requests to be enabled
-    ((option.permission === Permission.REQUEST_4K_TV ||
-      option.permission === Permission.AUTO_APPROVE_4K_TV) &&
-      !settings.currentSettings.series4kEnabled)
+    option.requires &&
+    !option.requires.every((requirement) =>
+      hasPermission(requirement.permissions, currentPermission, {
+        type: requirement.type ?? 'and',
+      })
+    )
   ) {
     disabled = true;
     checked = false;

@@ -24,31 +24,17 @@ const messages = defineMessages('notifications.agents.email', {
   issue: 'issue',
   pendingRequest:
     'A new request for the following {mediaType} is pending approval:',
-  pendingRequest4k:
-    'A new request for the following {mediaType} in 4K is pending approval:',
   autoRequested:
     'A new request for the following {mediaType} was automatically submitted:',
-  autoRequested4k:
-    'A new request for the following {mediaType} in 4K was automatically submitted:',
   approvedRequest:
     'Your request for the following {mediaType} has been approved:',
-  approvedRequest4k:
-    'Your request for the following {mediaType} in 4K has been approved:',
   autoApproved:
     'A new request for the following {mediaType} has been automatically approved:',
-  autoApproved4k:
-    'A new request for the following {mediaType} in 4K has been automatically approved:',
   availableRequest:
     'Your request for the following {mediaType} is now available:',
-  availableRequest4k:
-    'Your request for the following {mediaType} in 4K is now available:',
   declinedRequest: 'Your request for the following {mediaType} was declined:',
-  declinedRequest4k:
-    'Your request for the following {mediaType} in 4K was declined:',
   failedRequest:
     'A request for the following {mediaType} failed to be added to {service}:',
-  failedRequest4k:
-    'A request for the following {mediaType} in 4K failed to be added to {service}:',
   issueCreated:
     'A new {issueType} has been reported by {userName} for the {mediaType} {subject}:',
   issueComment:
@@ -128,56 +114,45 @@ class EmailAgent
         ? intl.formatMessage(globalMessages.movie)
         : intl.formatMessage(globalMessages.series)
       : undefined;
-    const is4k = payload.request?.is4k;
-
     if (payload.request) {
       let body = '';
 
       switch (type) {
         case Notification.MEDIA_PENDING:
-          body = intl.formatMessage(
-            is4k ? messages.pendingRequest4k : messages.pendingRequest,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.pendingRequest, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_AUTO_REQUESTED:
-          body = intl.formatMessage(
-            is4k ? messages.autoRequested4k : messages.autoRequested,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.autoRequested, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_APPROVED:
-          body = intl.formatMessage(
-            is4k ? messages.approvedRequest4k : messages.approvedRequest,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.approvedRequest, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_AUTO_APPROVED:
-          body = intl.formatMessage(
-            is4k ? messages.autoApproved4k : messages.autoApproved,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.autoApproved, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_AVAILABLE:
-          body = intl.formatMessage(
-            is4k ? messages.availableRequest4k : messages.availableRequest,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.availableRequest, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_DECLINED:
-          body = intl.formatMessage(
-            is4k ? messages.declinedRequest4k : messages.declinedRequest,
-            { mediaType }
-          );
+          body = intl.formatMessage(messages.declinedRequest, {
+            mediaType,
+          });
           break;
         case Notification.MEDIA_FAILED:
-          body = intl.formatMessage(
-            is4k ? messages.failedRequest4k : messages.failedRequest,
-            {
-              mediaType,
-              service: 'the download client',
-            }
-          );
+          body = intl.formatMessage(messages.failedRequest, {
+            mediaType,
+            service: 'the download client',
+          });
           break;
       }
 

@@ -74,7 +74,6 @@ const messages = defineMessages('components.TvDetails', {
   network: '{networkCount, plural, one {Network} other {Networks}}',
   viewfullcrew: 'View Full Crew',
   play: 'Play on {mediaServerName}',
-  play4k: 'Play 4K on {mediaServerName}',
   seasons: '{seasonCount, plural, one {# Season} other {# Seasons}}',
   episodeRuntime: 'Episode Runtime',
   episodeRuntimeMinutes: '{runtime} minutes',
@@ -86,7 +85,6 @@ const messages = defineMessages('components.TvDetails', {
   seasonstitle: 'Seasons',
   episodeCount: '{episodeCount, plural, one {# Episode} other {# Episodes}}',
   seasonnumber: 'Season {seasonNumber}',
-  status4k: '4K {status}',
   rtcriticsscore: 'Rotten Tomatoes Tomatometer',
   rtaudiencescore: 'Rotten Tomatoes Audience Score',
   tmdbuserscore: 'TMDB User Score',
@@ -119,7 +117,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     refreshInterval: refreshIntervalHelper(
       {
         downloadStatus: tv?.mediaInfo?.downloadStatus,
-        downloadStatus4k: tv?.mediaInfo?.downloadStatus4k,
       },
       15000
     ),
@@ -149,9 +146,8 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     []
   );
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
-    mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
   });
 
   if (!data && !error) {
@@ -177,20 +173,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     });
   }
 
-  if (
-    settings.currentSettings.series4kEnabled &&
-    mediaUrl4k &&
-    hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_TV], {
-      type: 'or',
-    })
-  ) {
-    mediaLinks.push({
-      text: getAvailable4kMediaServerName(),
-      url: mediaUrl4k,
-      svg: <PlayIcon />,
-    });
-  }
-
   const discoverRegion = user?.settings?.discoverRegion
     ? user.settings.discoverRegion
     : settings.currentSettings.discoverRegion
@@ -207,7 +189,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     );
   }
 
-  // Does NOT include "Specials"
   const seasonCount = data.seasons.filter(
     (season) => season.seasonNumber !== 0 && season.episodeCount !== 0
   ).length;
@@ -241,11 +222,10 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     );
   }
 
-  const getAllRequestedSeasons = (is4k: boolean): number[] => {
+  const getAllRequestedSeasons = (): number[] => {
     const requestedSeasons = (data?.mediaInfo?.requests ?? [])
       .filter(
         (request) =>
-          request.is4k === is4k &&
           request.status !== MediaRequestStatus.DECLINED &&
           request.status !== MediaRequestStatus.COMPLETED
       )
@@ -259,10 +239,9 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     const availableSeasons = (data?.mediaInfo?.seasons ?? [])
       .filter(
         (season) =>
-          (season[is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE ||
-            season[is4k ? 'status4k' : 'status'] ===
-              MediaStatus.PARTIALLY_AVAILABLE ||
-            season[is4k ? 'status4k' : 'status'] === MediaStatus.PROCESSING) &&
+          (season.status === MediaStatus.AVAILABLE ||
+            season.status === MediaStatus.PARTIALLY_AVAILABLE ||
+            season.status === MediaStatus.PROCESSING) &&
           !requestedSeasons.includes(season.seasonNumber)
       )
       .map((season) => season.seasonNumber);
@@ -278,11 +257,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
 
   const isComplete =
     (showHasSpecials ? seasonCount + 1 : seasonCount) <=
-    getAllRequestedSeasons(false).length;
-
-  const is4kComplete =
-    (showHasSpecials ? seasonCount + 1 : seasonCount) <=
-    getAllRequestedSeasons(true).length;
+    getAllRequestedSeasons().length;
 
   const streamingRegion = user?.settings?.streamingRegion
     ? user.settings.streamingRegion
@@ -300,14 +275,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     }
 
     return intl.formatMessage(messages.play, { mediaServerName: 'Jellyfin' });
-  }
-
-  function getAvailable4kMediaServerName() {
-    if (settings.currentSettings.mediaServerType === MediaServerType.EMBY) {
-      return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
-    }
-
-    return intl.formatMessage(messages.play4k, { mediaServerName: 'Jellyfin' });
   }
 
   const onClickHideItemBtn = async (): Promise<void> => {
@@ -454,31 +421,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
               mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
-            {settings.currentSettings.series4kEnabled &&
-              hasPermission(
-                [
-                  Permission.MANAGE_REQUESTS,
-                  Permission.REQUEST_4K,
-                  Permission.REQUEST_4K_TV,
-                ],
-                {
-                  type: 'or',
-                }
-              ) && (
-                <StatusBadge
-                  status={data.mediaInfo?.status4k}
-                  downloadItem={data.mediaInfo?.downloadStatus4k}
-                  title={data.name}
-                  is4k
-                  inProgress={
-                    (data.mediaInfo?.downloadStatus4k ?? []).length > 0
-                  }
-                  tmdbId={data.mediaInfo?.tmdbId}
-                  mediaType="tv"
-                  mediaUrl={mediaUrl4k}
-                  serviceUrl={data.mediaInfo?.serviceUrl4k}
-                />
-              )}
           </div>
           <h1 data-testid="media-title">
             {data.name}{' '}
@@ -531,17 +473,9 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
             tmdbId={data?.id}
             media={data?.mediaInfo}
             isShowComplete={isComplete}
-            is4kShowComplete={is4kComplete}
           />
           {(data.mediaInfo?.status === MediaStatus.AVAILABLE ||
-            data.mediaInfo?.status === MediaStatus.PARTIALLY_AVAILABLE ||
-            (settings.currentSettings.series4kEnabled &&
-              hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_TV], {
-                type: 'or',
-              }) &&
-              (data.mediaInfo?.status4k === MediaStatus.AVAILABLE ||
-                data?.mediaInfo?.status4k ===
-                  MediaStatus.PARTIALLY_AVAILABLE))) &&
+            data.mediaInfo?.status === MediaStatus.PARTIALLY_AVAILABLE) &&
             hasPermission(
               [Permission.CREATE_ISSUES, Permission.MANAGE_ISSUES],
               {
@@ -657,46 +591,17 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                   season.seasonNumber !== 0
               )
               .map((season) => {
-                const show4k =
-                  settings.currentSettings.series4kEnabled &&
-                  hasPermission(
-                    [
-                      Permission.MANAGE_REQUESTS,
-                      Permission.REQUEST_4K,
-                      Permission.REQUEST_4K_TV,
-                    ],
-                    {
-                      type: 'or',
-                    }
-                  );
                 const mSeason = (data.mediaInfo?.seasons ?? []).find(
                   (s) =>
                     season.seasonNumber === s.seasonNumber &&
                     s.status !== MediaStatus.UNKNOWN
-                );
-                const mSeason4k = (data.mediaInfo?.seasons ?? []).find(
-                  (s) =>
-                    season.seasonNumber === s.seasonNumber &&
-                    s.status4k !== MediaStatus.UNKNOWN
                 );
                 const request = (data.mediaInfo?.requests ?? [])
                   .filter(
                     (r) =>
                       !!r.seasons.find(
                         (s) => s.seasonNumber === season.seasonNumber
-                      ) && !r.is4k
-                  )
-                  .sort(
-                    (a, b) =>
-                      new Date(b.createdAt).getTime() -
-                      new Date(a.createdAt).getTime()
-                  )[0];
-                const request4k = (data.mediaInfo?.requests ?? [])
-                  .filter(
-                    (r) =>
-                      !!r.seasons.find(
-                        (s) => s.seasonNumber === season.seasonNumber
-                      ) && r.is4k
+                      )
                   )
                   .sort(
                     (a, b) =>
@@ -811,116 +716,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                                 </div>
                               </>
                             )}
-                          {((!mSeason4k &&
-                            request4k?.status ===
-                              MediaRequestStatus.APPROVED) ||
-                            mSeason4k?.status4k === MediaStatus.PROCESSING ||
-                            (request4k?.status ===
-                              MediaRequestStatus.APPROVED &&
-                              mSeason4k?.status4k === MediaStatus.DELETED)) &&
-                            show4k && (
-                              <>
-                                <div className="hidden md:flex">
-                                  <Badge badgeType="primary">
-                                    {intl.formatMessage(messages.status4k, {
-                                      status: intl.formatMessage(
-                                        globalMessages.requested
-                                      ),
-                                    })}
-                                  </Badge>
-                                </div>
-                                <div className="flex md:hidden">
-                                  <StatusBadgeMini
-                                    status={MediaStatus.PROCESSING}
-                                    is4k={true}
-                                  />
-                                </div>
-                              </>
-                            )}
-                          {((!mSeason4k &&
-                            request4k?.status === MediaRequestStatus.PENDING) ||
-                            mSeason4k?.status4k === MediaStatus.PENDING) &&
-                            show4k && (
-                              <>
-                                <div className="hidden md:flex">
-                                  <Badge badgeType="warning">
-                                    {intl.formatMessage(messages.status4k, {
-                                      status: intl.formatMessage(
-                                        globalMessages.pending
-                                      ),
-                                    })}
-                                  </Badge>
-                                </div>
-                                <div className="flex md:hidden">
-                                  <StatusBadgeMini
-                                    status={MediaStatus.PENDING}
-                                    is4k={true}
-                                  />
-                                </div>
-                              </>
-                            )}
-                          {mSeason4k?.status4k ===
-                            MediaStatus.PARTIALLY_AVAILABLE &&
-                            show4k && (
-                              <>
-                                <div className="hidden md:flex">
-                                  <Badge badgeType="success">
-                                    {intl.formatMessage(messages.status4k, {
-                                      status: intl.formatMessage(
-                                        globalMessages.partiallyavailable
-                                      ),
-                                    })}
-                                  </Badge>
-                                </div>
-                                <div className="flex md:hidden">
-                                  <StatusBadgeMini
-                                    status={MediaStatus.PARTIALLY_AVAILABLE}
-                                    is4k={true}
-                                  />
-                                </div>
-                              </>
-                            )}
-                          {mSeason4k?.status4k === MediaStatus.AVAILABLE &&
-                            show4k && (
-                              <>
-                                <div className="hidden md:flex">
-                                  <Badge badgeType="success">
-                                    {intl.formatMessage(messages.status4k, {
-                                      status: intl.formatMessage(
-                                        globalMessages.available
-                                      ),
-                                    })}
-                                  </Badge>
-                                </div>
-                                <div className="flex md:hidden">
-                                  <StatusBadgeMini
-                                    status={MediaStatus.AVAILABLE}
-                                    is4k={true}
-                                  />
-                                </div>
-                              </>
-                            )}
-                          {mSeason4k?.status4k === MediaStatus.DELETED &&
-                            request4k?.status !== MediaRequestStatus.APPROVED &&
-                            show4k && (
-                              <>
-                                <div className="hidden md:flex">
-                                  <Badge badgeType="danger">
-                                    {intl.formatMessage(messages.status4k, {
-                                      status: intl.formatMessage(
-                                        globalMessages.deleted
-                                      ),
-                                    })}
-                                  </Badge>
-                                </div>
-                                <div className="flex md:hidden">
-                                  <StatusBadgeMini
-                                    status={MediaStatus.DELETED}
-                                    is4k={true}
-                                  />
-                                </div>
-                              </>
-                            )}
                           <ChevronDownIcon
                             className={`${
                               open ? 'rotate-180' : ''
@@ -935,7 +730,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                           leave="transition-opacity duration-75 ease-out"
                           leaveFrom="opacity-100"
                           leaveTo="opacity-0"
-                          // Not sure why this transition is adding a margin without this here
                           style={{ margin: '0px' }}
                         >
                           <Disclosure.Panel className="w-full rounded-b-md border-b border-l border-r border-gray-700 px-4 pb-2">
@@ -1178,7 +972,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 tvdbId={data.externalIds.tvdbId}
                 imdbId={data.externalIds.imdbId}
                 rtUrl={ratingData?.url}
-                mediaUrl={mediaUrl ?? mediaUrl4k}
+                mediaUrl={mediaUrl}
               />
             </div>
           </div>

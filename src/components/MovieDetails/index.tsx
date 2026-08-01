@@ -76,9 +76,7 @@ const messages = defineMessages('components.MovieDetails', {
   viewfullcrew: 'View Full Crew',
   downloadstatus: 'Download Status',
   play: 'Play on {mediaServerName}',
-  play4k: 'Play 4K on {mediaServerName}',
   markavailable: 'Mark as Available',
-  mark4kavailable: 'Mark as Available in 4K',
   showmore: 'Show More',
   showless: 'Show Less',
   streamingproviders: 'Currently Streaming On',
@@ -124,7 +122,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     refreshInterval: refreshIntervalHelper(
       {
         downloadStatus: movie?.mediaInfo?.downloadStatus,
-        downloadStatus4k: movie?.mediaInfo?.downloadStatus4k,
       },
       15000
     ),
@@ -154,9 +151,8 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     []
   );
 
-  const { mediaUrl, mediaUrl4k } = useDeepLinks({
+  const { mediaUrl } = useDeepLinks({
     mediaUrl: data?.mediaInfo?.mediaUrl,
-    mediaUrl4k: data?.mediaInfo?.mediaUrl4k,
   });
 
   if (!data && !error) {
@@ -183,20 +179,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     });
   }
 
-  if (
-    settings.currentSettings.movie4kEnabled &&
-    mediaUrl4k &&
-    hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE], {
-      type: 'or',
-    })
-  ) {
-    mediaLinks.push({
-      text: getAvailable4kMediaServerName(),
-      url: mediaUrl4k,
-      svg: <PlayIcon />,
-    });
-  }
-
   const discoverRegion = user?.settings?.discoverRegion
     ? user.settings.discoverRegion
     : settings.currentSettings.discoverRegion
@@ -207,13 +189,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     (r) => r.iso_3166_1 === discoverRegion
   )?.release_dates;
 
-  // Release date types:
-  // 1. Premiere
-  // 2. Theatrical (limited)
-  // 3. Theatrical
-  // 4. Digital
-  // 5. Physical
-  // 6. TV
   const filteredReleases = uniqBy(
     releases?.filter((r) => r.type > 2 && r.type < 6),
     'type'
@@ -273,14 +248,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     }
 
     return intl.formatMessage(messages.play, { mediaServerName: 'Jellyfin' });
-  }
-
-  function getAvailable4kMediaServerName() {
-    if (settings.currentSettings.mediaServerType === MediaServerType.EMBY) {
-      return intl.formatMessage(messages.play, { mediaServerName: 'Emby' });
-    }
-
-    return intl.formatMessage(messages.play4k, { mediaServerName: 'Jellyfin' });
   }
 
   const onClickHideItemBtn = async (): Promise<void> => {
@@ -415,31 +382,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
               mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
-            {settings.currentSettings.movie4kEnabled &&
-              hasPermission(
-                [
-                  Permission.MANAGE_REQUESTS,
-                  Permission.REQUEST_4K,
-                  Permission.REQUEST_4K_MOVIE,
-                ],
-                {
-                  type: 'or',
-                }
-              ) && (
-                <StatusBadge
-                  status={data.mediaInfo?.status4k}
-                  downloadItem={data.mediaInfo?.downloadStatus4k}
-                  title={data.title}
-                  is4k
-                  inProgress={
-                    (data.mediaInfo?.downloadStatus4k ?? []).length > 0
-                  }
-                  tmdbId={data.mediaInfo?.tmdbId}
-                  mediaType="movie"
-                  mediaUrl={mediaUrl4k}
-                  serviceUrl={data.mediaInfo?.serviceUrl4k}
-                />
-              )}
           </div>
           <h1 data-testid="media-title">
             {data.title}{' '}
@@ -491,15 +433,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
             tmdbId={data.id}
             onUpdate={() => revalidate()}
           />
-          {(data.mediaInfo?.status === MediaStatus.AVAILABLE ||
-            (settings.currentSettings.movie4kEnabled &&
-              hasPermission(
-                [Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE],
-                {
-                  type: 'or',
-                }
-              ) &&
-              data.mediaInfo?.status4k === MediaStatus.AVAILABLE)) &&
+          {data.mediaInfo?.status === MediaStatus.AVAILABLE &&
             hasPermission(
               [Permission.CREATE_ISSUES, Permission.MANAGE_ISSUES],
               {
@@ -519,9 +453,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
           {hasPermission(Permission.MANAGE_REQUESTS) &&
             data.mediaInfo &&
             (data.mediaInfo.jellyfinMediaId ||
-              data.mediaInfo.jellyfinMediaId4k ||
-              data.mediaInfo.status !== MediaStatus.UNKNOWN ||
-              data.mediaInfo.status4k !== MediaStatus.UNKNOWN) && (
+              data.mediaInfo.status !== MediaStatus.UNKNOWN) && (
               <Tooltip content={intl.formatMessage(messages.managemovie)}>
                 <Button
                   buttonType="ghost"
@@ -743,7 +675,6 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                       key={`release-date-${i}`}
                     >
                       {r.type === 3 ? (
-                        // Theatrical
                         <Tooltip
                           content={intl.formatMessage(
                             messages.theatricalrelease
@@ -752,14 +683,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                           <TicketIcon className="h-4 w-4" />
                         </Tooltip>
                       ) : r.type === 4 ? (
-                        // Digital
                         <Tooltip
                           content={intl.formatMessage(messages.digitalrelease)}
                         >
                           <CloudIcon className="h-4 w-4" />
                         </Tooltip>
                       ) : (
-                        // Physical
                         <Tooltip
                           content={intl.formatMessage(messages.physicalrelease)}
                         >
@@ -960,9 +889,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                 tvdbId={data.externalIds.tvdbId}
                 imdbId={data.externalIds.imdbId}
                 rtUrl={ratingData?.rt?.url}
-                mediaUrl={
-                  data.mediaInfo?.mediaUrl ?? data.mediaInfo?.mediaUrl4k
-                }
+                mediaUrl={data.mediaInfo?.mediaUrl}
               />
             </div>
           </div>

@@ -24,15 +24,10 @@ interface DownloadingItem {
 
 interface DownloadBlockProps {
   downloadItem: DownloadingItem;
-  is4k?: boolean;
   title?: string;
 }
 
-const DownloadBlock = ({
-  downloadItem,
-  is4k = false,
-  title,
-}: DownloadBlockProps) => {
+const DownloadBlock = ({ downloadItem, title }: DownloadBlockProps) => {
   const intl = useIntl();
   const { hasPermission } = useUser();
 
@@ -79,11 +74,6 @@ const DownloadBlock = ({
       </div>
       <div className="flex items-center justify-between text-xs">
         <span>
-          {is4k && (
-            <Badge badgeType="warning" className="mr-2">
-              4K
-            </Badge>
-          )}
           <Badge className="capitalize">{downloadItem.status}</Badge>
         </span>
         <span>

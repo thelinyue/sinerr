@@ -42,7 +42,6 @@ const defaultPayload = {
     tvdbId: '{{media_tvdbid}}',
     jellyfinMediaId: '{{media_jellyfinMediaId}}',
     status: '{{media_status}}',
-    status4k: '{{media_status4k}}',
   },
   '{{request}}': {
     request_id: '{{request_id}}',

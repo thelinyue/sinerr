@@ -483,7 +483,9 @@ const ConnectionGuide = () => {
 
   useEffect(() => {
     try {
-      setDismissed(localStorage.getItem('connection-guide-dismissed') === 'true');
+      setDismissed(
+        localStorage.getItem('connection-guide-dismissed') === 'true'
+      );
     } catch {
       setDismissed(true);
     }
@@ -496,7 +498,7 @@ const ConnectionGuide = () => {
 
   const downloads = settings.currentSettings.clientDownloadUrls || [];
 
-  if (dismissed || (!serverUrl && downloads.length === 0)) {
+  if (!serverUrl && downloads.length === 0) {
     return null;
   }
 
@@ -509,29 +511,43 @@ const ConnectionGuide = () => {
     setDismissed(true);
   };
 
+  const showGuide = () => {
+    try {
+      localStorage.removeItem('connection-guide-dismissed');
+    } catch {
+      // localStorage may not be available
+    }
+    setDismissed(false);
+  };
+
   return (
-    <Transition
-      as="div"
-      show={!dismissed}
-      enter="transition-opacity duration-300"
-      enterFrom="opacity-0"
-      enterTo="opacity-100"
-    >
-      <div className="mx-4 mb-6 rounded-lg border border-indigo-500/30 bg-gradient-to-r from-indigo-600/30 to-purple-600/30 p-5">
-        <div className="mb-3 flex items-start justify-between">
-          <h2 className="text-lg font-bold text-white">
-            <span className="mr-2">📺</span>如何开始观看？
-          </h2>
+    <div className="mx-4 mb-6 overflow-hidden rounded-lg border border-indigo-500/30 bg-gradient-to-r from-indigo-600/30 to-purple-600/30">
+      <div
+        className={`flex items-center justify-between border-b border-indigo-500/20 p-4 ${dismissed ? '' : 'pb-3'}`}
+      >
+        <h2 className="text-base font-bold text-white">
+          <span className="mr-2">📺</span>如何开始观看？
+        </h2>
+        {dismissed ? (
+          <button
+            onClick={showGuide}
+            className="flex-shrink-0 text-sm text-indigo-400 transition-colors hover:text-indigo-300"
+          >
+            展开
+          </button>
+        ) : (
           <button
             onClick={dismiss}
-            className="flex-shrink-0 text-sm text-gray-400 hover:text-white"
+            className="flex-shrink-0 text-sm text-gray-400 transition-colors hover:text-white"
           >
-            不再显示
+            收起
           </button>
-        </div>
-        <div className="space-y-4">
+        )}
+      </div>
+      {!dismissed && (
+        <div className="space-y-4 p-5 pt-0">
           {downloads.length > 0 && (
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 pt-4">
               <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
                 1
               </div>
@@ -703,8 +719,8 @@ const ConnectionGuide = () => {
             </div>
           )}
         </div>
-      </div>
-    </Transition>
+      )}
+    </div>
   );
 };
 

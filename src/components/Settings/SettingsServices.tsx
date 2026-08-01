@@ -14,9 +14,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
-import type {
-  MediaryServerSettings,
-} from '@server/lib/settings';
+import type { MediaryServerSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -27,24 +25,18 @@ const messages = defineMessages('components.Settings', {
 
   mediarysettings: 'Mediary Settings',
   serviceSettingsDescription:
-    'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only two of them can be marked as defaults (one non-4K and one 4K). Administrators are able to override the server used to process new requests prior to approval.',
+    'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only one of them can be marked as the default. Administrators are able to override the server used to process new requests prior to approval.',
 
   mediarySettingsDescription: 'Configure Mediary connection settings',
   deleteserverconfirm: 'Are you sure you want to delete this server?',
   ssl: 'SSL',
   default: 'Default',
-  default4k: 'Default 4K',
-  is4k: '4K',
   address: 'Address',
   activeProfile: 'Active Profile',
 
   addmediary: 'Add Mediary Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
-  noDefaultNon4kServer:
-    'If you only have a single {serverType} server for both non-4K and 4K content (or if you only download 4K content), your {serverType} server should <strong>NOT</strong> be designated as a 4K server.',
-  noDefault4kServer:
-    'A 4K {serverType} server must be marked as default in order to enable users to submit 4K {mediaType} requests.',
   mediaTypeMovie: 'movie',
   mediaTypeSeries: 'series',
   deleteServer: 'Delete {serverType} Server',
@@ -53,13 +45,11 @@ const messages = defineMessages('components.Settings', {
 interface ServerInstanceProps {
   name: string;
   isDefault?: boolean;
-  is4k?: boolean;
   hostname: string;
   port: number;
   isSSL?: boolean;
   externalUrl?: string;
   profileName?: string;
-  isMoviepilot?: boolean;
   isMediary?: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -81,14 +71,11 @@ export interface DVRTestResponse {
   urlBase?: string;
 }
 
-
-
 const ServerInstance = ({
   name,
   hostname,
   port,
   profileName,
-  is4k = false,
   isDefault = false,
   isSSL = false,
   isMediary = false,
@@ -117,17 +104,7 @@ const ServerInstance = ({
                 {name}
               </a>
             </h3>
-            {isDefault && !is4k && (
-              <Badge>{intl.formatMessage(messages.default)}</Badge>
-            )}
-            {isDefault && is4k && (
-              <Badge>{intl.formatMessage(messages.default4k)}</Badge>
-            )}
-            {!isDefault && is4k && (
-              <Badge badgeType="warning">
-                {intl.formatMessage(messages.is4k)}
-              </Badge>
-            )}
+            {isDefault && <Badge>{intl.formatMessage(messages.default)}</Badge>}
             {isSSL && (
               <Badge badgeType="success">
                 {intl.formatMessage(messages.ssl)}

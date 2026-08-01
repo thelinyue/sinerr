@@ -1,6 +1,5 @@
 import BlocklistModal from '@app/components/BlocklistModal';
 import Button from '@app/components/Common/Button';
-import ButtonWithDropdown from '@app/components/Common/ButtonWithDropdown';
 import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
@@ -9,7 +8,6 @@ import RequestModal from '@app/components/RequestModal';
 import Slider from '@app/components/Slider';
 import StatusBadge from '@app/components/StatusBadge';
 import TitleCard from '@app/components/TitleCard';
-import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
@@ -37,7 +35,6 @@ const messages = defineMessages('components.CollectionDetails', {
   removefromblocklistpartialcount:
     '{removeLabel} ({count, plural, one {# movie} other {# movies}})',
   requestcollection: 'Request Collection',
-  requestcollection4k: 'Request Collection in 4K',
 });
 
 interface CollectionDetailsProps {
@@ -47,25 +44,18 @@ interface CollectionDetailsProps {
 const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
   const intl = useIntl();
   const router = useRouter();
-  const settings = useSettings();
   const { hasPermission } = useUser();
   const [requestModal, setRequestModal] = useState(false);
-  const [is4k, setIs4k] = useState(false);
   const [showBlocklistModal, setShowBlocklistModal] = useState(false);
   const [isBlocklistUpdating, setIsBlocklistUpdating] = useState(false);
   const { addToast } = useToasts();
 
   const returnCollectionDownloadItems = (data: Collection | undefined) => {
-    const [downloadStatus, downloadStatus4k] = [
-      data?.parts.flatMap((item) =>
-        item.mediaInfo?.downloadStatus ? item.mediaInfo?.downloadStatus : []
-      ),
-      data?.parts.flatMap((item) =>
-        item.mediaInfo?.downloadStatus4k ? item.mediaInfo?.downloadStatus4k : []
-      ),
-    ];
+    const downloadStatus = data?.parts.flatMap((item) =>
+      item.mediaInfo?.downloadStatus ? item.mediaInfo?.downloadStatus : []
+    );
 
-    return { downloadStatus, downloadStatus4k };
+    return { downloadStatus };
   };
 
   const {
@@ -141,20 +131,15 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
     setIsBlocklistUpdating(false);
   };
 
-  const [downloadStatus, downloadStatus4k] = useMemo(() => {
+  const downloadStatus = useMemo(() => {
     const downloadItems = returnCollectionDownloadItems(data);
-    return [downloadItems.downloadStatus, downloadItems.downloadStatus4k];
+    return downloadItems.downloadStatus;
   }, [data]);
 
-  const [titles, titles4k] = useMemo(() => {
-    return [
-      data?.parts
-        .filter((media) => (media.mediaInfo?.downloadStatus ?? []).length > 0)
-        .map((title) => title.title),
-      data?.parts
-        .filter((media) => (media.mediaInfo?.downloadStatus4k ?? []).length > 0)
-        .map((title) => title.title),
-    ];
+  const titles = useMemo(() => {
+    return data?.parts
+      .filter((media) => (media.mediaInfo?.downloadStatus ?? []).length > 0)
+      .map((title) => title.title);
   }, [data?.parts]);
 
   if (!data && !error) {
@@ -166,7 +151,6 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
   }
 
   let collectionStatus = MediaStatus.UNKNOWN;
-  let collectionStatus4k = MediaStatus.UNKNOWN;
 
   const blocklistedParts = data.parts.filter(
     (part) =>
@@ -194,22 +178,6 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
     collectionStatus = MediaStatus.PARTIALLY_AVAILABLE;
   }
 
-  if (
-    data.parts.every(
-      (part) =>
-        part.mediaInfo && part.mediaInfo.status4k === MediaStatus.AVAILABLE
-    )
-  ) {
-    collectionStatus4k = MediaStatus.AVAILABLE;
-  } else if (
-    data.parts.some(
-      (part) =>
-        part.mediaInfo && part.mediaInfo.status4k === MediaStatus.AVAILABLE
-    )
-  ) {
-    collectionStatus4k = MediaStatus.PARTIALLY_AVAILABLE;
-  }
-
   const hasRequestable =
     hasPermission([Permission.REQUEST, Permission.REQUEST_MOVIE], {
       type: 'or',
@@ -219,18 +187,6 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
         !part.mediaInfo ||
         part.mediaInfo.status === MediaStatus.DELETED ||
         part.mediaInfo.status === MediaStatus.UNKNOWN
-    ).length > 0;
-
-  const hasRequestable4k =
-    settings.currentSettings.movie4kEnabled &&
-    hasPermission([Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE], {
-      type: 'or',
-    }) &&
-    data.parts.filter(
-      (part) =>
-        !part.mediaInfo ||
-        part.mediaInfo.status4k === MediaStatus.DELETED ||
-        part.mediaInfo.status4k === MediaStatus.UNKNOWN
     ).length > 0;
 
   const blocklistVisibility = hasPermission(
@@ -305,7 +261,6 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
         tmdbId={data.id}
         show={requestModal}
         type="collection"
-        is4k={is4k}
         onComplete={() => {
           revalidate();
           setRequestModal(false);
@@ -353,24 +308,6 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
                 (part) => (part.mediaInfo?.downloadStatus ?? []).length > 0
               )}
             />
-            {settings.currentSettings.movie4kEnabled &&
-              hasPermission(
-                [Permission.REQUEST_4K, Permission.REQUEST_4K_MOVIE],
-                {
-                  type: 'or',
-                }
-              ) && (
-                <StatusBadge
-                  status={collectionStatus4k}
-                  downloadItem={downloadStatus4k}
-                  title={titles4k}
-                  is4k
-                  inProgress={data.parts.some(
-                    (part) =>
-                      (part.mediaInfo?.downloadStatus4k ?? []).length > 0
-                  )}
-                />
-              )}
           </div>
           <h1>{data.name}</h1>
           <span className="media-attributes">
@@ -429,41 +366,11 @@ const CollectionDetails = ({ collection }: CollectionDetailsProps) => {
                 </Button>
               </Tooltip>
             ))}
-          {(hasRequestable || hasRequestable4k) && (
-            <ButtonWithDropdown
-              buttonType="primary"
-              onClick={() => {
-                setRequestModal(true);
-                setIs4k(!hasRequestable);
-              }}
-              text={
-                <>
-                  <ArrowDownTrayIcon />
-                  <span>
-                    {intl.formatMessage(
-                      hasRequestable
-                        ? messages.requestcollection
-                        : messages.requestcollection4k
-                    )}
-                  </span>
-                </>
-              }
-            >
-              {hasRequestable && hasRequestable4k && (
-                <ButtonWithDropdown.Item
-                  buttonType="primary"
-                  onClick={() => {
-                    setRequestModal(true);
-                    setIs4k(true);
-                  }}
-                >
-                  <ArrowDownTrayIcon />
-                  <span>
-                    {intl.formatMessage(messages.requestcollection4k)}
-                  </span>
-                </ButtonWithDropdown.Item>
-              )}
-            </ButtonWithDropdown>
+          {hasRequestable && (
+            <Button buttonType="primary" onClick={() => setRequestModal(true)}>
+              <ArrowDownTrayIcon />
+              <span>{intl.formatMessage(messages.requestcollection)}</span>
+            </Button>
           )}
         </div>
       </div>

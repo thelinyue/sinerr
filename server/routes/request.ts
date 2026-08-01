@@ -128,12 +128,9 @@ requestRoutes.get<Record<string, unknown>, RequestResultsResponse>(
         .where('request.status IN (:...requestStatus)', {
           requestStatus: statusFilter,
         })
-        .andWhere(
-          '((request.is4k = false AND media.status IN (:...mediaStatus)) OR (request.is4k = true AND media.status4k IN (:...mediaStatus)))',
-          {
-            mediaStatus: mediaStatusFilter,
-          }
-        );
+        .andWhere('media.status IN (:...mediaStatus)', {
+          mediaStatus: mediaStatusFilter,
+        });
 
       if (
         !req.user?.hasPermission(
@@ -258,11 +255,11 @@ requestRoutes.get('/count', async (_req, res, next) => {
         'declined'
       )
       .addSelect(
-        `SUM(CASE WHEN request.status = :approved AND ((request.is4k = false AND media.status != :availableStatus) OR (request.is4k = true AND media.status4k != :availableStatus)) THEN 1 ELSE 0 END)`,
+        `SUM(CASE WHEN request.status = :approved AND media.status != :availableStatus THEN 1 ELSE 0 END)`,
         'processing'
       )
       .addSelect(
-        `SUM(CASE WHEN request.status = :approved AND ((request.is4k = false AND media.status = :availableStatus) OR (request.is4k = true AND media.status4k = :availableStatus)) THEN 1 ELSE 0 END)`,
+        `SUM(CASE WHEN request.status = :approved AND media.status = :availableStatus THEN 1 ELSE 0 END)`,
         'available'
       )
       .addSelect(
@@ -425,7 +422,6 @@ requestRoutes.put<{ requestId: string }>(
         const existingSeasons = media.requests
           .filter(
             (r) =>
-              r.is4k === request.is4k &&
               r.id !== request.id &&
               r.status !== MediaRequestStatus.DECLINED &&
               r.status !== MediaRequestStatus.COMPLETED
