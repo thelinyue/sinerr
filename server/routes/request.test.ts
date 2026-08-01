@@ -106,8 +106,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
       status,
       media,
       requestedBy,
-      # 4K removed,
-      updatedAt: new Date('2025-03-01T00:00:00.000Z'),
+            updatedAt: new Date('2025-03-01T00:00:00.000Z'),
     })
   );
 
@@ -161,8 +160,7 @@ describe('DELETE /request/:requestId', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: owner,
-        # 4K removed,
-      })
+              })
     );
 
     const agent = await loginAs('friend@sinerr.dev', 'test1234');
@@ -291,8 +289,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        # 4K removed,
-        isAutoRequest: true,
+                isAutoRequest: true,
       })
     );
 
@@ -305,8 +302,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     return { media, staleRequest, newRequest, admin };
@@ -349,8 +345,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        # 4K removed,
-        isAutoRequest: true,
+                isAutoRequest: true,
       })
     );
 
@@ -363,8 +358,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -422,8 +416,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        # 4K removed,
-        isAutoRequest: true,
+                isAutoRequest: true,
       })
     );
 
@@ -436,8 +429,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -475,8 +467,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     await requestRepo.save(
@@ -485,8 +476,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -522,8 +512,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-        # 4K removed,
-      })
+              })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -535,4 +524,5 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(updated.status, MediaStatus.PARTIALLY_AVAILABLE);
   });
 });
+
 
