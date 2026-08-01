@@ -96,7 +96,6 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
       mediaType: MediaType.MOVIE,
       tmdbId: 12345,
       status: MediaStatus.UNKNOWN,
-      status: MediaStatus.UNKNOWN,
     })
   );
 
@@ -149,7 +148,6 @@ describe('DELETE /request/:requestId', () => {
       new Media({
         mediaType: MediaType.MOVIE,
         tmdbId: 54321,
-        status: MediaStatus.UNKNOWN,
         status: MediaStatus.UNKNOWN,
       })
     );
