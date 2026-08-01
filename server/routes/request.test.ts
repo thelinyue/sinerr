@@ -277,7 +277,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99001,
         status: MediaStatus.DELETED,
-        status: MediaStatus.UNKNOWN,
+
       })
     );
 
@@ -500,7 +500,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99005,
         status: MediaStatus.PARTIALLY_AVAILABLE,
-        status: MediaStatus.UNKNOWN,
+
       })
     );
 
@@ -522,6 +522,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(updated.status, MediaStatus.PARTIALLY_AVAILABLE);
   });
 });
+
 
 
 
