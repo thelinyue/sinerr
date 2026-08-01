@@ -96,6 +96,10 @@ export default async function createCustomProxyAgent(
       }
     }
 
+    if (hostname === 'www.google.com') {
+      return false;
+    }
+
     const whitelist = proxySettings.proxyWhitelist?.trim();
     if (whitelist) {
       return !whitelist.split(',').some((entry) => {
