@@ -23,7 +23,7 @@ import { isAuthenticated } from '@server/middleware/auth';
 import discoverSettingRoutes from '@server/routes/settings/discover';
 import { ApiError } from '@server/types/error';
 import { appDataPath } from '@server/utils/appDataVolume';
-import { getAppVersion } from '@server/utils/appVersion';
+import { getAppVersion, getSeerrVersion } from '@server/utils/appVersion';
 import { dnsCache } from '@server/utils/dnsCache';
 import { getHostname } from '@server/utils/getHostname';
 import type { DnsEntries, DnsStats } from 'dns-caching';
@@ -36,6 +36,7 @@ import path from 'path';
 import semver from 'semver';
 
 import metadataRoutes from './metadata';
+import mediaryRoutes from './mediary';
 import moviepilotRoutes from './moviepilot';
 import notificationRoutes from './notifications';
 
@@ -43,6 +44,7 @@ const settingsRoutes = Router();
 
 settingsRoutes.use('/notifications', notificationRoutes);
 settingsRoutes.use('/moviepilot', moviepilotRoutes);
+settingsRoutes.use('/mediary', mediaryRoutes);
 settingsRoutes.use('/discover', discoverSettingRoutes);
 settingsRoutes.use('/metadatas', metadataRoutes);
 
@@ -608,6 +610,7 @@ settingsRoutes.get('/about', async (req, res) => {
 
   return res.status(200).json({
     version: getAppVersion(),
+    seerrVersion: getSeerrVersion(),
     totalMediaItems,
     totalRequests,
     tz: process.env.TZ,

@@ -14,6 +14,7 @@ const messages = defineMessages('components.Settings.SettingsAbout', {
   about: 'About',
   aboutsinerr: 'About Sinerr',
   version: 'Version',
+  seerrversion: 'Based on Seerr',
   totalmedia: 'Total Media',
   totalrequests: 'Total Requests',
   gettingsupport: 'Getting Support',
@@ -67,6 +68,12 @@ const SettingsAbout = () => {
             <code className="truncate">
               {data.version.replace('develop-', '')}
             </code>
+          </List.Item>
+          <List.Item
+            title={intl.formatMessage(messages.seerrversion)}
+            className="flex flex-row items-center truncate"
+          >
+            <code className="truncate">v{data.seerrVersion}</code>
           </List.Item>
           <List.Item title={intl.formatMessage(messages.totalmedia)}>
             {intl.formatNumber(data.totalMediaItems)}

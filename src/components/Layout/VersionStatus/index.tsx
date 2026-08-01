@@ -12,6 +12,7 @@ import useSWR from 'swr';
 const messages = defineMessages('components.Layout.VersionStatus', {
   streamdevelop: 'Sinerr Develop',
   streamstable: 'Sinerr Stable',
+  seerrbased: 'Based on Seerr v{version}',
 });
 
 interface VersionStatusProps {
@@ -66,6 +67,13 @@ const VersionStatus = ({ onClick }: VersionStatusProps) => {
             </code>
           )}
         </span>
+        {data.seerrVersion && data.seerrVersion !== 'unknown' && (
+          <span className="truncate text-[10px] text-gray-500">
+            {intl.formatMessage(messages.seerrbased, {
+              version: data.seerrVersion,
+            })}
+          </span>
+        )}
       </div>
     </Link>
   );
