@@ -81,7 +81,6 @@ async function loginAs(email: string, password: string) {
   } finally {
     settings.main.localLogin = priorLocalLogin;
   }
-}
 
 async function seedMedia() {
   return getRepository(Media).save(
@@ -205,5 +204,4 @@ describe('POST /issue', () => {
     assert.strictEqual(res.status, 404);
     assert.strictEqual(res.body.message, 'Issue user not found');
   });
-});
 

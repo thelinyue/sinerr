@@ -268,7 +268,6 @@ describe('Jellyfin Scanner', () => {
         new Season({
           seasonNumber: 3,
           status: MediaStatus.UNKNOWN,
-          status: MediaStatus.UNKNOWN,
         }),
       ];
 
@@ -366,7 +365,6 @@ describe('Jellyfin Scanner', () => {
         // Not present in the TMDB season list below
         new Season({
           seasonNumber: 2,
-          status: MediaStatus.UNKNOWN,
           status: MediaStatus.UNKNOWN,
         }),
       ];
@@ -501,6 +499,4 @@ describe('Jellyfin Scanner', () => {
         'Show should stay PARTIALLY_AVAILABLE when a DELETED season is missing from the metadata provider'
       );
     });
-  });
-});
 
