@@ -93,7 +93,7 @@ components:
         played:
           type: boolean
           example: true
-          description: Whether the media has been played (movie: any play record; series: at least one episode).
+          description: 'Whether the media has been played (movie: any play record; series: at least one episode).'
         playCount:
           type: number
           example: 3
