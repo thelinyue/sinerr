@@ -18,6 +18,7 @@ import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
 import MediaSlider from '@app/components/MediaSlider';
 import MediaryStatus from '@app/components/MediaryStatus';
+import MoviePilotStatus from '@app/components/MoviePilotStatus';
 import PersonCard from '@app/components/PersonCard';
 import RequestButton from '@app/components/RequestButton';
 import Slider from '@app/components/Slider';
@@ -385,6 +386,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
             />
             {data.mediaInfo?.tmdbId && (
               <MediaryStatus tmdbId={data.mediaInfo.tmdbId} mediaType="movie" />
+            )}
+            {data.mediaInfo?.tmdbId && (
+              <MoviePilotStatus
+                tmdbId={data.mediaInfo.tmdbId}
+                mediaType="movie"
+              />
             )}
           </div>
           <h1 data-testid="media-title">

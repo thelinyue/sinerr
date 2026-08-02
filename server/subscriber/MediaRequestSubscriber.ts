@@ -1,4 +1,8 @@
 import MediaryAPI from '@server/api/mediary';
+import MoviePilotAPI, {
+  type MoviePilotSubscribeOptions,
+  type MoviePilotSubscription,
+} from '@server/api/moviepilot';
 import TheMovieDb from '@server/api/themoviedb';
 import {
   MediaRequestStatus,
@@ -10,7 +14,9 @@ import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import Season from '@server/entity/Season';
 import SeasonRequest from '@server/entity/SeasonRequest';
+import { completeRequestForMoviePilot } from '@server/lib/moviePilotSync';
 import notificationManager, { Notification } from '@server/lib/notifications';
+import type { MoviePilotServerSettings } from '@server/lib/settings';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { truncate } from 'lodash';
@@ -320,6 +326,298 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
   }
 
+  /**
+   * 选择 MoviePilot 服务器：优先使用请求级覆盖的服务器（entity.serverId），
+   * 否则回退到默认服务器。与 Mediary 的默认服务器选择行为保持一致。
+   */
+  private getMoviePilotServer(
+    entity: MediaRequest
+  ): MoviePilotServerSettings | undefined {
+    const settings = getSettings();
+    if (settings.moviepilot.length === 0) {
+      return undefined;
+    }
+
+    if (entity.serverId !== undefined && entity.serverId !== null) {
+      const override = settings.moviepilot.find(
+        (m) => m.id === entity.serverId
+      );
+      if (override) {
+        return override;
+      }
+    }
+
+    return (
+      settings.moviepilot.find((m) => m.isDefault) ?? settings.moviepilot[0]
+    );
+  }
+
+  /**
+   * 构建 MoviePilot 订阅级配置：以服务器默认配置为主，请求级字段可覆盖。
+   * - rootFolder（请求级保存路径）→ save_path
+   * - tags（请求级站点 ID 列表）→ sites
+   * 其余（quality/resolution/effect/downloader/include/exclude）来自服务器默认配置。
+   */
+  private getMoviePilotConfig(
+    entity: MediaRequest,
+    server: MoviePilotServerSettings
+  ): {
+    quality?: string;
+    resolution?: string;
+    effect?: string;
+    downloader?: string;
+    savePath?: string;
+    sites?: number[];
+    include?: string;
+    exclude?: string;
+  } {
+    return {
+      quality: server.activeQuality,
+      resolution: server.activeResolution,
+      effect: server.activeEffect,
+      downloader: server.activeDownloader,
+      savePath: entity.rootFolder ?? server.activeSavePath,
+      sites:
+        entity.tags && entity.tags.length > 0
+          ? entity.tags
+          : server.activeSites,
+      include: server.activeInclude,
+      exclude: server.activeExclude,
+    };
+  }
+
+  /**
+   * 调用 MoviePilot 新增订阅并记录结果。
+   * 兜底处理：即使预检通过，仍可能因并发请求返回"订阅已存在"（服务端去重），
+   * 此时不视为失败，仅记录为已存在。
+   */
+  private async pushMoviePilotAdd(
+    moviepilot: MoviePilotAPI,
+    entity: MediaRequest,
+    options: MoviePilotSubscribeOptions
+  ): Promise<void> {
+    const data = await moviepilot.addSubscribe(options);
+    const message = String(data?.message ?? '');
+    if (message.includes('已存在')) {
+      logger.info('MoviePilot subscription already exists, skipped', {
+        label: 'Media Request',
+        requestId: entity.id,
+        tmdbId: options.tmdbid,
+        season: options.seasons ? Number(options.seasons) : undefined,
+        message,
+      });
+    } else {
+      logger.info('Sent request to MoviePilot', {
+        label: 'Media Request',
+        requestId: entity.id,
+        mediaId: entity.media.id,
+        tmdbId: options.tmdbid,
+        season: options.seasons ? Number(options.seasons) : undefined,
+      });
+    }
+  }
+
+  public async sendToMoviePilot(entity: MediaRequest): Promise<void> {
+    if (entity.status === MediaRequestStatus.APPROVED) {
+      try {
+        const server = this.getMoviePilotServer(entity);
+        if (!server) {
+          return;
+        }
+
+        const tmdb = new TheMovieDb();
+        const moviepilot = new MoviePilotAPI({
+          url: MoviePilotAPI.buildUrl(server),
+          apiKey: server.apiKey,
+        });
+
+        const tmdbId = entity.media.tmdbId;
+        const config = this.getMoviePilotConfig(entity, server);
+
+        // 推送前的去重预检：查询 MoviePilot 中该媒体的既有订阅。
+        // MoviePilot 服务端按 tmdbid+season+media_source 精确去重，跨媒体源（如豆瓣来源）
+        // 会绕过去重，因此这里按 tmdbid 匹配——只要已存在订阅即视为"已订阅"。
+        let existingSubscriptions: MoviePilotSubscription[] = [];
+        try {
+          existingSubscriptions =
+            await moviepilot.getSubscriptionsByTmdbId(tmdbId);
+        } catch (e) {
+          logger.warn('Failed to query MoviePilot existing subscriptions', {
+            label: 'Media Request',
+            requestId: entity.id,
+            tmdbId,
+            errorMessage: e.message,
+          });
+        }
+
+        // 已订阅且完成（state === 'S'）→ 请求直接置为 COMPLETED，不再走 PROCESSING。
+        // 全部完成时无需再推送订阅；部分季完成时对应季已被下方跳过逻辑排除。
+        const fullyCompleted = await completeRequestForMoviePilot(
+          entity,
+          existingSubscriptions
+        );
+        if (fullyCompleted) {
+          return;
+        }
+
+        const existingSeasons = new Set(
+          existingSubscriptions
+            .map((sub) => sub.season)
+            .filter(
+              (season): season is number =>
+                season !== null && season !== undefined
+            )
+        );
+
+        if (entity.type === MediaType.MOVIE) {
+          if (existingSubscriptions.length > 0) {
+            logger.info('Movie already subscribed in MoviePilot, skipped', {
+              label: 'Media Request',
+              requestId: entity.id,
+              tmdbId,
+            });
+            return;
+          }
+
+          const movie = await tmdb.getMovie({ movieId: tmdbId });
+          await this.pushMoviePilotAdd(moviepilot, entity, {
+            tmdbid: tmdbId,
+            type: 'movie',
+            name: movie.title,
+            year: movie.release_date
+              ? Number(movie.release_date.slice(0, 4))
+              : undefined,
+            ...config,
+          });
+        } else {
+          const tv = await tmdb.getTvShow({ tvId: tmdbId });
+          const name = tv.name;
+          const year = tv.first_air_date
+            ? Number(tv.first_air_date.slice(0, 4))
+            : undefined;
+
+          const seasons = entity.seasons?.map((s) => s.seasonNumber) ?? [];
+          // 只推送 MoviePilot 中尚未订阅的季，已订阅的季直接跳过。
+          const missingSeasons = seasons.filter(
+            (season) => !existingSeasons.has(season)
+          );
+          const skippedSeasons = seasons.filter((season) =>
+            existingSeasons.has(season)
+          );
+
+          if (skippedSeasons.length > 0) {
+            logger.info('Seasons already subscribed in MoviePilot, skipped', {
+              label: 'Media Request',
+              requestId: entity.id,
+              tmdbId,
+              seasons: skippedSeasons,
+            });
+          }
+
+          for (const season of missingSeasons) {
+            try {
+              await this.pushMoviePilotAdd(moviepilot, entity, {
+                tmdbid: tmdbId,
+                type: 'tv',
+                name,
+                year,
+                seasons: String(season),
+                ...config,
+              });
+            } catch (e) {
+              logger.warn('Failed to send season to MoviePilot', {
+                label: 'Media Request',
+                requestId: entity.id,
+                tmdbId,
+                season,
+                errorMessage: e.message,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        logger.warn('Failed to send request to MoviePilot', {
+          label: 'Media Request',
+          requestId: entity.id,
+          mediaId: entity.media.id,
+          errorMessage: e.message,
+        });
+      }
+    }
+  }
+
+  public async removeFromMoviePilot(entity: MediaRequest): Promise<void> {
+    try {
+      const server = this.getMoviePilotServer(entity);
+      if (!server) {
+        return;
+      }
+
+      const moviepilot = new MoviePilotAPI({
+        url: MoviePilotAPI.buildUrl(server),
+        apiKey: server.apiKey,
+      });
+
+      if (
+        entity.type === MediaType.TV &&
+        entity.seasons &&
+        entity.seasons.length > 0
+      ) {
+        for (const season of entity.seasons) {
+          try {
+            await moviepilot.deleteSubscribe(
+              entity.media.tmdbId,
+              season.seasonNumber
+            );
+            logger.info('Removed season subscription from MoviePilot', {
+              label: 'Media Request',
+              requestId: entity.id,
+              mediaId: entity.media.id,
+              tmdbId: entity.media.tmdbId,
+              season: season.seasonNumber,
+            });
+          } catch (e) {
+            logger.warn(
+              'Failed to remove season subscription from MoviePilot',
+              {
+                label: 'Media Request',
+                requestId: entity.id,
+                tmdbId: entity.media.tmdbId,
+                season: season.seasonNumber,
+                errorMessage: e.message,
+              }
+            );
+          }
+        }
+      } else {
+        try {
+          await moviepilot.deleteSubscribe(entity.media.tmdbId);
+          logger.info('Removed subscription from MoviePilot', {
+            label: 'Media Request',
+            requestId: entity.id,
+            mediaId: entity.media.id,
+            tmdbId: entity.media.tmdbId,
+          });
+        } catch (e) {
+          logger.warn('Failed to remove subscription from MoviePilot', {
+            label: 'Media Request',
+            requestId: entity.id,
+            tmdbId: entity.media.tmdbId,
+            errorMessage: e.message,
+          });
+        }
+      }
+    } catch (e) {
+      logger.error('Unexpected error in removeFromMoviePilot', {
+        label: 'Media Request',
+        requestId: entity.id,
+        mediaId: entity.media.id,
+        tmdbId: entity.media.tmdbId,
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
   public async updateParentStatus(entity: MediaRequest): Promise<void> {
     const mediaRepository = getRepository(Media);
     const media = await mediaRepository.findOne({
@@ -485,6 +783,19 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
 
     try {
+      await this.sendToMoviePilot(event.entity as MediaRequest);
+    } catch (e) {
+      logger.error(
+        'Error while sending to MoviePilot in afterUpdate subscriber',
+        {
+          label: 'Media Request',
+          requestId: (event.entity as MediaRequest).id,
+          errorMessage: e instanceof Error ? e.message : String(e),
+        }
+      );
+    }
+
+    try {
       await this.updateParentStatus(event.entity as MediaRequest);
 
       if (event.entity.status === MediaRequestStatus.COMPLETED) {
@@ -523,6 +834,19 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
 
     try {
+      await this.sendToMoviePilot(event.entity as MediaRequest);
+    } catch (e) {
+      logger.error(
+        'Error while sending to MoviePilot in afterInsert subscriber',
+        {
+          label: 'Media Request',
+          requestId: (event.entity as MediaRequest).id,
+          errorMessage: e instanceof Error ? e.message : String(e),
+        }
+      );
+    }
+
+    try {
       await this.updateParentStatus(event.entity as MediaRequest);
     } catch (e) {
       logger.error(
@@ -547,6 +871,8 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     );
 
     await this.removeFromMediary(event.entity as MediaRequest);
+
+    await this.removeFromMoviePilot(event.entity as MediaRequest);
   }
 
   public listenTo(): typeof MediaRequest {

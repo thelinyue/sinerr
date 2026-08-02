@@ -34,7 +34,18 @@ const messages = defineMessages('components.RequestModal', {
   requestApproved: 'Request for <strong>{title}</strong> approved!',
   requesterror: 'Something went wrong while submitting the request.',
   pendingapproval: 'Your request is pending approval.',
+  alreadyInMoviePilot:
+    'This title is already subscribed in MoviePilot. A new request is not required.',
 });
+
+interface MoviePilotStatusResponse {
+  configured: boolean;
+  status?: Record<string, unknown>;
+  subscriptions?: { season?: number | null; state?: string | null }[];
+  subscribed?: boolean;
+  completed?: boolean;
+  error?: boolean;
+}
 
 interface RequestModalProps extends React.HTMLAttributes<HTMLDivElement> {
   tmdbId: number;
@@ -58,6 +69,9 @@ const MovieRequestModal = ({
   const { data, error } = useSWR<MovieDetails>(`/api/v1/movie/${tmdbId}`, {
     revalidateOnMount: true,
   });
+  const { data: moviePilotStatus } = useSWR<MoviePilotStatusResponse>(
+    `/api/v1/service/moviepilot/status?tmdbId=${tmdbId}&mediaType=movie`
+  );
   const intl = useIntl();
   const { user, hasPermission } = useUser();
   const { data: quota } = useSWR<QuotaResponse>(
@@ -298,6 +312,9 @@ const MovieRequestModal = ({
     { type: 'or' }
   );
 
+  // 若 MoviePilot 中已订阅，则阻止重复请求（编辑已有请求不受影响）。
+  const moviePilotSubscribed = moviePilotStatus?.subscribed === true;
+
   return (
     <Modal
       loading={(!data && !error) || !quota}
@@ -306,7 +323,8 @@ const MovieRequestModal = ({
       onOk={sendRequest}
       okDisabled={
         isUpdating ||
-        (quota?.movie.restricted && !requestOverrides?.ignoreQuota)
+        (quota?.movie.restricted && !requestOverrides?.ignoreQuota) ||
+        (moviePilotSubscribed && !editRequest)
       }
       title={intl.formatMessage(messages.requestmovietitle)}
       subTitle={data?.title}
@@ -323,6 +341,14 @@ const MovieRequestModal = ({
           <Alert
             title={intl.formatMessage(messages.requestadmin)}
             type="info"
+          />
+        </div>
+      )}
+      {moviePilotSubscribed && !editRequest && (
+        <div className="mt-6">
+          <Alert
+            title={intl.formatMessage(messages.alreadyInMoviePilot)}
+            type="warning"
           />
         </div>
       )}

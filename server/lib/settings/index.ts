@@ -90,6 +90,29 @@ export interface MediaryServerSettings {
   syncEnabled: boolean;
 }
 
+export interface MoviePilotServerSettings {
+  id: number;
+  name: string;
+  hostname: string;
+  port: number;
+  apiKey: string;
+  useSsl: boolean;
+  baseUrl?: string;
+  isDefault: boolean;
+  externalUrl?: string;
+  syncEnabled: boolean;
+  // 订阅默认配置（对应 Sonarr/Radarr 的 activeProfile/activeDirectory/tags），
+  // 请求推送订阅时作为订阅级字段下发，可被请求级覆盖。
+  activeQuality?: string;
+  activeResolution?: string;
+  activeEffect?: string;
+  activeDownloader?: string;
+  activeSavePath?: string;
+  activeSites?: number[];
+  activeInclude?: string;
+  activeExclude?: string;
+}
+
 interface Quota {
   quotaLimit?: number;
   quotaDays?: number;
@@ -340,7 +363,8 @@ export type JobId =
   | 'image-cache-cleanup'
   | 'availability-sync'
   | 'process-blocklisted-tags'
-  | 'mostplayed-cache-refresh';
+  | 'mostplayed-cache-refresh'
+  | 'moviepilot-sync';
 
 export interface AllSettings {
   clientId: string;
@@ -351,6 +375,7 @@ export interface AllSettings {
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
   mediary: MediaryServerSettings[];
+  moviepilot: MoviePilotServerSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
   jobs: Record<JobId, JobSettings>;
@@ -421,6 +446,7 @@ class Settings {
         anime: MetadataProviderType.TMDB,
       },
       mediary: [],
+      moviepilot: [],
       public: {
         initialized: false,
       },
@@ -450,7 +476,7 @@ class Settings {
               webhookUrl: '',
               webhookRoleId: '',
               enableMentions: true,
-              locale: 'en',
+              locale: 'zh-CN',
               useUserLocale: true,
             },
           },
@@ -460,7 +486,7 @@ class Settings {
             types: 0,
             options: {
               webhookUrl: '',
-              locale: 'en',
+              locale: 'zh-CN',
             },
           },
           telegram: {
@@ -515,7 +541,7 @@ class Settings {
               url: '',
               token: '',
               priority: 0,
-              locale: 'en',
+              locale: 'zh-CN',
             },
           },
           ntfy: {
@@ -526,7 +552,7 @@ class Settings {
               url: '',
               topic: '',
               priority: 3,
-              locale: 'en',
+              locale: 'zh-CN',
             },
           },
           mediary: {
@@ -540,6 +566,9 @@ class Settings {
       jobs: {
         'availability-sync': {
           schedule: '0 0 5 * * *',
+        },
+        'moviepilot-sync': {
+          schedule: '0 */15 * * * *',
         },
         'jellyfin-recently-added-scan': {
           schedule: '0 */5 * * * *',
@@ -630,6 +659,17 @@ class Settings {
 
   set mediary(data: MediaryServerSettings[]) {
     this.data.mediary = data;
+  }
+
+  get moviepilot(): MoviePilotServerSettings[] {
+    if (!this.data.moviepilot) {
+      this.data.moviepilot = [];
+    }
+    return this.data.moviepilot;
+  }
+
+  set moviepilot(data: MoviePilotServerSettings[]) {
+    this.data.moviepilot = data;
   }
 
   get public(): PublicSettings {

@@ -47,7 +47,20 @@ const messages = defineMessages('components.RequestModal', {
   autoapproval: 'Automatic Approval',
   requesterror: 'Something went wrong while submitting the request.',
   pendingapproval: 'Your request is pending approval.',
+  alreadyInMoviePilotSeasons:
+    'This series is already subscribed in MoviePilot (season {seasons}). A new request is not required.',
+  alreadyInMoviePilotAny:
+    'This series is already subscribed in MoviePilot. A new request is not required.',
 });
+
+interface MoviePilotStatusResponse {
+  configured: boolean;
+  status?: Record<string, unknown>;
+  subscriptions?: { season?: number | null; state?: string | null }[];
+  subscribed?: boolean;
+  completed?: boolean;
+  error?: boolean;
+}
 
 interface RequestModalProps extends React.HTMLAttributes<HTMLDivElement> {
   tmdbId: number;
@@ -70,6 +83,9 @@ const TvRequestModal = ({
     (season) => season.seasonNumber
   );
   const { data, error } = useSWR<TvDetails>(`/api/v1/tv/${tmdbId}`);
+  const { data: moviePilotStatus } = useSWR<MoviePilotStatusResponse>(
+    `/api/v1/service/moviepilot/status?tmdbId=${tmdbId}&mediaType=tv`
+  );
   const [requestOverrides, setRequestOverrides] =
     useState<RequestOverrides | null>(null);
   const [selectedSeasons, setSelectedSeasons] = useState<number[]>(
@@ -296,6 +312,23 @@ const TvRequestModal = ({
     (season) => !getAllRequestedSeasons().includes(season)
   );
 
+  // 查询 MoviePilot 订阅状态：若仍可请求的季全部已在 MoviePilot 订阅，则阻止重复请求
+  // （编辑已有请求不受影响）。
+  const moviePilotSubscribedSeasons = new Set(
+    (moviePilotStatus?.subscriptions ?? [])
+      .map((sub) => sub.season)
+      .filter(
+        (season): season is number => season !== null && season !== undefined
+      )
+  );
+  const moviePilotAnySubscribed = moviePilotStatus?.subscribed === true;
+  const moviePilotBlocksRequest =
+    !editRequest &&
+    unrequestedSeasons.length > 0 &&
+    unrequestedSeasons.every((season) =>
+      moviePilotSubscribedSeasons.has(season)
+    );
+
   const toggleAllSeasons = (): void => {
     if (
       quota?.tv.limit &&
@@ -415,6 +448,7 @@ const TvRequestModal = ({
               !requestOverrides?.ignoreQuota
             ? true
             : getAllRequestedSeasons().length >= getAllSeasons().length ||
+              moviePilotBlocksRequest ||
               (settings.currentSettings.partialRequestsEnabled &&
                 selectedSeasons.length === 0)
       }
@@ -466,6 +500,22 @@ const TvRequestModal = ({
             />
           </p>
         )}
+      {moviePilotAnySubscribed && !editRequest && (
+        <div className="mt-6">
+          <Alert
+            title={
+              moviePilotSubscribedSeasons.size > 0
+                ? intl.formatMessage(messages.alreadyInMoviePilotSeasons, {
+                    seasons: [...moviePilotSubscribedSeasons]
+                      .sort((a, b) => a - b)
+                      .join(', '),
+                  })
+                : intl.formatMessage(messages.alreadyInMoviePilotAny)
+            }
+            type="warning"
+          />
+        </div>
+      )}
       {(quota?.tv.limit ?? 0) > 0 && (
         <QuotaDisplay
           mediaType="tv"

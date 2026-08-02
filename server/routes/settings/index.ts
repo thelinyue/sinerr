@@ -38,12 +38,14 @@ import semver from 'semver';
 
 import mediaryRoutes from './mediary';
 import metadataRoutes from './metadata';
+import moviepilotRoutes from './moviepilot';
 import notificationRoutes from './notifications';
 
 const settingsRoutes = Router();
 
 settingsRoutes.use('/notifications', notificationRoutes);
 settingsRoutes.use('/mediary', mediaryRoutes);
+settingsRoutes.use('/moviepilot', moviepilotRoutes);
 settingsRoutes.use('/discover', discoverSettingRoutes);
 settingsRoutes.use('/metadatas', metadataRoutes);
 

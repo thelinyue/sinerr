@@ -3,6 +3,7 @@ import blocklistedTagsProcessor from '@server/job/blocklistedTagsProcessor';
 import { refreshMostPlayedCache } from '@server/job/refreshMostPlayedCache';
 import availabilitySync from '@server/lib/availabilitySync';
 import ImageProxy from '@server/lib/imageproxy';
+import { runMoviePilotSync } from '@server/lib/moviePilotSync';
 import {
   jellyfinFullScanner,
   jellyfinRecentScanner,
@@ -46,9 +47,12 @@ export const startJobs = (): void => {
           const autoScan = getSettings().jellyfin.autoScan ?? true;
           if (!autoScan) return;
           if (jellyfinRecentScanner.status().running) {
-            logger.info('Skipping Jellyfin Recently Added Scan: already running', {
-              label: 'Jobs',
-            });
+            logger.info(
+              'Skipping Jellyfin Recently Added Scan: already running',
+              {
+                label: 'Jobs',
+              }
+            );
             return;
           }
           logger.info('Starting scheduled job: Jellyfin Recently Added Scan', {
@@ -75,27 +79,30 @@ export const startJobs = (): void => {
       type: 'process',
       interval: 'hours',
       cronSchedule: jobs['jellyfin-full-scan'].schedule,
-      job: schedule.scheduleJob(jobs['jellyfin-full-scan'].schedule, async () => {
-        const autoScan = getSettings().jellyfin.autoScan ?? true;
-        if (!autoScan) return;
-        if (jellyfinFullScanner.status().running) {
-          logger.info('Skipping Jellyfin Full Scan: already running', {
+      job: schedule.scheduleJob(
+        jobs['jellyfin-full-scan'].schedule,
+        async () => {
+          const autoScan = getSettings().jellyfin.autoScan ?? true;
+          if (!autoScan) return;
+          if (jellyfinFullScanner.status().running) {
+            logger.info('Skipping Jellyfin Full Scan: already running', {
+              label: 'Jobs',
+            });
+            return;
+          }
+          logger.info('Starting scheduled job: Jellyfin Full Scan', {
             label: 'Jobs',
           });
-          return;
+          try {
+            await jellyfinFullScanner.run();
+          } catch (e) {
+            logger.error('Error during Jellyfin Full Scan', {
+              label: 'Jobs',
+              message: e instanceof Error ? e.message : 'Unknown error',
+            });
+          }
         }
-        logger.info('Starting scheduled job: Jellyfin Full Scan', {
-          label: 'Jobs',
-        });
-        try {
-          await jellyfinFullScanner.run();
-        } catch (e) {
-          logger.error('Error during Jellyfin Full Scan', {
-            label: 'Jobs',
-            message: e instanceof Error ? e.message : 'Unknown error',
-          });
-        }
-      }),
+      ),
       running: () => jellyfinFullScanner.status().running,
       cancelFn: () => jellyfinFullScanner.cancel(),
     });
@@ -158,6 +165,29 @@ export const startJobs = (): void => {
     cancelFn: () => availabilitySync.cancel(),
   });
 
+  // Periodically sync MoviePilot subscription states to complete requests
+  // (only runs for servers with "Enable Scan" / syncEnabled enabled)
+  scheduledJobs.push({
+    id: 'moviepilot-sync',
+    name: 'MoviePilot Subscription Sync',
+    type: 'process',
+    interval: 'minutes',
+    cronSchedule: jobs['moviepilot-sync'].schedule,
+    job: schedule.scheduleJob(jobs['moviepilot-sync'].schedule, async () => {
+      logger.info('Starting scheduled job: MoviePilot Subscription Sync', {
+        label: 'Jobs',
+      });
+      try {
+        await runMoviePilotSync();
+      } catch (e) {
+        logger.error('Error during MoviePilot Subscription Sync', {
+          label: 'Jobs',
+          message: e instanceof Error ? e.message : 'Unknown error',
+        });
+      }
+    }),
+  });
+
   // Run image cache cleanup every 24 hours
   scheduledJobs.push({
     id: 'image-cache-cleanup',
@@ -165,20 +195,23 @@ export const startJobs = (): void => {
     type: 'process',
     interval: 'hours',
     cronSchedule: jobs['image-cache-cleanup'].schedule,
-    job: schedule.scheduleJob(jobs['image-cache-cleanup'].schedule, async () => {
-      logger.info('Starting scheduled job: Image Cache Cleanup', {
-        label: 'Jobs',
-      });
-      try {
-        await ImageProxy.clearCache('tmdb');
-        await ImageProxy.clearCache('avatar');
-      } catch (e) {
-        logger.error('Error during Image Cache Cleanup', {
+    job: schedule.scheduleJob(
+      jobs['image-cache-cleanup'].schedule,
+      async () => {
+        logger.info('Starting scheduled job: Image Cache Cleanup', {
           label: 'Jobs',
-          message: e instanceof Error ? e.message : 'Unknown error',
         });
+        try {
+          await ImageProxy.clearCache('tmdb');
+          await ImageProxy.clearCache('avatar');
+        } catch (e) {
+          logger.error('Error during Image Cache Cleanup', {
+            label: 'Jobs',
+            message: e instanceof Error ? e.message : 'Unknown error',
+          });
+        }
       }
-    }),
+    ),
   });
 
   scheduledJobs.push({
@@ -187,25 +220,28 @@ export const startJobs = (): void => {
     type: 'process',
     interval: 'days',
     cronSchedule: jobs['process-blocklisted-tags'].schedule,
-    job: schedule.scheduleJob(jobs['process-blocklisted-tags'].schedule, async () => {
-      if (blocklistedTagsProcessor.status().running) {
-        logger.info('Skipping Process Blocklisted Tags: already running', {
+    job: schedule.scheduleJob(
+      jobs['process-blocklisted-tags'].schedule,
+      async () => {
+        if (blocklistedTagsProcessor.status().running) {
+          logger.info('Skipping Process Blocklisted Tags: already running', {
+            label: 'Jobs',
+          });
+          return;
+        }
+        logger.info('Starting scheduled job: Process Blocklisted Tags', {
           label: 'Jobs',
         });
-        return;
+        try {
+          await blocklistedTagsProcessor.run();
+        } catch (e) {
+          logger.error('Error during Process Blocklisted Tags', {
+            label: 'Jobs',
+            message: e instanceof Error ? e.message : 'Unknown error',
+          });
+        }
       }
-      logger.info('Starting scheduled job: Process Blocklisted Tags', {
-        label: 'Jobs',
-      });
-      try {
-        await blocklistedTagsProcessor.run();
-      } catch (e) {
-        logger.error('Error during Process Blocklisted Tags', {
-          label: 'Jobs',
-          message: e instanceof Error ? e.message : 'Unknown error',
-        });
-      }
-    }),
+    ),
     running: () => blocklistedTagsProcessor.status().running,
     cancelFn: () => blocklistedTagsProcessor.cancel(),
   });
