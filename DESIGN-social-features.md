@@ -257,7 +257,7 @@ GET /api/v1/activity?take=20&skip=0
 
 ---
 
-## 5. 阶段 3：媒体短评 + 轻游戏化（可选、后置）
+## 5. 阶段 3：媒体短评 + 轻游戏化（可选、后置）—— ✅ 已实现
 
 ### 5.1 媒体短评（Media Review）
 
@@ -275,6 +275,18 @@ GET /api/v1/activity?take=20&skip=0
 
 1. 媒体页短评可发可看，星级评分展示。
 2. 个人页徽章随数据自动更新，无手动配置。
+
+### 5.4 实现记录
+
+- 短评：
+  - 实体 `server/entity/MediaReview.ts`（media + user + rating 1-5 + message，双库迁移 `1787000000000-AddMediaReview`）。
+  - 路由 `server/routes/review.ts`：`GET/POST /review/:tmdbId/:mediaType` + `DELETE /review/:reviewId`。
+  - 发表鉴权 `REQUEST`（决策点 5 确认）；每用户每媒体仅一条短评（重复提交视为更新）；删除限作者 + `MANAGE_REQUESTS`。
+  - 前端 `src/components/MediaReviewBlock`：星级选择 + 表单 + 短评列表 + 平均分展示，接入 Movie/TV 详情页。
+- 徽章：
+  - 接口 `GET /user/:id/achievements`（`server/routes/user/index.ts`）：聚合请求数/获赞数/Issue 数，返回 6 个徽章进度。
+  - 前端 `src/components/UserProfile/Achievements`：个人页展示徽章行（含进度与已达成态）。
+- 测试：`review.test.ts`（12 条）+ `user/achievements.test.ts`（4 条）。
 
 ---
 
