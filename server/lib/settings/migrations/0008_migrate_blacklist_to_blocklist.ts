@@ -1,5 +1,6 @@
 import type { AllSettings } from '@server/lib/settings';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const migrateBlacklistToBlocklist = (settings: any): AllSettings => {
   if (
     Array.isArray(settings.migrations) &&

@@ -2,6 +2,7 @@ import ExternalAPI from '@server/api/externalapi';
 import type { TvShowProvider } from '@server/api/provider';
 import cacheManager from '@server/lib/cache';
 import { getSettings } from '@server/lib/settings';
+import { TMDB_API_KEY } from '@server/utils/apiKeys';
 import { sortBy } from 'lodash';
 import type {
   TmdbCollection,
@@ -135,7 +136,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
     super(
       'https://api.themoviedb.org/3',
       {
-        api_key: '3fd52e6951387635a3710416b83d40d6',
+        api_key: TMDB_API_KEY,
       },
       {
         nodeCache: cacheManager.getCache('tmdb').data,

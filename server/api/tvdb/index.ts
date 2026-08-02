@@ -17,6 +17,7 @@ import {
 } from '@server/api/tvdb/interfaces';
 import cacheManager, { type AvailableCacheIds } from '@server/lib/cache';
 import logger from '@server/logger';
+import { TVDB_API_KEY } from '@server/utils/apiKeys';
 
 interface TvdbConfig {
   baseUrl: string;
@@ -111,7 +112,7 @@ class Tvdb extends ExternalAPI implements TvShowProvider {
 
   async login(): Promise<TvdbLoginResponse> {
     let body: { apiKey: string; pin?: string } = {
-      apiKey: 'd00d9ecb-a9d0-4860-958a-74b14a041405',
+      apiKey: TVDB_API_KEY,
     };
 
     if (this.pin) {

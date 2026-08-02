@@ -68,7 +68,9 @@ router.get('/', async (req, res, next) => {
       }
     }
 
-    let query = getRepository(User).createQueryBuilder('user');
+    let query = getRepository(User)
+      .createQueryBuilder('user')
+      .loadRelationCountAndMap('user.requestCount', 'user.requests');
 
     if (q) {
       query = query.where(
@@ -490,6 +492,10 @@ router.get<{ id: string }>('/:id', async (req, res, next) => {
       where: { id: Number(req.params.id) },
     });
 
+    user.requestCount = await getRepository(MediaRequest).count({
+      where: { requestedBy: { id: user.id } },
+    });
+
     const isOwnProfile = req.user?.id === user.id;
     const isAdmin = req.user?.hasPermission(Permission.MANAGE_USERS);
 
@@ -512,6 +518,10 @@ router.get<{ jellyfinUserId: string }>(
 
       const user = await userRepository.findOneOrFail({
         where: { jellyfinUserId },
+      });
+
+      user.requestCount = await getRepository(MediaRequest).count({
+        where: { requestedBy: { id: user.id } },
       });
 
       return res

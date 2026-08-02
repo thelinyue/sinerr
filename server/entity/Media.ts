@@ -40,6 +40,8 @@ export interface DownloadingItem {
 
 @Entity()
 @Index(['tmdbId', 'mediaType'])
+@Index('IDX_MEDIA_UPDATED_AT', ['updatedAt'])
+@Index('IDX_MEDIA_ADDED_AT', ['mediaAddedAt'])
 class Media {
   public static async getRelatedMedia(
     user: User | undefined,

@@ -12,6 +12,7 @@ import { Permission } from '@server/lib/permissions';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
+import { EntityNotFoundError } from 'typeorm';
 
 const issueRoutes = Router();
 
@@ -268,11 +269,14 @@ issueRoutes.get<{ issueId: string }>(
 
       return res.status(200).json(issue);
     } catch (e) {
-      logger.debug('Failed to retrieve issue.', {
+      if (e instanceof EntityNotFoundError) {
+        return next({ status: 404, message: 'Issue not found.' });
+      }
+      logger.error('Failed to retrieve issue.', {
         label: 'API',
         errorMessage: e.message,
       });
-      next({ status: 500, message: 'Issue not found.' });
+      next({ status: 500, message: 'Something went wrong.' });
     }
   }
 );

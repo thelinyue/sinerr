@@ -1,6 +1,7 @@
 import ExternalAPI from '@server/api/externalapi';
 import cacheManager from '@server/lib/cache';
 import { getSettings } from '@server/lib/settings';
+import { ROTTEN_TOMATOES_ALGOLIA_API_KEY } from '@server/utils/apiKeys';
 import jaro from 'wink-jaro-distance';
 
 interface RTAlgoliaSearchResponse {
@@ -107,7 +108,7 @@ class RottenTomatoes extends ExternalAPI {
       {
         'x-algolia-agent':
           'Algolia%20for%20JavaScript%20(4.14.3)%3B%20Browser%20(lite)',
-        'x-algolia-api-key': '175588f6e5f8319b27702e4cc4013561',
+        'x-algolia-api-key': ROTTEN_TOMATOES_ALGOLIA_API_KEY,
         'x-algolia-application-id': '79FRDP12PN',
       },
       {

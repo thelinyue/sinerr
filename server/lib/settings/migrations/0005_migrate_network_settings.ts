@@ -1,5 +1,6 @@
 import type { AllSettings } from '@server/lib/settings';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const migrateNetworkSettings = (settings: any): AllSettings => {
   if (settings.network) {
     return settings;

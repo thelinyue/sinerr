@@ -138,7 +138,7 @@ blocklistRoutes.post(
       return res.status(201).send();
     } catch (error) {
       if (!(error instanceof Error)) {
-        return;
+        return next({ status: 500, message: 'Unknown error.' });
       }
 
       if (error instanceof QueryFailedError) {

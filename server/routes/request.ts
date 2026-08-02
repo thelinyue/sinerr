@@ -23,6 +23,7 @@ import { Permission } from '@server/lib/permissions';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
+import { EntityNotFoundError } from 'typeorm';
 
 const requestRoutes = Router();
 
@@ -186,7 +187,11 @@ requestRoutes.get<Record<string, unknown>, RequestResultsResponse>(
         serviceErrors: {},
       });
     } catch (e) {
-      next({ status: 500, message: e.message });
+      logger.error('Something went wrong retrieving requests.', {
+        label: 'API',
+        errorMessage: e.message,
+      });
+      next({ status: 500, message: 'Something went wrong.' });
     }
   }
 );
@@ -331,11 +336,14 @@ requestRoutes.get('/:requestId', async (req, res, next) => {
 
     return res.status(200).json(request);
   } catch (e) {
-    logger.debug('Failed to retrieve request.', {
+    if (e instanceof EntityNotFoundError) {
+      return next({ status: 404, message: 'Request not found.' });
+    }
+    logger.error('Failed to retrieve request.', {
       label: 'API',
       errorMessage: e.message,
     });
-    next({ status: 404, message: 'Request not found.' });
+    next({ status: 500, message: 'Something went wrong.' });
   }
 });
 
@@ -474,7 +482,11 @@ requestRoutes.put<{ requestId: string }>(
 
       return res.status(200).json(request);
     } catch (e) {
-      next({ status: 500, message: e.message });
+      logger.error('Something went wrong editing a request.', {
+        label: 'API',
+        errorMessage: e.message,
+      });
+      next({ status: 500, message: 'Something went wrong.' });
     }
   }
 );
@@ -503,11 +515,14 @@ requestRoutes.delete('/:requestId', async (req, res, next) => {
 
     return res.status(204).send();
   } catch (e) {
+    if (e instanceof EntityNotFoundError) {
+      return next({ status: 404, message: 'Request not found.' });
+    }
     logger.error('Something went wrong deleting a request.', {
       label: 'API',
       errorMessage: e.message,
     });
-    next({ status: 404, message: 'Request not found.' });
+    next({ status: 500, message: 'Something went wrong.' });
   }
 });
 
@@ -532,11 +547,14 @@ requestRoutes.post<{
 
       return res.status(200).json(request);
     } catch (e) {
+      if (e instanceof EntityNotFoundError) {
+        return next({ status: 404, message: 'Request not found.' });
+      }
       logger.error('Error processing request retry', {
         label: 'Media Request',
         message: e.message,
       });
-      next({ status: 404, message: 'Request not found.' });
+      next({ status: 500, message: 'Something went wrong.' });
     }
   }
 );
@@ -568,6 +586,8 @@ requestRoutes.post<{
         case 'decline':
           newStatus = MediaRequestStatus.DECLINED;
           break;
+        default:
+          return next({ status: 400, message: 'Invalid request status.' });
       }
 
       request.status = newStatus;
@@ -576,11 +596,14 @@ requestRoutes.post<{
 
       return res.status(200).json(request);
     } catch (e) {
+      if (e instanceof EntityNotFoundError) {
+        return next({ status: 404, message: 'Request not found.' });
+      }
       logger.error('Error processing request update', {
         label: 'Media Request',
         message: e.message,
       });
-      next({ status: 404, message: 'Request not found.' });
+      next({ status: 500, message: 'Something went wrong.' });
     }
   }
 );

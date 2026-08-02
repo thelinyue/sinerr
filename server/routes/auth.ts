@@ -16,6 +16,7 @@ import { getHostname } from '@server/utils/getHostname';
 import axios from 'axios';
 import { Router } from 'express';
 import net from 'net';
+import validator from 'validator';
 
 const authRoutes = Router();
 
@@ -30,6 +31,16 @@ authRoutes.get('/me', isAuthenticated(), async (req, res) => {
   const user = await userRepository.findOneOrFail({
     where: { id: req.user.id },
   });
+
+  // check if email is required in settings and if user has a valid email
+  const settings = getSettings();
+  if (
+    settings.notifications.agents.email.options.userEmailRequired &&
+    !validator.isEmail(user.email ?? '', { require_tld: false })
+  ) {
+    user.warnings.push('userEmailRequired');
+    logger.warn(`User ${user.username} has no valid email address`);
+  }
 
   return res.status(200).json(user.filter());
 });
@@ -386,20 +397,27 @@ authRoutes.post('/jellyfin', async (req, res, next) => {
 authRoutes.post('/local', async (req, res, next) => {
   const settings = getSettings();
   const userRepository = getRepository(User);
-  const body = req.body as { username?: string; password?: string };
+  const body = req.body as {
+    username?: string;
+    email?: string;
+    password?: string;
+  };
 
   if (!settings.main.localLogin) {
     return res.status(500).json({ error: 'Password sign-in is disabled.' });
-  } else if (!body.username || !body.password) {
+  } else if ((!body.username && !body.email) || !body.password) {
     return res.status(500).json({
       error: 'You must provide both a username and a password.',
     });
   }
   try {
+    const loginIdentifier = body.username ?? body.email;
     const user = await userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.username', 'user.password'])
-      .where('user.username = :username', { username: body.username })
+      .select(['user.id', 'user.username', 'user.email', 'user.password'])
+      .where('user.username = :identifier OR user.email = :identifier', {
+        identifier: loginIdentifier,
+      })
       .getOne();
 
     const passwordValid = user
@@ -410,7 +428,7 @@ authRoutes.post('/local', async (req, res, next) => {
       logger.warn('Failed sign-in attempt using invalid Sinerr password', {
         label: 'API',
         ip: req.ip,
-        username: body.username,
+        username: loginIdentifier,
         userId: user?.id,
       });
       return next({
@@ -430,7 +448,7 @@ authRoutes.post('/local', async (req, res, next) => {
       label: 'API',
       errorMessage: e.message,
       ip: req.ip,
-      username: body.username,
+      username: body.username ?? body.email,
     });
     return next({
       status: 500,

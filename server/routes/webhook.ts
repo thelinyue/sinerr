@@ -5,7 +5,7 @@ import { Router } from 'express';
 
 const webhookRoutes = Router();
 
-webhookRoutes.post('/emby', (req, res) => {
+webhookRoutes.post('/emby', async (req, res) => {
   const configuredApiKey = getSettings().main.apiKey;
   const providedApiKey = req.query.api_key as string | undefined;
 
@@ -29,12 +29,26 @@ webhookRoutes.post('/emby', (req, res) => {
     event === 'system.libraryscancomplete' ||
     event === 'item.updated'
   ) {
-    logger.info('Triggering recent scan due to Jellyfin webhook', {
-      label: 'Webhook',
-      event,
-      itemName,
-    });
-    jellyfinRecentScanner.run();
+    if (jellyfinRecentScanner.status().running) {
+      logger.info('Skipping recent scan: already running', {
+        label: 'Webhook',
+        event,
+      });
+    } else {
+      logger.info('Triggering recent scan due to Jellyfin webhook', {
+        label: 'Webhook',
+        event,
+        itemName,
+      });
+      try {
+        await jellyfinRecentScanner.run();
+      } catch (e) {
+        logger.error('Error during Jellyfin webhook scan', {
+          label: 'Webhook',
+          message: e instanceof Error ? e.message : 'Unknown error',
+        });
+      }
+    }
   }
 
   res.status(204).send();

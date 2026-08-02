@@ -1,5 +1,6 @@
 import type { AllSettings } from '@server/lib/settings';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const migrateHostname = (settings: any): AllSettings => {
   if (settings.jellyfin?.hostname) {
     const { hostname } = settings.jellyfin;

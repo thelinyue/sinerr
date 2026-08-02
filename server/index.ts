@@ -225,26 +225,6 @@ app
         validateRequests: true,
       })
     );
-    /**
-     * This is a workaround to convert dates to strings before they are validated by
-     * OpenAPI validator. Otherwise, they are treated as objects instead of strings
-     * and response validation will fail
-     */
-    server.use((_req, res, next) => {
-      const original = res.json;
-      res.json = function jsonp(json) {
-        try {
-          return original.call(this, JSON.parse(JSON.stringify(json)));
-        } catch (e) {
-          logger.error('Failed to serialize JSON response', {
-            label: 'Server',
-            error: (e as Error).message,
-          });
-          return original.call(this, json);
-        }
-      };
-      next();
-    });
     server.use('/api/v1', routes);
 
     // Do not set cookies so CDNs can cache them

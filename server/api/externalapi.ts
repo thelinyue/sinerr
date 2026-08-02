@@ -20,6 +20,11 @@ export interface ExternalAPIOptions {
   };
 }
 
+// Axios instances are rate-limited via a shared per-host instance so the
+// queue actually accumulates across all ExternalAPI instances (otherwise each
+// `new TheMovieDb()` creates a fresh limiter that never throttles anything).
+const rateLimitedClients = new Map<string, AxiosInstance>();
+
 class ExternalAPI {
   protected axios: AxiosInstance;
   private baseUrl: string;
@@ -30,23 +35,31 @@ class ExternalAPI {
     params: Record<string, unknown>,
     options: ExternalAPIOptions = {}
   ) {
-    this.axios = axios.create({
-      baseURL: baseUrl,
-      params,
-      timeout: options.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...options.headers,
-      },
-    });
-    this.axios.interceptors.request.use(proxyRequestInterceptor);
+    const createClient = (): AxiosInstance => {
+      const client = axios.create({
+        baseURL: baseUrl,
+        params,
+        timeout: options.timeout,
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...options.headers,
+        },
+      });
+      client.interceptors.request.use(proxyRequestInterceptor);
+      return client;
+    };
 
     if (options.rateLimit) {
-      this.axios = rateLimit(this.axios, {
-        maxRequests: options.rateLimit.maxRequests,
-        maxRPS: options.rateLimit.maxRPS,
-      });
+      const existing = rateLimitedClients.get(baseUrl);
+      if (existing) {
+        this.axios = existing;
+      } else {
+        this.axios = rateLimit(createClient(), options.rateLimit);
+        rateLimitedClients.set(baseUrl, this.axios);
+      }
+    } else {
+      this.axios = createClient();
     }
 
     this.baseUrl = baseUrl;
@@ -58,9 +71,11 @@ class ExternalAPI {
     config?: AxiosRequestConfig,
     ttl?: number
   ): Promise<T> {
+    // Headers are intentionally excluded from the cache key: auth tokens (e.g.
+    // TVDB) refresh periodically and would otherwise invalidate every cached
+    // entry even though the response content is identical.
     const cacheKey = this.serializeCacheKey(endpoint, {
       ...config?.params,
-      headers: config?.headers,
     });
     const cachedItem = this.cache?.get<T>(cacheKey);
     if (cachedItem) {
@@ -108,7 +123,6 @@ class ExternalAPI {
   ): Promise<T> {
     const cacheKey = this.serializeCacheKey(endpoint, {
       ...config?.params,
-      headers: config?.headers,
     });
     const cachedItem = this.cache?.get<T>(cacheKey);
 

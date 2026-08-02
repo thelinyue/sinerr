@@ -22,7 +22,6 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  RelationCount,
   UpdateDateColumn,
 } from 'typeorm';
 import Media from './Media';
@@ -40,8 +39,13 @@ type MediaRequestOptions = {
 };
 
 @Entity()
-@Index(['status'])
-@Index(['media'])
+@Index('IDX_MEDIA_REQUEST_QUOTA', [
+  'requestedBy',
+  'createdAt',
+  'status',
+  'type',
+])
+@Index('IDX_MEDIA_REQUEST_STATUS_USER', ['status', 'requestedBy'])
 export class MediaRequest {
   public static async request(
     requestBody: MediaRequestBody,
@@ -404,14 +408,13 @@ export class MediaRequest {
   @Column({ type: 'varchar' })
   public type: MediaType;
 
-  @RelationCount((request: MediaRequest) => request.seasons)
-  public seasonCount: number;
-
   @OneToMany(() => SeasonRequest, (season) => season.request, {
     eager: true,
     cascade: true,
   })
   public seasons: SeasonRequest[];
+
+  public seasonCount?: number;
 
   @Column({ nullable: true })
   public serverId: number;

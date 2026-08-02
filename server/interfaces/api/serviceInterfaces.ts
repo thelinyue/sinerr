@@ -21,6 +21,6 @@ export interface ServiceCommonServerWithDetails {
     path: string;
     totalSpace?: number;
   }[];
-  languageProfiles?: any[];
+  languageProfiles?: { id: number; name: string }[];
   tags: { id: number; label: string }[];
 }

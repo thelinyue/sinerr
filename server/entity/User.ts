@@ -23,7 +23,6 @@ import {
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
-  RelationCount,
   UpdateDateColumn,
 } from 'typeorm';
 import Issue from './Issue';
@@ -97,11 +96,10 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   public avatarVersion?: string | null;
 
-  @RelationCount((user: User) => user.requests)
-  public requestCount: number;
-
   @OneToMany(() => MediaRequest, (request) => request.requestedBy)
   public requests: MediaRequest[];
+
+  public requestCount?: number;
 
   @Column({ nullable: true })
   public movieQuotaLimit?: number;
@@ -355,7 +353,10 @@ export class User {
                 .where('parentRequest.id = request.id');
             }, 'seasonCount')
             .getMany()
-        ).reduce((sum: number, req: MediaRequest) => sum + req.seasonCount, 0)
+        ).reduce(
+          (sum: number, req: MediaRequest) => sum + (req.seasonCount ?? 0),
+          0
+        )
       : 0;
 
     return {

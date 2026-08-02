@@ -10,6 +10,7 @@ import {
   type MostPlayedCacheEntry,
   type RankingPeriod,
 } from '@server/job/refreshMostPlayedCache';
+import cacheManager from '@server/lib/cache';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { mapProductionCompany } from '@server/models/Movie';
@@ -21,10 +22,13 @@ import {
 } from '@server/models/Search';
 import { mapNetwork } from '@server/models/Tv';
 import { isCollection, isMovie, isPerson } from '@server/utils/typeHelpers';
-import { Router, Response } from 'express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { sortBy } from 'lodash';
 import { z } from 'zod';
+
+// Genre slider data rarely changes; cache per-language for 6 hours.
+const GENRE_SLIDER_CACHE_TTL = 21600;
 
 export const createTmdbWithRegionLanguage = (user?: User): TheMovieDb => {
   const settings = getSettings();
@@ -835,13 +839,24 @@ discoverRoutes.get<{ keywordId: string }>(
 discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
   '/genreslider/movie',
   async (req, res, next) => {
+    // Genre sliders only depend on the language and rarely change, so we cache
+    // them per-language instead of firing ~19 concurrent TMDB calls per request.
+    const language = (req.query.language as string) ?? req.locale;
+    const cacheKey = `genreslider:movie:${language}`;
+    const cache = cacheManager.getCache('tmdb').data;
+
+    const cached = cache.get<GenreSliderItem[]>(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const tmdb = new TheMovieDb();
 
     try {
       const mappedGenres: GenreSliderItem[] = [];
 
       const genres = await tmdb.getMovieGenres({
-        language: (req.query.language as string) ?? req.locale,
+        language,
       });
 
       await Promise.all(
@@ -862,6 +877,8 @@ discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
 
       const sortedData = sortBy(mappedGenres, 'name');
 
+      cache.set(cacheKey, sortedData, GENRE_SLIDER_CACHE_TTL);
+
       return res.status(200).json(sortedData);
     } catch (e) {
       logger.debug('Something went wrong retrieving the movie genre slider', {
@@ -879,13 +896,22 @@ discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
 discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
   '/genreslider/tv',
   async (req, res, next) => {
+    const language = (req.query.language as string) ?? req.locale;
+    const cacheKey = `genreslider:tv:${language}`;
+    const cache = cacheManager.getCache('tmdb').data;
+
+    const cached = cache.get<GenreSliderItem[]>(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const tmdb = new TheMovieDb();
 
     try {
       const mappedGenres: GenreSliderItem[] = [];
 
       const genres = await tmdb.getTvGenres({
-        language: (req.query.language as string) ?? req.locale,
+        language,
       });
 
       await Promise.all(
@@ -905,6 +931,8 @@ discoverRoutes.get<{ language: string }, GenreSliderItem[]>(
       );
 
       const sortedData = sortBy(mappedGenres, 'name');
+
+      cache.set(cacheKey, sortedData, GENRE_SLIDER_CACHE_TTL);
 
       return res.status(200).json(sortedData);
     } catch (e) {
@@ -953,7 +981,10 @@ async function serveMostPlayedFromCache(
     ),
   ]);
 
-  const tmdbDetailMap = new Map<number, { type: 'movie' | 'tv'; data: unknown }>();
+  const tmdbDetailMap = new Map<
+    number,
+    { type: 'movie' | 'tv'; data: unknown }
+  >();
   movieDetails.forEach((detail, i) => {
     if (detail) tmdbDetailMap.set(movieIds[i], { type: 'movie', data: detail });
   });
@@ -965,13 +996,12 @@ async function serveMostPlayedFromCache(
     req.user,
     pageItems.map((item) => ({
       tmdbId: Number(item.tmdbId),
-      mediaType:
-        item.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE,
+      mediaType: item.mediaType === 'tv' ? MediaType.TV : MediaType.MOVIE,
     }))
   );
 
   const results = pageItems
-    .map((item, index) => {
+    .map((item) => {
       const detail = tmdbDetailMap.get(Number(item.tmdbId));
       if (!detail) {
         return null;
@@ -1021,8 +1051,7 @@ discoverRoutes.get('/mostplayed', async (req, res, next) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = 20;
-    const period: RankingPeriod =
-      (req.query.period as RankingPeriod) || 'week';
+    const period: RankingPeriod = (req.query.period as RankingPeriod) || 'week';
 
     const cache = getMostPlayedCache(period);
 

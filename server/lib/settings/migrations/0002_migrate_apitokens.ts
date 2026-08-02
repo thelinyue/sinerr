@@ -5,6 +5,7 @@ import { User } from '@server/entity/User';
 import type { AllSettings } from '@server/lib/settings';
 import { getHostname } from '@server/utils/getHostname';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const migrateApiTokens = async (settings: any): Promise<AllSettings> => {
   const mediaServerType = settings.main.mediaServerType;
   if (
