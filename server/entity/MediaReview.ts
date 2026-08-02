@@ -21,6 +21,7 @@ import { User } from './User';
 @Entity()
 @Index('IDX_MEDIA_REVIEW_MEDIA', ['media'])
 @Index('IDX_MEDIA_REVIEW_USER', ['user'])
+@Index('IDX_MEDIA_REVIEW_TARGET', ['media', 'seasonNumber', 'episodeNumber'])
 class MediaReview {
   @PrimaryGeneratedColumn()
   public id: number;
@@ -46,6 +47,20 @@ class MediaReview {
   /** 短评内容（一句话） */
   @Column({ type: 'text' })
   public message: string;
+
+  /**
+   * 评论目标：季号（仅剧集使用）
+   *
+   * - 为 null 且 episodeNumber 为 null：整部剧集（默认）
+   * - 有值且 episodeNumber 为 null：针对该季
+   * - 有值且 episodeNumber 有值：针对该季该集
+   */
+  @Column({ type: 'integer', nullable: true })
+  public seasonNumber?: number | null;
+
+  /** 评论目标：集号（仅剧集使用，必须有 seasonNumber） */
+  @Column({ type: 'integer', nullable: true })
+  public episodeNumber?: number | null;
 
   @DbAwareColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   public createdAt: Date;

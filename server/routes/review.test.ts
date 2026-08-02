@@ -88,6 +88,18 @@ async function seedMedia() {
   return media;
 }
 
+async function seedTvMedia() {
+  const mediaRepo = getRepository(Media);
+  const media = await mediaRepo.save(
+    new Media({
+      mediaType: MediaType.TV,
+      tmdbId: 24682,
+      status: MediaStatus.UNKNOWN,
+    })
+  );
+  return media;
+}
+
 describe('GET /review/:tmdbId/:mediaType', () => {
   it('returns an empty review list for media without reviews', async () => {
     await seedMedia();
@@ -264,5 +276,163 @@ describe('DELETE /review/:reviewId', () => {
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
     const res = await agent.delete('/review/99999999');
     assert.strictEqual(res.status, 404);
+  });
+});
+
+describe('TV reviews with season/episode targets', () => {
+  it('allows a whole-series review and separates it from season reviews', async () => {
+    await seedTvMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    // 整部剧集
+    const whole = await agent.post('/review/24682/tv').send({
+      rating: 3,
+      message: 'Whole series review',
+    });
+    assert.strictEqual(whole.status, 201);
+
+    // 第 1 季
+    const season = await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'Season 1 was great',
+      seasonNumber: 1,
+    });
+    assert.strictEqual(season.status, 201);
+
+    // 整部列表只包含整部评论
+    const wholeList = await agent.get('/review/24682/tv');
+    assert.strictEqual(wholeList.body.reviewCount, 1);
+    assert.strictEqual(
+      wholeList.body.results[0].message,
+      'Whole series review'
+    );
+    assert.strictEqual(wholeList.body.averageRating, 3);
+
+    // 第 1 季列表只包含季评论
+    const seasonList = await agent.get('/review/24682/tv?seasonNumber=1');
+    assert.strictEqual(seasonList.body.reviewCount, 1);
+    assert.strictEqual(
+      seasonList.body.results[0].message,
+      'Season 1 was great'
+    );
+    assert.strictEqual(seasonList.body.results[0].seasonNumber, 1);
+    assert.strictEqual(seasonList.body.results[0].episodeNumber, null);
+    assert.strictEqual(seasonList.body.averageRating, 4);
+  });
+
+  it('separates episode reviews from the season reviews', async () => {
+    await seedTvMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'Season 1 review',
+      seasonNumber: 1,
+    });
+    await agent.post('/review/24682/tv').send({
+      rating: 5,
+      message: 'Episode 3 review',
+      seasonNumber: 1,
+      episodeNumber: 3,
+    });
+
+    const seasonList = await agent.get('/review/24682/tv?seasonNumber=1');
+    assert.strictEqual(seasonList.body.reviewCount, 1);
+    assert.strictEqual(seasonList.body.results[0].message, 'Season 1 review');
+
+    const episodeList = await agent.get(
+      '/review/24682/tv?seasonNumber=1&episodeNumber=3'
+    );
+    assert.strictEqual(episodeList.body.reviewCount, 1);
+    assert.strictEqual(episodeList.body.results[0].message, 'Episode 3 review');
+    assert.strictEqual(episodeList.body.results[0].seasonNumber, 1);
+    assert.strictEqual(episodeList.body.results[0].episodeNumber, 3);
+    assert.strictEqual(episodeList.body.averageRating, 5);
+  });
+
+  it('upserts within the same target but keeps different targets separate', async () => {
+    await seedTvMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'Season 1 first take',
+      seasonNumber: 1,
+    });
+    const updated = await agent.post('/review/24682/tv').send({
+      rating: 2,
+      message: 'Season 1 second take',
+      seasonNumber: 1,
+    });
+    assert.strictEqual(updated.status, 201);
+
+    const seasonList = await agent.get('/review/24682/tv?seasonNumber=1');
+    assert.strictEqual(seasonList.body.reviewCount, 1);
+    assert.strictEqual(
+      seasonList.body.results[0].message,
+      'Season 1 second take'
+    );
+
+    const episodeList = await agent.get(
+      '/review/24682/tv?seasonNumber=1&episodeNumber=2'
+    );
+    assert.strictEqual(episodeList.body.reviewCount, 0);
+  });
+
+  it('rejects an episode review without a season number', async () => {
+    await seedTvMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    const res = await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'No season',
+      episodeNumber: 3,
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  it('rejects season targets on movie reviews', async () => {
+    await seedMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    const res = await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'Movie should not have a season',
+      seasonNumber: 1,
+    });
+
+    assert.strictEqual(res.status, 400);
+  });
+
+  it('rejects a negative or zero season number', async () => {
+    await seedTvMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    const res = await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'Bad season',
+      seasonNumber: 0,
+    });
+
+    assert.strictEqual(res.status, 400);
   });
 });

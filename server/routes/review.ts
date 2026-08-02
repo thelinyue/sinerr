@@ -10,7 +10,7 @@ import { Permission } from '@server/lib/permissions';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
-import { EntityNotFoundError } from 'typeorm';
+import { EntityNotFoundError, IsNull } from 'typeorm';
 
 const reviewRoutes = Router();
 
@@ -24,6 +24,58 @@ async function findMedia(
   return getRepository(Media).findOne({ where: { tmdbId, mediaType } });
 }
 
+/**
+ * 解析并校验评论目标（季/集）
+ *
+ * 规则：
+ * - 电影不允许携带季/集目标
+ * - episodeNumber 有值但 seasonNumber 为空 → 非法
+ * - 返回 { seasonNumber, episodeNumber }，两者都可能为 null/undefined
+ */
+function parseTarget(
+  mediaType: MediaType,
+  seasonNumberRaw: unknown,
+  episodeNumberRaw: unknown
+): { seasonNumber?: number | null; episodeNumber?: number | null } | string {
+  const seasonNumber =
+    seasonNumberRaw === undefined ||
+    seasonNumberRaw === null ||
+    seasonNumberRaw === ''
+      ? null
+      : Number(seasonNumberRaw);
+  const episodeNumber =
+    episodeNumberRaw === undefined ||
+    episodeNumberRaw === null ||
+    episodeNumberRaw === ''
+      ? null
+      : Number(episodeNumberRaw);
+
+  if (mediaType === MediaType.MOVIE) {
+    if (seasonNumber !== null || episodeNumber !== null) {
+      return 'Movie reviews cannot target a season or episode.';
+    }
+    return { seasonNumber: null, episodeNumber: null };
+  }
+
+  if (
+    seasonNumber !== null &&
+    (!Number.isInteger(seasonNumber) || seasonNumber < 1)
+  ) {
+    return 'Season number must be a positive integer.';
+  }
+
+  if (episodeNumber !== null) {
+    if (seasonNumber === null) {
+      return 'Episode number requires a season number.';
+    }
+    if (!Number.isInteger(episodeNumber) || episodeNumber < 1) {
+      return 'Episode number must be a positive integer.';
+    }
+  }
+
+  return { seasonNumber, episodeNumber };
+}
+
 reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
   '/:tmdbId/:mediaType',
   isAuthenticated(),
@@ -35,6 +87,15 @@ reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
       return next({ status: 400, message: 'Invalid media type.' });
     }
 
+    const target = parseTarget(
+      mediaType,
+      req.query.seasonNumber,
+      req.query.episodeNumber
+    );
+    if (typeof target === 'string') {
+      return next({ status: 400, message: target });
+    }
+
     try {
       const media = await findMedia(tmdbId, mediaType);
 
@@ -43,12 +104,20 @@ reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
       }
 
       const reviewRepository = getRepository(MediaReview);
-      const reviews = await reviewRepository
+      const query = reviewRepository
         .createQueryBuilder('review')
         .leftJoinAndSelect('review.user', 'user')
-        .where('review.mediaId = :mediaId', { mediaId: media.id })
-        .orderBy('review.createdAt', 'DESC')
-        .getMany();
+        .where('review.mediaId = :mediaId', { mediaId: media.id });
+
+      // 目标过滤：完全匹配（季/集）
+      query.andWhere('review.seasonNumber IS :seasonNumber', {
+        seasonNumber: target.seasonNumber,
+      });
+      query.andWhere('review.episodeNumber IS :episodeNumber', {
+        episodeNumber: target.episodeNumber,
+      });
+
+      const reviews = await query.orderBy('review.createdAt', 'DESC').getMany();
 
       const averageRating = reviews.length
         ? Math.round(
@@ -104,6 +173,15 @@ reviewRoutes.post<
       });
     }
 
+    const target = parseTarget(
+      mediaType,
+      req.body.seasonNumber,
+      req.body.episodeNumber
+    );
+    if (typeof target === 'string') {
+      return next({ status: 400, message: target });
+    }
+
     try {
       if (!req.user) {
         return next({
@@ -120,9 +198,14 @@ reviewRoutes.post<
 
       const reviewRepository = getRepository(MediaReview);
 
-      // 每个用户对同一媒体仅保留一条短评，重复提交视为更新
+      // 每个用户对同一媒体 + 同一目标（季/集）仅保留一条短评，重复提交视为更新
       const existing = await reviewRepository.findOne({
-        where: { media: { id: media.id }, user: { id: req.user.id } },
+        where: {
+          media: { id: media.id },
+          user: { id: req.user.id },
+          seasonNumber: target.seasonNumber ?? IsNull(),
+          episodeNumber: target.episodeNumber ?? IsNull(),
+        },
       });
 
       let review: MediaReview;
@@ -137,6 +220,8 @@ reviewRoutes.post<
             user: req.user,
             rating,
             message,
+            seasonNumber: target.seasonNumber,
+            episodeNumber: target.episodeNumber,
           })
         );
       }

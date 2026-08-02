@@ -1117,6 +1117,14 @@ components:
         message:
           type: string
           example: Great film!
+        seasonNumber:
+          type: integer
+          nullable: true
+          description: Target season (series only). Null when reviewing the whole series.
+        episodeNumber:
+          type: integer
+          nullable: true
+          description: Target episode within a season (series only).
         createdAt:
           type: string
           format: date-time
@@ -6638,6 +6646,8 @@ paths:
       description: |
         Returns the reviews and average rating for a specific media item.
 
+        For series, pass `seasonNumber` and/or `episodeNumber` to filter reviews to a specific season or episode. Without these parameters, only whole-series reviews are returned.
+
         Requires authentication. Review messages are visible to any authenticated user.
       tags:
         - review
@@ -6655,6 +6665,18 @@ paths:
           schema:
             type: string
             enum: [movie, tv]
+        - in: query
+          name: seasonNumber
+          description: Filter reviews to a specific season (series only)
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: episodeNumber
+          description: Filter reviews to a specific episode within a season (requires seasonNumber)
+          required: false
+          schema:
+            type: integer
       responses:
         '200':
           description: Reviews for the media
@@ -6667,9 +6689,11 @@ paths:
     post:
       summary: Create or update a media review
       description: |
-        Creates a review for a media item (or updates the current user's existing review).
+        Creates a review for a media item (or updates the current user's existing review for the same target).
 
-        Requires the `REQUEST` permission or `ADMIN`. A user may only have one review per media item.
+        For series, pass `seasonNumber` and/or `episodeNumber` to review a specific season or episode. When neither is provided, the review targets the whole series. A user may only have one review per media item and target.
+
+        Requires the `REQUEST` permission or `ADMIN`.
       tags:
         - review
       parameters:
@@ -6701,6 +6725,14 @@ paths:
                 message:
                   type: string
                   example: Great film!
+                seasonNumber:
+                  type: integer
+                  nullable: true
+                  description: Target season (series only). Omit or null for whole series.
+                episodeNumber:
+                  type: integer
+                  nullable: true
+                  description: Target episode within a season. Requires seasonNumber.
               required:
                 - rating
                 - message
@@ -6712,7 +6744,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MediaReview'
         '400':
-          description: Invalid rating or message
+          description: Invalid rating, message, or season/episode target
         '404':
           description: Media not found
   /review/{reviewId}:

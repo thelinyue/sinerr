@@ -10,7 +10,7 @@ import type { MediaReviewsResponse } from '@server/interfaces/api/reviewInterfac
 import axios from 'axios';
 import Link from 'next/link';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 import useSWR from 'swr';
 
@@ -25,19 +25,38 @@ const messages = defineMessages('components.MediaReviewBlock', {
   deletereview: 'Delete Review',
   deletefailed: 'Something went wrong deleting your review.',
   avgrating: 'Average: {rating} / 5',
+  wholeseries: 'Whole Series',
+  season: 'Season {number}',
+  wholeSeason: 'Whole Season',
+  episode: 'Episode {number}',
+  seasonBadge: 'Season {season}',
+  episodeBadge: 'S{season}E{episode}',
 });
+
+/** 季信息（仅用 TvDetails 已加载的字段） */
+interface SeasonOption {
+  seasonNumber: number;
+  episodeCount: number;
+}
 
 const isReviewAuthor = (
   review: MediaReview,
   currentUserId: number | undefined
 ) => review.user.id === currentUserId;
 
+interface ReviewTarget {
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+}
+
 const MediaReviewBlock = ({
   tmdbId,
   mediaType,
+  seasons,
 }: {
   tmdbId: number;
   mediaType: 'movie' | 'tv';
+  seasons?: SeasonOption[];
 }) => {
   const intl = useIntl();
   const { user, hasPermission } = useUser();
@@ -46,11 +65,39 @@ const MediaReviewBlock = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 评论目标：默认整部剧集（movie 固定为整部）
+  const [target, setTarget] = useState<ReviewTarget>({
+    seasonNumber: null,
+    episodeNumber: null,
+  });
+
+  const isTv = mediaType === 'tv';
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (isTv && target.seasonNumber !== null) {
+      params.set('seasonNumber', String(target.seasonNumber));
+    }
+    if (isTv && target.episodeNumber !== null) {
+      params.set('episodeNumber', String(target.episodeNumber));
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : '';
+  }, [isTv, target]);
+
   const {
     data,
     error: loadError,
     mutate,
-  } = useSWR<MediaReviewsResponse>(`/api/v1/review/${tmdbId}/${mediaType}`);
+  } = useSWR<MediaReviewsResponse>(
+    `/api/v1/review/${tmdbId}/${mediaType}${query}`
+  );
+
+  // 选中季的集数（来自 TvDetails 已加载的 seasons）
+  const selectedSeason = useMemo(
+    () => seasons?.find((s) => s.seasonNumber === target.seasonNumber) ?? null,
+    [seasons, target.seasonNumber]
+  );
 
   const canPost = hasPermission(Permission.REQUEST);
 
@@ -67,6 +114,8 @@ const MediaReviewBlock = ({
       await axios.post(`/api/v1/review/${tmdbId}/${mediaType}`, {
         rating,
         message,
+        seasonNumber: isTv ? target.seasonNumber : undefined,
+        episodeNumber: isTv ? target.episodeNumber : undefined,
       });
       await mutate();
       setMessage('');
@@ -84,6 +133,21 @@ const MediaReviewBlock = ({
     } catch {
       setError(intl.formatMessage(messages.deletefailed));
     }
+  };
+
+  const reviewTargetLabel = (review: MediaReview): string => {
+    if (review.seasonNumber && review.episodeNumber) {
+      return intl.formatMessage(messages.episodeBadge, {
+        season: review.seasonNumber,
+        episode: review.episodeNumber,
+      });
+    }
+    if (review.seasonNumber) {
+      return intl.formatMessage(messages.seasonBadge, {
+        season: review.seasonNumber,
+      });
+    }
+    return intl.formatMessage(messages.wholeseries);
   };
 
   if (!data && !loadError) {
@@ -105,6 +169,94 @@ const MediaReviewBlock = ({
           <span>{intl.formatMessage(messages.reviews)}</span>
         </div>
       </div>
+
+      {isTv && !!seasons?.length && (
+        <div className="mb-4 space-y-2">
+          {/* 第一级：季选择 */}
+          <div className="hide-scrollbar flex items-center space-x-2 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() =>
+                setTarget({ seasonNumber: null, episodeNumber: null })
+              }
+              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+                target.seasonNumber === null
+                  ? 'bg-indigo-600 text-white ring-indigo-500'
+                  : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+              }`}
+            >
+              {intl.formatMessage(messages.wholeseries)}
+            </button>
+            {seasons
+              .filter((s) => s.seasonNumber > 0)
+              .map((s) => (
+                <button
+                  key={`season-${s.seasonNumber}`}
+                  type="button"
+                  onClick={() =>
+                    setTarget({
+                      seasonNumber: s.seasonNumber,
+                      episodeNumber: null,
+                    })
+                  }
+                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+                    target.seasonNumber === s.seasonNumber
+                      ? 'bg-indigo-600 text-white ring-indigo-500'
+                      : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                  }`}
+                >
+                  {intl.formatMessage(messages.season, {
+                    number: s.seasonNumber,
+                  })}
+                </button>
+              ))}
+          </div>
+
+          {/* 第二级：集选择（选中季时出现） */}
+          {target.seasonNumber !== null && selectedSeason && (
+            <div className="hide-scrollbar flex items-center space-x-2 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() =>
+                  setTarget({
+                    seasonNumber: target.seasonNumber,
+                    episodeNumber: null,
+                  })
+                }
+                className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+                  target.episodeNumber === null
+                    ? 'bg-indigo-600 text-white ring-indigo-500'
+                    : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                }`}
+              >
+                {intl.formatMessage(messages.wholeSeason)}
+              </button>
+              {Array.from(
+                { length: selectedSeason.episodeCount },
+                (_, i) => i + 1
+              ).map((n) => (
+                <button
+                  key={`episode-${n}`}
+                  type="button"
+                  onClick={() =>
+                    setTarget({
+                      seasonNumber: target.seasonNumber as number,
+                      episodeNumber: n,
+                    })
+                  }
+                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+                    target.episodeNumber === n
+                      ? 'bg-indigo-600 text-white ring-indigo-500'
+                      : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                  }`}
+                >
+                  {intl.formatMessage(messages.episode, { number: n })}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!!data?.reviewCount && (
         <div className="mb-4 flex items-center space-x-2 text-sm text-gray-400">
@@ -195,7 +347,7 @@ const MediaReviewBlock = ({
                 />
               </Link>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center space-x-2 text-sm">
+                <div className="flex flex-wrap items-center space-x-2 text-sm">
                   <Link
                     href={
                       review.user.id === user?.id
@@ -218,6 +370,11 @@ const MediaReviewBlock = ({
                       />
                     ))}
                   </span>
+                  {isTv && (review.seasonNumber || review.episodeNumber) && (
+                    <span className="rounded bg-gray-700/60 px-1.5 py-0.5 text-xs text-gray-300">
+                      {reviewTargetLabel(review)}
+                    </span>
+                  )}
                   <span className="text-xs text-gray-500">
                     <FormattedRelativeTime
                       value={Math.floor(

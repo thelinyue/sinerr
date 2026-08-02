@@ -987,7 +987,11 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
           </div>
         </div>
       </div>
-      <MediaReviewBlock tmdbId={data.id} mediaType="tv" />
+      <MediaReviewBlock
+        tmdbId={data.id}
+        mediaType="tv"
+        seasons={data.seasons}
+      />
       {data.credits.cast.length > 0 && (
         <>
           <div className="slider-header">

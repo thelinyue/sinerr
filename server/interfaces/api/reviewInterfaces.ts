@@ -8,6 +8,10 @@ export interface MediaReviewRequestBody {
   rating: number;
   /** 短评内容 */
   message: string;
+  /** 评论目标季号（仅剧集）：null 且 episodeNumber 为 null 表示整部剧集 */
+  seasonNumber?: number | null;
+  /** 评论目标集号（仅剧集，必须有 seasonNumber） */
+  episodeNumber?: number | null;
 }
 
 export interface MediaReviewsResponse {
