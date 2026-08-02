@@ -28,3 +28,23 @@ export interface UserWatchDataResponse {
   recentlyWatched: Media[];
   playCount: number;
 }
+
+/**
+ * 用户成就徽章定义
+ */
+export interface Achievement {
+  /** 徽章唯一标识 */
+  id: string;
+  /** 是否已达成 */
+  earned: boolean;
+  /** 当前进度（0-100） */
+  progress: number;
+  /** 达成所需的统计值 */
+  target: number;
+  /** 当前统计值 */
+  current: number;
+}
+
+export interface UserAchievementsResponse {
+  results: Achievement[];
+}

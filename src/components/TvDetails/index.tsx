@@ -17,6 +17,7 @@ import Tooltip from '@app/components/Common/Tooltip';
 import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
+import MediaReviewBlock from '@app/components/MediaReviewBlock';
 import MediaSlider from '@app/components/MediaSlider';
 import MediaryStatus from '@app/components/MediaryStatus';
 import MoviePilotStatus from '@app/components/MoviePilotStatus';
@@ -986,6 +987,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
           </div>
         </div>
       </div>
+      <MediaReviewBlock tmdbId={data.id} mediaType="tv" />
       {data.credits.cast.length > 0 && (
         <>
           <div className="slider-header">

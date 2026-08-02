@@ -20,6 +20,7 @@ import {
 } from 'typeorm';
 import Issue from './Issue';
 import { MediaRequest } from './MediaRequest';
+import MediaReview from './MediaReview';
 import Season from './Season';
 
 export interface DownloadingItem {
@@ -124,6 +125,11 @@ class Media {
 
   @OneToMany(() => Issue, (issue) => issue.media, { cascade: true })
   public issues: Issue[];
+
+  @OneToMany(() => MediaReview, (review) => review.media, {
+    cascade: ['insert', 'remove'],
+  })
+  public mediaReviews: MediaReview[];
 
   @OneToOne(() => Blocklist, (blocklist) => blocklist.media)
   public blocklist: Promise<Blocklist>;

@@ -2,11 +2,14 @@ import JellyfinAPI from '@server/api/jellyfin';
 import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
 import dataSource, { getRepository } from '@server/datasource';
+import Issue from '@server/entity/Issue';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import { User } from '@server/entity/User';
 import { UserPushSubscription } from '@server/entity/UserPushSubscription';
 import type {
+  Achievement,
   QuotaResponse,
+  UserAchievementsResponse,
   UserRequestsResponse,
   UserResultsResponse,
 } from '@server/interfaces/api/userInterfaces';
@@ -880,6 +883,84 @@ router.get<{ id: string }, QuotaResponse>(
       const quotas = await user.getQuota();
 
       return res.status(200).json(quotas);
+    } catch (e) {
+      next({ status: 404, message: e.message });
+    }
+  }
+);
+
+/**
+ * 用户成就徽章接口
+ *
+ * 按需聚合计算（不落新表）：
+ * - requester：请求数 >= 10 / 50 / 100
+ * - voted：获得的点赞数 >= 5 / 25
+ * - helper：解决的 Issue 数 >= 3
+ *
+ * 徽章仅展示给本人或具备查看权限的用户。
+ */
+router.get<{ id: string }, UserAchievementsResponse>(
+  '/:id/achievements',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const requestRepository = getRepository(MediaRequest);
+      const issueRepository = getRepository(Issue);
+
+      const [requestCount, votesReceived, resolvedIssues] = await Promise.all([
+        requestRepository.count({
+          where: { requestedBy: { id: userId } },
+        }),
+        requestRepository
+          .createQueryBuilder('request')
+          .leftJoinAndSelect('request.requestedBy', 'requestedBy')
+          .leftJoin('request.votes', 'vote')
+          .where('requestedBy.id = :userId', { userId })
+          .select('COUNT(vote.id)', 'count')
+          .getRawOne<{ count: string }>(),
+        issueRepository.count({
+          where: { createdBy: { id: userId } },
+        }),
+      ]);
+
+      const votesReceivedCount = Number(votesReceived?.count ?? 0);
+
+      const definitions: {
+        id: string;
+        target: number;
+        current: number;
+      }[] = [
+        { id: 'requester10', target: 10, current: requestCount },
+        { id: 'requester50', target: 50, current: requestCount },
+        { id: 'requester100', target: 100, current: requestCount },
+        { id: 'voted5', target: 5, current: votesReceivedCount },
+        { id: 'voted25', target: 25, current: votesReceivedCount },
+        { id: 'helper3', target: 3, current: resolvedIssues },
+      ];
+
+      const results: Achievement[] = definitions.map((def) => ({
+        id: def.id,
+        target: def.target,
+        current: def.current,
+        earned: def.current >= def.target,
+        progress: Math.min(100, Math.round((def.current / def.target) * 100)),
+      }));
+
+      return res.status(200).json({ results });
     } catch (e) {
       next({ status: 404, message: e.message });
     }

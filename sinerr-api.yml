@@ -1090,6 +1090,43 @@ components:
           description: List of users who voted. Only returned to the request owner or users with the `REQUEST_VIEW` permission.
           items:
             $ref: '#/components/schemas/User'
+    MediaReviews:
+      type: object
+      properties:
+        averageRating:
+          type: number
+          example: 4.2
+          description: Average rating out of 5 (0 when there are no reviews).
+        reviewCount:
+          type: number
+          example: 5
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaReview'
+    MediaReview:
+      type: object
+      properties:
+        id:
+          type: number
+          readOnly: true
+        rating:
+          type: integer
+          example: 4
+          description: Rating out of 5.
+        message:
+          type: string
+          example: Great film!
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+        media:
+          $ref: '#/components/schemas/MediaInfo'
     MediaInfo:
       type: object
       properties:
@@ -6595,6 +6632,112 @@ paths:
                       $ref: '#/components/schemas/CreditCrew'
                   id:
                     type: number
+  /review/{tmdbId}/{mediaType}:
+    get:
+      summary: Get media reviews
+      description: |
+        Returns the reviews and average rating for a specific media item.
+
+        Requires authentication. Review messages are visible to any authenticated user.
+      tags:
+        - review
+      parameters:
+        - in: path
+          name: tmdbId
+          description: TMDB ID of the media
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: mediaType
+          description: Media type
+          required: true
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Reviews for the media
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaReviews'
+        '404':
+          description: Media not found
+    post:
+      summary: Create or update a media review
+      description: |
+        Creates a review for a media item (or updates the current user's existing review).
+
+        Requires the `REQUEST` permission or `ADMIN`. A user may only have one review per media item.
+      tags:
+        - review
+      parameters:
+        - in: path
+          name: tmdbId
+          description: TMDB ID of the media
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: mediaType
+          description: Media type
+          required: true
+          schema:
+            type: string
+            enum: [movie, tv]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  example: 4
+                message:
+                  type: string
+                  example: Great film!
+              required:
+                - rating
+                - message
+      responses:
+        '201':
+          description: Review created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaReview'
+        '400':
+          description: Invalid rating or message
+        '404':
+          description: Media not found
+  /review/{reviewId}:
+    delete:
+      summary: Delete a media review
+      description: |
+        Deletes a media review. Authors can delete their own reviews; users with the `MANAGE_REQUESTS` permission can delete any review.
+
+        Requires the `REQUEST` permission or `ADMIN`.
+      tags:
+        - review
+      parameters:
+        - in: path
+          name: reviewId
+          description: Review ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Review deleted
+        '403':
+          description: Not permitted to delete this review
+        '404':
+          description: Review not found
   /media:
     get:
       summary: Get media

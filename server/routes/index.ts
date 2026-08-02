@@ -44,6 +44,7 @@ import mediaRoutes from './media';
 import movieRoutes from './movie';
 import personRoutes from './person';
 import requestRoutes from './request';
+import reviewRoutes from './review';
 import searchRoutes from './search';
 import serviceRoutes from './service';
 import tvRoutes from './tv';
@@ -151,6 +152,7 @@ router.use('/collection', isAuthenticated(), collectionRoutes);
 router.use('/service', isAuthenticated(), serviceRoutes);
 router.use('/issue', isAuthenticated(), issueRoutes);
 router.use('/issueComment', isAuthenticated(), issueCommentRoutes);
+router.use('/review', isAuthenticated(), reviewRoutes);
 router.use('/auth', authRoutes);
 
 router.get('/regions', isAuthenticated(), async (req, res, next) => {

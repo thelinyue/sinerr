@@ -5,6 +5,7 @@ import ProgressCircle from '@app/components/Common/ProgressCircle';
 import RequestCard from '@app/components/RequestCard';
 import Slider from '@app/components/Slider';
 import TmdbTitleCard from '@app/components/TitleCard/TmdbTitleCard';
+import Achievements from '@app/components/UserProfile/Achievements';
 import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
 import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
@@ -116,6 +117,7 @@ const UserProfile = () => {
         </div>
       )}
       <ProfileHeader user={user} />
+      <Achievements userId={user.id} />
       {quota &&
         (user.id === currentUser?.id ||
           currentHasPermission(
