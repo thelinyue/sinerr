@@ -4,12 +4,14 @@ import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
 import RequestItem from '@app/components/RequestList/RequestItem';
+import { useToasts } from '@app/hooks/useToasts';
 import { useUpdateQueryParams } from '@app/hooks/useUpdateQueryParams';
-import { useUser } from '@app/hooks/useUser';
+import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import {
   ArrowDownIcon,
+  ArrowPathIcon,
   ArrowUpIcon,
   Bars3BottomLeftIcon,
   ChevronLeftIcon,
@@ -18,6 +20,7 @@ import {
   FunnelIcon,
 } from '@heroicons/react/24/solid';
 import type { RequestResultsResponse } from '@server/interfaces/api/requestInterfaces';
+import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -32,6 +35,10 @@ const messages = defineMessages('components.RequestList', {
   sortDirection: 'Toggle Sort Direction',
   unableToConnect:
     'Unable to connect to {services}. Some information may be unavailable.',
+  syncMoviePilot: 'Sync MoviePilot',
+  moviePilotSynced:
+    'Imported {count} requests from MoviePilot current subscriptions.',
+  moviePilotSyncFailed: 'Failed to sync MoviePilot subscriptions.',
 });
 
 enum Filter {
@@ -55,16 +62,18 @@ type MediaType = 'all' | 'movie' | 'tv';
 const RequestList = () => {
   const router = useRouter();
   const intl = useIntl();
+  const { addToast } = useToasts();
   const { user } = useUser({
     id: Number(router.query.userId),
   });
-  const { user: currentUser } = useUser();
+  const { user: currentUser, hasPermission } = useUser();
   const [currentFilter, setCurrentFilter] = useState<Filter>(Filter.PENDING);
   const [currentSort, setCurrentSort] = useState<Sort>('added');
   const [currentMediaType, setCurrentMediaType] = useState<string>('all');
   const [currentSortDirection, setCurrentSortDirection] =
     useState<SortDirection>('desc');
   const [currentPageSize, setCurrentPageSize] = useState<number>(10);
+  const [isSyncingMoviePilot, setIsSyncingMoviePilot] = useState(false);
 
   const page = router.query.page ? Number(router.query.page) : 1;
   const pageIndex = page - 1;
@@ -89,6 +98,36 @@ const RequestList = () => {
   // SWR's bound mutate is stable, so passing it directly keeps RequestItem's
   // React.memo effective while still allowing optimistic updates.
   const revalidateList = revalidate;
+
+  // 仅当配置了 MoviePilot 服务器且当前用户为管理员时，才显示"同步 MoviePilot"按钮。
+  const { data: moviePilotServers } = useSWR<{ id: number }[]>(
+    '/api/v1/service/moviepilot'
+  );
+  const canSyncMoviePilot =
+    hasPermission(Permission.ADMIN) && (moviePilotServers?.length ?? 0) > 0;
+
+  const syncMoviePilot = async () => {
+    setIsSyncingMoviePilot(true);
+    try {
+      const response = await axios.post<{ imported: number }>(
+        '/api/v1/service/moviepilot/sync'
+      );
+      addToast(
+        intl.formatMessage(messages.moviePilotSynced, {
+          count: response.data.imported,
+        }),
+        { appearance: 'success', autoDismiss: true }
+      );
+      revalidate();
+    } catch {
+      addToast(intl.formatMessage(messages.moviePilotSyncFailed), {
+        appearance: 'error',
+        autoDismiss: true,
+      });
+    } finally {
+      setIsSyncingMoviePilot(false);
+    }
+  };
 
   // Restore last set filter values on component mount
   useEffect(() => {
@@ -292,6 +331,24 @@ const RequestList = () => {
               </Button>
             </Tooltip>
           </div>
+          {canSyncMoviePilot && (
+            <Button
+              buttonType="primary"
+              buttonSize="md"
+              className="ml-2"
+              onClick={() => syncMoviePilot()}
+              disabled={isSyncingMoviePilot}
+            >
+              <ArrowPathIcon
+                className={`h-5 w-5 ${isSyncingMoviePilot ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {isSyncingMoviePilot
+                  ? intl.formatMessage(globalMessages.syncing)
+                  : intl.formatMessage(messages.syncMoviePilot)}
+              </span>
+            </Button>
+          )}
         </div>
       </div>
 

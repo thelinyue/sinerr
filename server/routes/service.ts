@@ -1,7 +1,10 @@
 import MediaryAPI from '@server/api/mediary';
 import MoviePilotAPI from '@server/api/moviepilot';
+import { importMoviePilotSubscriptions } from '@server/lib/moviePilotSync';
+import { Permission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
+import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
 
 interface ServiceServer {
@@ -120,5 +123,29 @@ serviceRoutes.get('/moviepilot/status', async (req, res, next) => {
     return res.status(200).json({ configured: true, status: {}, error: true });
   }
 });
+
+/**
+ * 手动把 MoviePilot 当前活跃订阅导入为 Sinerr 请求（状态为已请求，请求人为管理员）。
+ * 仅管理员可触发；忽略各服务器的"启用扫描"开关（手动操作即明确意图）。
+ */
+serviceRoutes.post(
+  '/moviepilot/sync',
+  isAuthenticated(Permission.ADMIN),
+  async (req, res, next) => {
+    try {
+      const imported = await importMoviePilotSubscriptions();
+      return res.status(200).json({ imported });
+    } catch (e) {
+      logger.error('Failed to import MoviePilot subscriptions', {
+        label: 'MoviePilot',
+        errorMessage: e instanceof Error ? e.message : 'Unknown error',
+      });
+      return next({
+        status: 500,
+        message: `Failed to sync MoviePilot subscriptions: ${e.message}`,
+      });
+    }
+  }
+);
 
 export default serviceRoutes;

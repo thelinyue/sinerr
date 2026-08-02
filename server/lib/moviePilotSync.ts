@@ -11,6 +11,7 @@ import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import Season from '@server/entity/Season';
 import SeasonRequest from '@server/entity/SeasonRequest';
+import { User } from '@server/entity/User';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 
@@ -191,4 +192,127 @@ export async function runMoviePilotSync(): Promise<void> {
       }
     }
   }
+}
+
+/**
+ * 把 MoviePilot 当前的活跃订阅导入为 Sinerr 请求（状态为已请求/APPROVED，请求人为管理员）。
+ *
+ * 用于请求列表上的「同步 MoviePilot」按钮：遍历所有已配置的 MoviePilot 服务器
+ * （手动触发忽略"启用扫描"开关），把尚未在 Sinerr 中有请求的媒体创建为 APPROVED 请求；
+ * 剧集按 tmdbId 聚合，把该剧已订阅的季合并到同一条请求。
+ * 已完成（state === 'S'）的订阅不导入（已完成的媒体不应再显示为"已请求"）。
+ *
+ * @returns 本次导入的请求数量
+ */
+export async function importMoviePilotSubscriptions(): Promise<number> {
+  const servers = getSettings().moviepilot;
+  if (servers.length === 0) {
+    return 0;
+  }
+
+  const userRepository = getRepository(User);
+  const admin =
+    (await userRepository.findOne({ where: { id: 1 } })) ??
+    (await userRepository.findOne({ order: { id: 'ASC' } }));
+  if (!admin) {
+    logger.warn('MoviePilot import skipped: no admin user found', {
+      label: 'MoviePilot Sync',
+    });
+    return 0;
+  }
+
+  const mediaRepository = getRepository(Media);
+  const requestRepository = getRepository(MediaRequest);
+  let imported = 0;
+
+  for (const server of servers) {
+    const moviepilot = new MoviePilotAPI({
+      url: MoviePilotAPI.buildUrl(server),
+      apiKey: server.apiKey,
+    });
+
+    let subscriptions: MoviePilotSubscription[];
+    try {
+      subscriptions = await moviepilot.getSubscriptions();
+    } catch (e) {
+      logger.warn('MoviePilot import failed to fetch subscriptions', {
+        label: 'MoviePilot Sync',
+        serverId: server.id,
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
+      continue;
+    }
+
+    // 按 tmdbId 聚合（同一媒体的多个季合并为一条请求），跳过已完成（state === 'S'）订阅。
+    const byTmdb = new Map<number, MoviePilotSubscription[]>();
+    for (const sub of subscriptions) {
+      if (sub.tmdbid == null || String(sub.state) === 'S') {
+        continue;
+      }
+      const list = byTmdb.get(sub.tmdbid) ?? [];
+      list.push(sub);
+      byTmdb.set(sub.tmdbid, list);
+    }
+
+    for (const [tmdbId, subs] of byTmdb) {
+      const mediaType =
+        String(subs[0]?.type) === '电影' ? MediaType.MOVIE : MediaType.TV;
+
+      // 已在 Sinerr 中有请求的媒体跳过，避免重复导入。
+      const existing = await requestRepository.findOne({
+        where: { media: { tmdbId }, type: mediaType },
+      });
+      if (existing) {
+        continue;
+      }
+
+      let media = await mediaRepository.findOne({
+        where: { tmdbId, mediaType },
+      });
+      if (!media) {
+        media = new Media({
+          tmdbId,
+          mediaType,
+          status: MediaStatus.PENDING,
+        });
+        await mediaRepository.save(media);
+      }
+
+      const seasons =
+        mediaType === MediaType.TV
+          ? subs
+              .map((sub) => sub.season)
+              .filter((season): season is number => season != null)
+          : [];
+
+      const request = new MediaRequest({
+        type: mediaType,
+        media,
+        requestedBy: admin,
+        modifiedBy: admin,
+        status: MediaRequestStatus.APPROVED,
+        seasons:
+          mediaType === MediaType.TV
+            ? seasons.map(
+                (season) =>
+                  new SeasonRequest({
+                    seasonNumber: season,
+                    status: MediaRequestStatus.APPROVED,
+                  })
+              )
+            : undefined,
+      });
+
+      await requestRepository.save(request);
+      imported++;
+      logger.info('Imported MoviePilot subscription as request', {
+        label: 'MoviePilot Sync',
+        tmdbId,
+        mediaType,
+        seasons: seasons.length > 0 ? seasons : undefined,
+      });
+    }
+  }
+
+  return imported;
 }
