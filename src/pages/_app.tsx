@@ -247,7 +247,7 @@ CoreApp.getInitialProps = async (initialProps) => {
           pageProps: {},
           user,
           messages: {},
-          locale: 'en' as AvailableLocale,
+          locale: 'zh-CN' as AvailableLocale,
           currentSettings,
         };
       }
@@ -259,7 +259,7 @@ CoreApp.getInitialProps = async (initialProps) => {
           pageProps: {},
           user,
           messages: {},
-          locale: 'en' as AvailableLocale,
+          locale: 'zh-CN' as AvailableLocale,
           currentSettings,
         };
       }
@@ -275,7 +275,7 @@ CoreApp.getInitialProps = async (initialProps) => {
           pageProps: {},
           user,
           messages: {},
-          locale: 'en' as AvailableLocale,
+          locale: 'zh-CN' as AvailableLocale,
           currentSettings,
         };
       }
@@ -287,7 +287,7 @@ CoreApp.getInitialProps = async (initialProps) => {
           pageProps: {},
           user,
           messages: {},
-          locale: 'en' as AvailableLocale,
+          locale: 'zh-CN' as AvailableLocale,
           currentSettings,
         };
       }

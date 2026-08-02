@@ -39,9 +39,9 @@ export function initI18n(): void {
 }
 
 export function getIntl(locale?: AvailableLocale): IntlInstance {
-  // "Default" stores a falsy locale, so fall back to the server language, then English
+  // "Default" stores a falsy locale, so fall back to the server language, then Simplified Chinese
   const serverLocale = getSettings().main.locale as AvailableLocale;
-  const resolved = locale || serverLocale || 'en';
+  const resolved = locale || serverLocale || 'zh-CN';
   return intls.get(resolved) || intls.get('en')!;
 }
 
