@@ -15,6 +15,7 @@ export interface User {
   warnings: string[];
   jellyfinUsername?: string | null;
   username?: string;
+  nickname?: string | null;
   displayName: string;
   email?: string | null;
   avatar: string;

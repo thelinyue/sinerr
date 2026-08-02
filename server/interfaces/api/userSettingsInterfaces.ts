@@ -2,6 +2,7 @@ import type { NotificationAgentKey } from '@server/lib/settings';
 
 export interface UserSettingsGeneralResponse {
   username?: string;
+  nickname?: string | null;
   email?: string;
   locale?: string;
   discoverRegion?: string;

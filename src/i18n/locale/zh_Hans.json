@@ -418,6 +418,8 @@
   "components.UserProfile.UserSettings.UserGeneralSettings.general": "常规",
   "components.UserProfile.UserSettings.UserGeneralSettings.enableOverride": "覆盖全局限制",
   "components.UserProfile.UserSettings.UserGeneralSettings.displayName": "显示名称",
+  "components.UserProfile.UserSettings.UserGeneralSettings.nickname": "昵称",
+  "components.UserProfile.UserSettings.UserGeneralSettings.nicknameTip": "设置后优先展示昵称，未设置时显示用户名",
   "components.UserProfile.UserSettings.UserGeneralSettings.applanguage": "显示语言",
   "components.UserProfile.UserSettings.UserGeneralSettings.admin": "管理员",
   "components.UserProfile.UserSettings.UserGeneralSettings.accounttype": "用户类型",

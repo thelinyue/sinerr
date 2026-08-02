@@ -670,6 +670,7 @@ router.put<{ id: string }>(
 
       Object.assign(user, {
         username: req.body.username,
+        nickname: req.body.nickname?.trim() || null,
         permissions: req.body.permissions,
       });
 

@@ -1653,6 +1653,8 @@
   "components.UserProfile.UserSettings.UserGeneralSettings.discoverRegion": "Discover Region",
   "components.UserProfile.UserSettings.UserGeneralSettings.discoverRegionTip": "Filter content by regional availability",
   "components.UserProfile.UserSettings.UserGeneralSettings.displayName": "Display Name",
+  "components.UserProfile.UserSettings.UserGeneralSettings.nickname": "Nickname",
+  "components.UserProfile.UserSettings.UserGeneralSettings.nicknameTip": "Shown in place of your username when set",
   "components.UserProfile.UserSettings.UserGeneralSettings.email": "Email",
   "components.UserProfile.UserSettings.UserGeneralSettings.enableOverride": "Override Global Limit",
   "components.UserProfile.UserSettings.UserGeneralSettings.general": "General",

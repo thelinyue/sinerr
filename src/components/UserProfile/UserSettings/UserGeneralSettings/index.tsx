@@ -32,6 +32,8 @@ const messages = defineMessages(
     general: 'General',
     generalsettings: 'General Settings',
     displayName: 'Display Name',
+    nickname: 'Nickname',
+    nicknameTip: 'Shown in place of your username when set',
     email: 'Email',
     save: 'Save Changes',
     saving: 'Saving…',
@@ -130,6 +132,7 @@ const UserGeneralSettings = () => {
       <Formik
         initialValues={{
           displayName: data?.username !== user?.email ? data?.username : '',
+          nickname: data?.nickname ?? '',
           email: data?.email?.includes('@') ? data.email : '',
           locale: data?.locale,
           discoverRegion: data?.discoverRegion,
@@ -146,6 +149,7 @@ const UserGeneralSettings = () => {
           try {
             await axios.post(`/api/v1/user/${user?.id}/settings/main`, {
               username: values.displayName,
+              nickname: values.nickname,
               email: values.email || user?.jellyfinUsername,
               locale: values.locale,
               discoverRegion: values.discoverRegion,
@@ -270,6 +274,24 @@ const UserGeneralSettings = () => {
                     typeof errors.displayName === 'string' && (
                       <div className="error">{errors.displayName}</div>
                     )}
+                </div>
+              </div>
+              <div className="form-row">
+                <label htmlFor="nickname" className="text-label">
+                  <span>{intl.formatMessage(messages.nickname)}</span>
+                  <span className="label-tip">
+                    {intl.formatMessage(messages.nicknameTip)}
+                  </span>
+                </label>
+                <div className="form-input-area">
+                  <div className="form-input-field">
+                    <Field
+                      id="nickname"
+                      name="nickname"
+                      type="text"
+                      placeholder={user?.displayName}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="form-row">

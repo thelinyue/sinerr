@@ -47,6 +47,7 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
 
       return res.status(200).json({
         username: user.username,
+        nickname: user.nickname ?? undefined,
         email: user.email ?? undefined,
         locale: user.settings?.locale,
         discoverRegion: user.settings?.discoverRegion,
@@ -93,6 +94,7 @@ userSettingsRoutes.post<
 
     const oldEmail = user.email;
     user.username = req.body.username;
+    user.nickname = req.body.nickname?.trim() || null;
     user.email = req.body.email || null;
 
     if (user.email) {
@@ -135,6 +137,7 @@ userSettingsRoutes.post<
 
     return res.status(200).json({
       username: savedUser.username,
+      nickname: savedUser.nickname ?? undefined,
       locale: savedUser.settings?.locale,
       discoverRegion: savedUser.settings?.discoverRegion,
       streamingRegion: savedUser.settings?.streamingRegion,

@@ -63,6 +63,10 @@ export class User {
   @Column({ nullable: true })
   public username?: string;
 
+  /** 用户昵称：设置后优先用于展示（displayName），未设置时回退到用户名 */
+  @Column({ type: 'varchar', nullable: true })
+  public nickname?: string | null;
+
   @Column({ nullable: true, select: false })
   public password?: string;
 
@@ -272,7 +276,11 @@ export class User {
   @AfterLoad()
   public setDisplayName(): void {
     this.displayName =
-      this.username || this.jellyfinUsername || this.email || '';
+      this.nickname ||
+      this.username ||
+      this.jellyfinUsername ||
+      this.email ||
+      '';
   }
 
   public async getQuota(): Promise<QuotaResponse> {

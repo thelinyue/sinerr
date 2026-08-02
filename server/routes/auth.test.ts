@@ -82,6 +82,40 @@ describe('GET /auth/me', () => {
     assert.strictEqual(res.body.displayName, 'admin');
   });
 
+  it('prefers nickname over username when computing displayName', async () => {
+    const userRepo = getRepository(User);
+    const user = await userRepo.findOneOrFail({
+      where: { username: 'friend' },
+    });
+    user.nickname = '小明的昵称';
+    await userRepo.save(user);
+
+    const agent = await authenticatedAgent('friend', 'test1234');
+
+    const res = await agent.get('/auth/me');
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.displayName, '小明的昵称');
+    assert.strictEqual(res.body.nickname, '小明的昵称');
+  });
+
+  it('falls back to username when nickname is unset', async () => {
+    const userRepo = getRepository(User);
+    const user = await userRepo.findOneOrFail({
+      where: { username: 'friend' },
+    });
+    user.nickname = null;
+    await userRepo.save(user);
+
+    const agent = await authenticatedAgent('friend', 'test1234');
+
+    const res = await agent.get('/auth/me');
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.displayName, 'friend');
+    assert.strictEqual(res.body.nickname, null);
+  });
+
   it('includes userEmailRequired warning when email is required but invalid', async () => {
     const settings = getSettings();
     settings.notifications.agents.email.options.userEmailRequired = true;
