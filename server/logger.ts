@@ -25,27 +25,16 @@ const hformat = winston.format.printf(
   }
 );
 
-const sinerrFileTransport = new winston.transports.DailyRotateFile({
+const fileTransport = new winston.transports.DailyRotateFile({
   filename: process.env.CONFIG_DIRECTORY
-    ? `${process.env.CONFIG_DIRECTORY}/logs/sinerr-%DATE%.log`
-    : path.join(__dirname, '../config/logs/sinerr-%DATE%.log'),
+    ? `${process.env.CONFIG_DIRECTORY}/logs/sinerr-%DATE%.json`
+    : path.join(__dirname, '../config/logs/sinerr-%DATE%.json'),
   datePattern: 'YYYY-MM-DD',
   zippedArchive: true,
   maxSize: '20m',
   maxFiles: '7d',
   createSymlink: true,
   symlinkName: 'sinerr.log',
-});
-const machineLogFileTransport = new winston.transports.DailyRotateFile({
-  filename: process.env.CONFIG_DIRECTORY
-    ? `${process.env.CONFIG_DIRECTORY}/logs/.machinelogs-%DATE%.json`
-    : path.join(__dirname, '../config/logs/.machinelogs-%DATE%.json'),
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '20m',
-  maxFiles: '1d',
-  createSymlink: true,
-  symlinkName: '.machinelogs.json',
   format: winston.format.combine(
     winston.format.splat(),
     winston.format.timestamp({ format: localTimestamp }),
@@ -53,12 +42,8 @@ const machineLogFileTransport = new winston.transports.DailyRotateFile({
   ),
 });
 
-sinerrFileTransport.on('error', (err) => {
+fileTransport.on('error', (err) => {
   console.error('Error in sinerr file transport:', err);
-});
-
-machineLogFileTransport.on('error', (err) => {
-  console.error('Error in machine log file transport:', err);
 });
 
 const logger = winston.createLogger({
@@ -77,8 +62,7 @@ const logger = winston.createLogger({
         hformat
       ),
     }),
-    sinerrFileTransport,
-    machineLogFileTransport,
+    fileTransport,
   ],
 });
 
