@@ -18,6 +18,7 @@ import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
 import MediaSlider from '@app/components/MediaSlider';
+import MediaryStatus from '@app/components/MediaryStatus';
 import PersonCard from '@app/components/PersonCard';
 import RequestButton from '@app/components/RequestButton';
 import RequestModal from '@app/components/RequestModal';
@@ -421,6 +422,9 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
               mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
+            {data.mediaInfo?.tmdbId && (
+              <MediaryStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />
+            )}
           </div>
           <h1 data-testid="media-title">
             {data.name}{' '}

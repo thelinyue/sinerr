@@ -30,15 +30,18 @@ const SearchByNameModal = ({
   closeModal,
   modalTitle,
   modalSubTitle,
-  tmdbId,
   backdrop,
 }: SearchByNameModalProps) => {
   const intl = useIntl();
   const { data, error } = useSWR<
-    { tvdbId: number; title: string; year: number; remotePoster?: string; overview?: string }[]
-  >(
-    null
-  );
+    {
+      tvdbId: number;
+      title: string;
+      year: number;
+      remotePoster?: string;
+      overview?: string;
+    }[]
+  >(null);
 
   const handleClick = (tvdbId: number) => {
     setTvdbId(tvdbId);

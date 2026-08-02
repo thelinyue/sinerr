@@ -21,9 +21,13 @@ import type { MainSettings } from '@server/lib/settings';
 import type { AvailableLocale } from '@server/types/languages';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
+import type { ImageLoader } from 'next/image';
+import Image from 'next/image';
 import { useIntl } from 'react-intl';
 import useSWR, { mutate } from 'swr';
 import * as Yup from 'yup';
+
+const imageLoader: ImageLoader = ({ src }) => src;
 
 const messages = defineMessages('components.Settings.SettingsMain', {
   general: 'General',
@@ -601,9 +605,13 @@ const SettingsMain = () => {
                           >
                             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-600 text-2xl">
                               {isImageIcon ? (
-                                <img
+                                <Image
+                                  unoptimized
+                                  loader={imageLoader}
                                   src={icon}
                                   alt=""
+                                  width={48}
+                                  height={48}
                                   className="h-full w-full object-cover"
                                   onError={(e) => {
                                     (

@@ -3,8 +3,6 @@ import ConfirmButton from '@app/components/Common/ConfirmButton';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
-import CreateSlider from '@app/components/Discover/CreateSlider';
-import DiscoverSliderEdit from '@app/components/Discover/DiscoverSliderEdit';
 import MovieGenreSlider from '@app/components/Discover/MovieGenreSlider';
 import NetworkSlider from '@app/components/Discover/NetworkSlider';
 import RecentRequestsSlider from '@app/components/Discover/RecentRequestsSlider';
@@ -31,9 +29,23 @@ import {
 import { DiscoverSliderType } from '@server/constants/discover';
 import type DiscoverSlider from '@server/entity/DiscoverSlider';
 import axios from 'axios';
+import dynamic from 'next/dynamic';
+import type { ImageLoader } from 'next/image';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
+
+const imageLoader: ImageLoader = ({ src }) => src;
+
+const CreateSlider = dynamic(
+  () => import('@app/components/Discover/CreateSlider'),
+  { ssr: false }
+);
+const DiscoverSliderEdit = dynamic(
+  () => import('@app/components/Discover/DiscoverSliderEdit'),
+  { ssr: false }
+);
 
 const messages = defineMessages('components.Discover', {
   discover: 'Discover',
@@ -49,6 +61,27 @@ const messages = defineMessages('components.Discover', {
   customizediscover: 'Customize Discover',
   stopediting: 'Stop Editing',
   createnewslider: 'Create New Slider',
+  guideTitle: 'How to start watching?',
+  guideExpand: 'Expand',
+  guideCollapse: 'Collapse',
+  guideDownloadClient: 'Download Client',
+  guideDownload: 'Download',
+  guideServerAddress: 'Server Address',
+  guideCopy: 'Copy',
+  guidePortWarning:
+    '⚠ The default port is {port}. If the connection fails, check the port setting.',
+  guideLogin: 'Sign in to {appName}',
+  guideLoginHint:
+    'Sign in with the account {username} and your password. On first sign-in, we recommend checking "Remember me".',
+  guideViewExample: 'View connection example',
+  guideHideExample: 'Hide example',
+  guideDemoTitle: '{appName} Client — Connect to Server',
+  guideDemoHost: 'Host',
+  guideDemoPort: 'Port',
+  guideDemoUsername: 'Username',
+  guideDemoPassword: 'Password',
+  guideRememberMe: 'Remember me',
+  guideSignIn: 'Sign In',
 });
 
 const Discover = () => {
@@ -477,6 +510,7 @@ const Discover = () => {
 
 const ConnectionGuide = () => {
   const settings = useSettings();
+  const intl = useIntl();
   const { user } = useUser();
   const [dismissed, setDismissed] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
@@ -526,21 +560,24 @@ const ConnectionGuide = () => {
         className={`flex items-center justify-between border-b border-indigo-500/20 p-4 ${dismissed ? '' : 'pb-3'}`}
       >
         <h2 className="text-base font-bold text-white">
-          <span className="mr-2">📺</span>如何开始观看？
+          <span className="mr-2">📺</span>
+          {intl.formatMessage(messages.guideTitle)}
         </h2>
         {dismissed ? (
           <button
             onClick={showGuide}
             className="flex-shrink-0 text-sm text-indigo-400 transition-colors hover:text-indigo-300"
+            aria-label={intl.formatMessage(messages.guideExpand)}
           >
-            展开
+            {intl.formatMessage(messages.guideExpand)}
           </button>
         ) : (
           <button
             onClick={dismiss}
             className="flex-shrink-0 text-sm text-gray-400 transition-colors hover:text-white"
+            aria-label={intl.formatMessage(messages.guideCollapse)}
           >
-            收起
+            {intl.formatMessage(messages.guideCollapse)}
           </button>
         )}
       </div>
@@ -553,7 +590,7 @@ const ConnectionGuide = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="mb-2 text-sm font-medium text-white">
-                  下载客户端
+                  {intl.formatMessage(messages.guideDownloadClient)}
                 </p>
                 <div className="flex flex-col gap-3">
                   {downloads.map((d, i) => (
@@ -563,9 +600,13 @@ const ConnectionGuide = () => {
                     >
                       <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg p-1">
                         {/^https?:\/\//.test(d.icon) ? (
-                          <img
+                          <Image
+                            unoptimized
+                            loader={imageLoader}
                             src={d.icon}
                             alt={d.name}
+                            width={80}
+                            height={56}
                             className="max-h-full max-w-full object-contain"
                           />
                         ) : (
@@ -585,7 +626,7 @@ const ConnectionGuide = () => {
                       >
                         <Button buttonType="primary" buttonSize="sm">
                           <ArrowDownTrayIcon className="mr-1 h-4 w-4" />
-                          下载
+                          {intl.formatMessage(messages.guideDownload)}
                         </Button>
                       </a>
                     </div>
@@ -602,7 +643,7 @@ const ConnectionGuide = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="mb-1 text-sm font-medium text-white">
-                  输入服务器地址
+                  {intl.formatMessage(messages.guideServerAddress)}
                 </p>
                 <div className="mb-2 flex items-center gap-2">
                   <code className="flex-1 break-all rounded bg-gray-800/80 px-3 py-1.5 font-mono text-xs text-gray-300">
@@ -616,11 +657,11 @@ const ConnectionGuide = () => {
                     }}
                     className="flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500"
                   >
-                    复制
+                    {intl.formatMessage(messages.guideCopy)}
                   </button>
                 </div>
                 <p className="text-xs text-yellow-400/90">
-                  ⚠ 默认端口号为 <strong>443</strong>，如连接失败请检查端口设置
+                  {intl.formatMessage(messages.guidePortWarning, { port: 443 })}
                 </p>
               </div>
             </div>
@@ -631,20 +672,24 @@ const ConnectionGuide = () => {
               {downloads.length > 0 ? '3' : '2'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="mb-1 text-sm font-medium text-white">登录 Emby</p>
+              <p className="mb-1 text-sm font-medium text-white">
+                {intl.formatMessage(messages.guideLogin, {
+                  appName: settings.currentSettings.applicationTitle,
+                })}
+              </p>
               <p className="mb-2 text-xs text-gray-300">
-                使用当前账号
-                <strong className="mx-1 text-white">
-                  {user?.displayName || user?.username || '用户名'}
-                </strong>
-                和密码登录，首次登录建议勾选"记住我"
+                {intl.formatMessage(messages.guideLoginHint, {
+                  username: user?.displayName || user?.username || 'Username',
+                })}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={() => setShowDemo(!showDemo)}
                   className="inline-flex items-center text-xs text-indigo-400 transition-colors hover:text-indigo-300"
                 >
-                  {showDemo ? '收起示例' : '查看连接示例'}
+                  {showDemo
+                    ? intl.formatMessage(messages.guideHideExample)
+                    : intl.formatMessage(messages.guideViewExample)}
                 </button>
               </div>
             </div>
@@ -659,14 +704,16 @@ const ConnectionGuide = () => {
                   <div className="h-3 w-3 rounded-full bg-green-500" />
                 </div>
                 <span className="ml-2 text-xs text-gray-400">
-                  Emby 客户端 — 连接服务器
+                  {intl.formatMessage(messages.guideDemoTitle, {
+                    appName: settings.currentSettings.applicationTitle,
+                  })}
                 </span>
               </div>
               <div className="space-y-3 p-4">
                 <div className="flex gap-3">
                   <div className="flex-[2]">
                     <span className="mb-1 block text-xs text-gray-500">
-                      主机地址
+                      {intl.formatMessage(messages.guideDemoHost)}
                     </span>
                     <div className="truncate rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-green-400">
                       {serverUrl
@@ -676,7 +723,7 @@ const ConnectionGuide = () => {
                   </div>
                   <div className="flex-1">
                     <span className="mb-1 block text-xs text-gray-500">
-                      端口号
+                      {intl.formatMessage(messages.guideDemoPort)}
                     </span>
                     <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
                       {serverUrl
@@ -688,7 +735,7 @@ const ConnectionGuide = () => {
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <span className="mb-1 block text-xs text-gray-500">
-                      用户名
+                      {intl.formatMessage(messages.guideDemoUsername)}
                     </span>
                     <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
                       {user?.displayName || user?.username || 'username'}
@@ -696,7 +743,7 @@ const ConnectionGuide = () => {
                   </div>
                   <div className="flex-1">
                     <span className="mb-1 block text-xs text-gray-500">
-                      密码
+                      {intl.formatMessage(messages.guideDemoPassword)}
                     </span>
                     <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
                       ••••••••
@@ -710,10 +757,10 @@ const ConnectionGuide = () => {
                     readOnly
                     className="rounded border-gray-600"
                   />
-                  记住我
+                  {intl.formatMessage(messages.guideRememberMe)}
                 </div>
                 <div className="rounded bg-indigo-600 py-2 text-center text-sm font-medium text-white">
-                  登录
+                  {intl.formatMessage(messages.guideSignIn)}
                 </div>
               </div>
             </div>

@@ -520,7 +520,7 @@ const SettingsJobs = () => {
                           Date.now()) /
                           1000
                       )}
-                      updateIntervalInSeconds={1}
+                      updateIntervalInSeconds={60}
                       numeric="auto"
                     />
                   </div>

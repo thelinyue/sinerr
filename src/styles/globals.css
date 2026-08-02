@@ -586,3 +586,9 @@
 .ptr--box {
   margin-bottom: -13px !important;
 }
+
+/* Let the browser skip rendering of long list rows that are far off-screen. */
+.virtualized-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}

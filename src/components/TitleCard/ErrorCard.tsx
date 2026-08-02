@@ -2,6 +2,7 @@ import Button from '@app/components/Common/Button';
 import useToasts from '@app/hooks/useToasts';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { revalidateRequests } from '@app/utils/revalidateRequests';
 import { CheckIcon, TrashIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import { useIntl } from 'react-intl';
@@ -35,7 +36,7 @@ const ErrorCard = ({ id, tmdbId, tvdbId, type, canExpand }: ErrorCardProps) => {
       });
     });
     mutate('/api/v1/media?filter=allavailable&take=20&sort=mediaAdded');
-    mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
+    revalidateRequests();
   };
 
   return (

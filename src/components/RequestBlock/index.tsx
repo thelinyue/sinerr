@@ -50,8 +50,7 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
   const intl = useIntl();
   const [isUpdating, setIsUpdating] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const { profile, rootFolder, server, languageProfile } =
-    useRequestOverride(request);
+  const { profile, rootFolder, server, languageProfile } = useRequestOverride();
 
   const updateRequest = async (type: 'approve' | 'decline'): Promise<void> => {
     setIsUpdating(true);

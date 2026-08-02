@@ -17,6 +17,7 @@ import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
 import MediaSlider from '@app/components/MediaSlider';
+import MediaryStatus from '@app/components/MediaryStatus';
 import PersonCard from '@app/components/PersonCard';
 import RequestButton from '@app/components/RequestButton';
 import Slider from '@app/components/Slider';
@@ -382,6 +383,9 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
               mediaUrl={mediaUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
+            {data.mediaInfo?.tmdbId && (
+              <MediaryStatus tmdbId={data.mediaInfo.tmdbId} mediaType="movie" />
+            )}
           </div>
           <h1 data-testid="media-title">
             {data.title}{' '}

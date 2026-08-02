@@ -294,7 +294,7 @@ const IssueDetails = () => {
                     (new Date(issueData.createdAt).getTime() - Date.now()) /
                       1000
                   )}
-                  updateIntervalInSeconds={1}
+                  updateIntervalInSeconds={60}
                   numeric="auto"
                 />
               ),
@@ -359,7 +359,7 @@ const IssueDetails = () => {
                       (new Date(issueData.updatedAt).getTime() - Date.now()) /
                         1000
                     )}
-                    updateIntervalInSeconds={1}
+                    updateIntervalInSeconds={60}
                     numeric="auto"
                   />
                 </span>
@@ -569,7 +569,7 @@ const IssueDetails = () => {
                     (new Date(issueData.updatedAt).getTime() - Date.now()) /
                       1000
                   )}
-                  updateIntervalInSeconds={1}
+                  updateIntervalInSeconds={60}
                   numeric="auto"
                 />
               </span>

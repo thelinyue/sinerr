@@ -11,6 +11,7 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
+import { revalidateRequests } from '@app/utils/revalidateRequests';
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -26,9 +27,10 @@ import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import axios from 'axios';
 import Link from 'next/link';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
+import type { KeyedMutator } from 'swr';
 import useSWR, { mutate } from 'swr';
 
 const messages = defineMessages('components.RequestList.RequestItem', {
@@ -161,7 +163,7 @@ const RequestItemError = ({
                                 Date.now()) /
                                 1000
                             )}
-                            updateIntervalInSeconds={1}
+                            updateIntervalInSeconds={60}
                             numeric="auto"
                           />
                         ),
@@ -200,7 +202,7 @@ const RequestItemError = ({
                             Date.now()) /
                             1000
                         )}
-                        updateIntervalInSeconds={1}
+                        updateIntervalInSeconds={60}
                         numeric="auto"
                       />
                     </span>
@@ -221,7 +223,7 @@ const RequestItemError = ({
                               Date.now()) /
                               1000
                           )}
-                          updateIntervalInSeconds={1}
+                          updateIntervalInSeconds={60}
                           numeric="auto"
                         />
                       ),
@@ -271,7 +273,7 @@ const RequestItemError = ({
 
 interface RequestItemProps {
   request: RequestResultsResponse['results'][number];
-  revalidateList: () => void;
+  revalidateList: KeyedMutator<RequestResultsResponse>;
 }
 
 const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
@@ -308,11 +310,31 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
 
   const modifyRequest = async (type: 'approve' | 'decline') => {
     setUpdatingType(type);
+    const newStatus =
+      type === 'approve'
+        ? MediaRequestStatus.APPROVED
+        : MediaRequestStatus.DECLINED;
+    const optimisticRequest = requestData
+      ? { ...requestData, status: newStatus }
+      : undefined;
+
     try {
-      await axios.post(`/api/v1/request/${request.id}/${type}`);
-      revalidate();
+      if (optimisticRequest) {
+        await revalidate(
+          async () => {
+            await axios.post(`/api/v1/request/${request.id}/${type}`);
+            return optimisticRequest;
+          },
+          {
+            optimisticData: optimisticRequest,
+            rollbackOnError: true,
+          }
+        );
+      } else {
+        await axios.post(`/api/v1/request/${request.id}/${type}`);
+      }
       revalidateList();
-      mutate('/api/v1/request/count');
+      revalidateRequests();
     } catch {
       addToast(intl.formatMessage(messages.failedmodify), {
         autoDismiss: true,
@@ -324,10 +346,30 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
   };
 
   const deleteRequest = async () => {
-    await axios.delete(`/api/v1/request/${request.id}`);
+    // Optimistically remove the item from the visible list; a revalidation
+    // below (or a revalidate after failure) restores the authoritative state.
+    revalidateList(
+      (data) =>
+        data
+          ? {
+              ...data,
+              results: data.results.filter((r) => r.id !== request.id),
+            }
+          : data,
+      { revalidate: false }
+    );
 
-    revalidateList();
-    mutate('/api/v1/request/count');
+    try {
+      await axios.delete(`/api/v1/request/${request.id}`);
+    } catch (e) {
+      if (!axios.isAxiosError(e) || e.response?.status !== 404) {
+        addToast(intl.formatMessage(messages.failedmodify), {
+          autoDismiss: true,
+          appearance: 'error',
+        });
+      }
+    }
+    revalidateRequests();
   };
 
   const deleteMediaFile = async () => {
@@ -539,7 +581,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                               Date.now()) /
                               1000
                           )}
-                          updateIntervalInSeconds={1}
+                          updateIntervalInSeconds={60}
                           numeric="auto"
                         />
                       ),
@@ -578,7 +620,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                           Date.now()) /
                           1000
                       )}
-                      updateIntervalInSeconds={1}
+                      updateIntervalInSeconds={60}
                       numeric="auto"
                     />
                   </span>
@@ -599,7 +641,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                             Date.now()) /
                             1000
                         )}
-                        updateIntervalInSeconds={1}
+                        updateIntervalInSeconds={60}
                         numeric="auto"
                       />
                     ),
@@ -748,4 +790,4 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
   );
 };
 
-export default RequestItem;
+export default memo(RequestItem);

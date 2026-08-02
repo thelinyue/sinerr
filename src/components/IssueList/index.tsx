@@ -158,7 +158,7 @@ const IssueList = () => {
       </div>
       {data.results.map((issue) => {
         return (
-          <div className="py-2" key={`issue-item-${issue.id}`}>
+          <div className="virtualized-row py-2" key={`issue-item-${issue.id}`}>
             <IssueItem issue={issue} />
           </div>
         );

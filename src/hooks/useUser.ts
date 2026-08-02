@@ -22,7 +22,7 @@ export interface User {
   userType: number;
   createdAt: Date;
   updatedAt: Date;
-  requestCount: number;
+  requestCount?: number;
   settings?: UserSettings;
 }
 
@@ -65,7 +65,7 @@ export const useUser = ({
     mutate: revalidate,
   } = useSWR<User>(id ? `/api/v1/user/${id}` : `/api/v1/auth/me`, {
     fallbackData: initialData,
-    refreshInterval: !isAuthPage ? 30000 : 0,
+    refreshInterval: !isAuthPage ? 60000 : 0,
     revalidateOnFocus: !isAuthPage,
     revalidateOnMount: !isAuthPage,
     revalidateOnReconnect: !isAuthPage,

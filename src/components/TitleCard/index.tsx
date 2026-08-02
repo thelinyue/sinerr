@@ -23,7 +23,14 @@ import { MediaStatus } from '@server/constants/media';
 import type { MediaType } from '@server/models/Search';
 import axios from 'axios';
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useIntl } from 'react-intl';
 
 interface TitleCardProps {
@@ -500,4 +507,4 @@ const TitleCard = ({
   );
 };
 
-export default withProperties(TitleCard, { Placeholder, ErrorCard });
+export default withProperties(memo(TitleCard), { Placeholder, ErrorCard });

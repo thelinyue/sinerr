@@ -10,6 +10,7 @@ import useToasts from '@app/hooks/useToasts';
 import { useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { revalidateRequests } from '@app/utils/revalidateRequests';
 import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
@@ -123,8 +124,7 @@ const TvRequestModal = ({
       } else {
         await axios.delete(`/api/v1/request/${editRequest.id}`);
       }
-      mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-      mutate('/api/v1/request/count');
+      revalidateRequests();
 
       addToast(
         <span>
@@ -200,7 +200,7 @@ const TvRequestModal = ({
             ),
         ...overrideParams,
       });
-      mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
+      revalidateRequests();
 
       if (response.data) {
         if (onComplete) {

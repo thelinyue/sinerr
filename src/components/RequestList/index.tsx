@@ -86,6 +86,10 @@ const RequestList = () => {
     }`
   );
 
+  // SWR's bound mutate is stable, so passing it directly keeps RequestItem's
+  // React.memo effective while still allowing optimistic updates.
+  const revalidateList = revalidate;
+
   // Restore last set filter values on component mount
   useEffect(() => {
     const filterString = window.localStorage.getItem('rl-filter-settings');
@@ -293,11 +297,11 @@ const RequestList = () => {
 
       {data.results.map((request) => {
         return (
-          <div className="py-2" key={`request-list-${request.id}`}>
-            <RequestItem
-              request={request}
-              revalidateList={() => revalidate()}
-            />
+          <div
+            className="virtualized-row py-2"
+            key={`request-list-${request.id}`}
+          >
+            <RequestItem request={request} revalidateList={revalidateList} />
           </div>
         );
       })}

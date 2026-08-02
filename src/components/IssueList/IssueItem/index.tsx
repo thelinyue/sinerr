@@ -13,6 +13,7 @@ import type Issue from '@server/entity/Issue';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
+import { memo } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 import useSWR from 'swr';
@@ -257,7 +258,7 @@ const IssueItem = ({ issue }: IssueItemProps) => {
                           (new Date(issue.createdAt).getTime() - Date.now()) /
                             1000
                         )}
-                        updateIntervalInSeconds={1}
+                        updateIntervalInSeconds={60}
                         numeric="auto"
                       />
                     ),
@@ -292,7 +293,7 @@ const IssueItem = ({ issue }: IssueItemProps) => {
                     value={Math.floor(
                       (new Date(issue.createdAt).getTime() - Date.now()) / 1000
                     )}
-                    updateIntervalInSeconds={1}
+                    updateIntervalInSeconds={60}
                     numeric="auto"
                   />
                 </span>
@@ -315,4 +316,4 @@ const IssueItem = ({ issue }: IssueItemProps) => {
   );
 };
 
-export default IssueItem;
+export default memo(IssueItem);

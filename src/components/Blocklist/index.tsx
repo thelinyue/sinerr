@@ -410,7 +410,7 @@ const BlocklistedItem = ({ item, revalidateList }: BlocklistedItemProps) => {
                       value={Math.floor(
                         (new Date(item.createdAt).getTime() - Date.now()) / 1000
                       )}
-                      updateIntervalInSeconds={1}
+                      updateIntervalInSeconds={60}
                       numeric="auto"
                     />
                   ),

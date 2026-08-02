@@ -139,7 +139,7 @@ const UserProfile = () => {
                         : '/requests'
                     }
                   >
-                    {intl.formatNumber(user.requestCount)}
+                    {intl.formatNumber(user.requestCount ?? 0)}
                   </Link>
                 </dd>
               </div>

@@ -7,6 +7,7 @@ import useToasts from '@app/hooks/useToasts';
 import { useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { revalidateRequests } from '@app/utils/revalidateRequests';
 import { MediaStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
 import type { NonFunctionProperties } from '@server/interfaces/api/common';
@@ -16,7 +17,7 @@ import type { MovieDetails } from '@server/models/Movie';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import useSWR, { mutate } from 'swr';
+import useSWR from 'swr';
 
 const messages = defineMessages('components.RequestModal', {
   requestadmin: 'This request will be approved automatically.',
@@ -92,8 +93,7 @@ const MovieRequestModal = ({
         ignoreQuota: requestOverrides?.ignoreQuota,
         ...overrideParams,
       });
-      mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-      mutate('/api/v1/request/count');
+      revalidateRequests();
 
       if (response.data) {
         if (onComplete) {
@@ -139,8 +139,7 @@ const MovieRequestModal = ({
       const response = await axios.delete<MediaRequest>(
         `/api/v1/request/${editRequest?.id}`
       );
-      mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-      mutate('/api/v1/request/count');
+      revalidateRequests();
 
       if (response.status === 204) {
         if (onComplete) {
@@ -177,8 +176,7 @@ const MovieRequestModal = ({
       if (alsoApproveRequest) {
         await axios.post(`/api/v1/request/${editRequest?.id}/approve`);
       }
-      mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-      mutate('/api/v1/request/count');
+      revalidateRequests();
 
       addToast(
         <span>

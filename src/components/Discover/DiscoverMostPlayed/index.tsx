@@ -4,8 +4,8 @@ import PageTitle from '@app/components/Common/PageTitle';
 import useDiscover from '@app/hooks/useDiscover';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
-import type { MovieResult, TvResult } from '@server/models/Search';
 import type { RankingPeriod } from '@server/job/refreshMostPlayedCache';
+import type { MovieResult, TvResult } from '@server/models/Search';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 
@@ -22,12 +22,6 @@ const PERIODS: { key: RankingPeriod; label: keyof typeof messages }[] = [
   { key: 'year', label: 'year' },
 ];
 
-const rankColors = [
-  'from-amber-400 to-yellow-500 text-amber-900',
-  'from-gray-300 to-gray-400 text-gray-700',
-  'from-amber-600 to-amber-700 text-amber-100',
-];
-
 const DiscoverMostPlayed = () => {
   const intl = useIntl();
   const [period, setPeriod] = useState<RankingPeriod>('week');
@@ -40,11 +34,9 @@ const DiscoverMostPlayed = () => {
     titles,
     fetchMore,
     error,
-    mutate,
-  } = useDiscover<MovieResult | TvResult>(
-    '/api/v1/discover/mostplayed',
-    { period }
-  );
+  } = useDiscover<MovieResult | TvResult>('/api/v1/discover/mostplayed', {
+    period,
+  });
 
   if (error) {
     return <ErrorPage statusCode={500} />;

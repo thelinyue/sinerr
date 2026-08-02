@@ -88,7 +88,7 @@ const DownloadBlock = ({ downloadItem, title }: DownloadBlockProps) => {
                         Date.now()) /
                         1000
                     )}
-                    updateIntervalInSeconds={1}
+                    updateIntervalInSeconds={60}
                     numeric="auto"
                   />
                 ),

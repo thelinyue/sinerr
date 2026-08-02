@@ -87,6 +87,46 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
     });
     useLockBodyScroll(true, disableScrollLock);
 
+    // Move focus into the dialog so keyboard users don't tab into background
+    // content behind the modal.
+    useEffect(() => {
+      modalRef.current?.focus();
+    }, []);
+
+    // Close the modal on Escape.
+    useEffect(() => {
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && onCancel) {
+          e.stopPropagation();
+          onCancel();
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+      return () => document.removeEventListener('keydown', onKeyDown);
+    }, [onCancel]);
+
+    // Keep Tab/Shift+Tab focus trapped inside the modal.
+    const handleTabKey = (e: React.KeyboardEvent) => {
+      if (e.key !== 'Tab' || !modalRef.current) {
+        return;
+      }
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) {
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
     return ReactDOM.createPortal(
       <Transition.Child
         as="div"
@@ -118,7 +158,9 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
           className={`hide-scrollbar relative inline-block w-full overflow-auto bg-gray-800 px-4 pb-4 pt-4 text-left align-bottom shadow-xl ring-1 ring-gray-700 transition-all sm:my-8 sm:max-w-3xl sm:rounded-lg sm:align-middle ${dialogClass}`}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="modal-headline"
+          aria-labelledby={
+            title ? 'modal-headline' : subTitle ? 'modal-subtitle' : undefined
+          }
           style={{
             maxHeight: 'calc(100% - env(safe-area-inset-top) * 2)',
           }}
@@ -131,6 +173,8 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
           leaveTo="opacity-0"
           show={!loading}
           ref={modalRef}
+          tabIndex={-1}
+          onKeyDown={handleTabKey}
         >
           {backdrop && (
             <div className="absolute left-0 right-0 top-0 z-0 h-64 max-h-full w-full">
@@ -169,7 +213,7 @@ const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
                   {subTitle && (
                     <span
                       className="truncate text-lg font-semibold leading-6 text-gray-200"
-                      id="modal-headline"
+                      id="modal-subtitle"
                       data-testid="modal-title"
                     >
                       {subTitle}

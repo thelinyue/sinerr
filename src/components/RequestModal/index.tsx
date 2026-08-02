@@ -1,10 +1,22 @@
-import CollectionRequestModal from '@app/components/RequestModal/CollectionRequestModal';
-import MovieRequestModal from '@app/components/RequestModal/MovieRequestModal';
-import TvRequestModal from '@app/components/RequestModal/TvRequestModal';
 import { Transition } from '@headlessui/react';
 import type { MediaStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
 import type { NonFunctionProperties } from '@server/interfaces/api/common';
+import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+
+const MovieRequestModal = dynamic(
+  () => import('@app/components/RequestModal/MovieRequestModal'),
+  { ssr: false }
+);
+const TvRequestModal = dynamic(
+  () => import('@app/components/RequestModal/TvRequestModal'),
+  { ssr: false }
+);
+const CollectionRequestModal = dynamic(
+  () => import('@app/components/RequestModal/CollectionRequestModal'),
+  { ssr: false }
+);
 
 interface RequestModalProps {
   show: boolean;
@@ -25,6 +37,14 @@ const RequestModal = ({
   onUpdating,
   onCancel,
 }: RequestModalProps) => {
+  const [renderContent, setRenderContent] = useState(show);
+
+  useEffect(() => {
+    if (show) {
+      setRenderContent(true);
+    }
+  }, [show]);
+
   return (
     <Transition
       as="div"
@@ -35,31 +55,34 @@ const RequestModal = ({
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
       show={show}
+      afterLeave={() => setRenderContent(false)}
     >
-      {type === 'movie' ? (
-        <MovieRequestModal
-          onComplete={onComplete}
-          onCancel={onCancel}
-          tmdbId={tmdbId}
-          onUpdating={onUpdating}
-          editRequest={editRequest}
-        />
-      ) : type === 'tv' ? (
-        <TvRequestModal
-          onComplete={onComplete}
-          onCancel={onCancel}
-          tmdbId={tmdbId}
-          onUpdating={onUpdating}
-          editRequest={editRequest}
-        />
-      ) : (
-        <CollectionRequestModal
-          onComplete={onComplete}
-          onCancel={onCancel}
-          tmdbId={tmdbId}
-          onUpdating={onUpdating}
-        />
-      )}
+      {renderContent ? (
+        type === 'movie' ? (
+          <MovieRequestModal
+            onComplete={onComplete}
+            onCancel={onCancel}
+            tmdbId={tmdbId}
+            onUpdating={onUpdating}
+            editRequest={editRequest}
+          />
+        ) : type === 'tv' ? (
+          <TvRequestModal
+            onComplete={onComplete}
+            onCancel={onCancel}
+            tmdbId={tmdbId}
+            onUpdating={onUpdating}
+            editRequest={editRequest}
+          />
+        ) : (
+          <CollectionRequestModal
+            onComplete={onComplete}
+            onCancel={onCancel}
+            tmdbId={tmdbId}
+            onUpdating={onUpdating}
+          />
+        )
+      ) : null}
     </Transition>
   );
 };

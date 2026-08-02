@@ -5,6 +5,7 @@ import { usePopperTooltip } from 'react-popper-tooltip';
 
 type TooltipProps = {
   content: React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   children: React.ReactElement<any>;
   tooltipConfig?: Partial<Config>;
   className?: string;

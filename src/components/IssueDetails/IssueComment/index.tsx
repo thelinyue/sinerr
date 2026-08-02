@@ -260,7 +260,7 @@ const IssueComment = ({
                       (new Date(comment.createdAt).getTime() - Date.now()) /
                         1000
                     )}
-                    updateIntervalInSeconds={1}
+                    updateIntervalInSeconds={60}
                     numeric="auto"
                   />
                 ),

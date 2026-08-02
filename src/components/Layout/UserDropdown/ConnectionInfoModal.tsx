@@ -4,8 +4,12 @@ import useSettings from '@app/hooks/useSettings';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
 import { ArrowDownTrayIcon, ServerIcon } from '@heroicons/react/24/outline';
+import type { ImageLoader } from 'next/image';
+import Image from 'next/image';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
+
+const imageLoader: ImageLoader = ({ src }) => src;
 
 const messages = defineMessages('components.Layout.UserDropdown', {
   connectioninfo: 'Connection Info',
@@ -123,9 +127,13 @@ const ConnectionInfoModal = ({ show, onClose }: ConnectionInfoModalProps) => {
                   >
                     <div className="flex h-12 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg text-2xl">
                       {/^https?:\/\//.test(item.icon) ? (
-                        <img
+                        <Image
+                          unoptimized
+                          loader={imageLoader}
                           src={item.icon}
                           alt={item.name}
+                          width={64}
+                          height={48}
                           className="max-h-full max-w-full object-contain"
                         />
                       ) : (

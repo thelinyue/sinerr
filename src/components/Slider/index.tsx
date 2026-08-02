@@ -153,6 +153,7 @@ const Slider = ({
           onClick={() => slide(Direction.LEFT)}
           disabled={scrollPos.isStart}
           type="button"
+          aria-label={intl.formatMessage(globalMessages.previous)}
         >
           <ChevronLeftIcon className="h-6 w-6" />
         </button>
@@ -163,6 +164,7 @@ const Slider = ({
           onClick={() => slide(Direction.RIGHT)}
           disabled={scrollPos.isEnd}
           type="button"
+          aria-label={intl.formatMessage(globalMessages.next)}
         >
           <ChevronRightIcon className="h-6 w-6" />
         </button>

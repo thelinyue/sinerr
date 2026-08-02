@@ -94,7 +94,7 @@ const Release = ({ currentVersion, release, isLatest }: ReleaseProps) => {
               value={Math.floor(
                 (new Date(release.created_at).getTime() - Date.now()) / 1000
               )}
-              updateIntervalInSeconds={1}
+              updateIntervalInSeconds={60}
               numeric="auto"
             />
           </span>

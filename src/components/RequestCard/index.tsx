@@ -11,6 +11,7 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
+import { revalidateRequests } from '@app/utils/revalidateRequests';
 import { withProperties } from '@app/utils/typeHelpers';
 import {
   ArrowPathIcon,
@@ -26,7 +27,7 @@ import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import axios from 'axios';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { useIntl } from 'react-intl';
 import useSWR, { mutate } from 'swr';
@@ -75,8 +76,7 @@ const RequestCardError = ({ requestData }: RequestCardErrorProps) => {
   const deleteRequest = async () => {
     await axios.delete(`/api/v1/media/${requestData?.media.id}`);
     mutate('/api/v1/media?filter=allavailable&take=20&sort=mediaAdded');
-    mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-    mutate('/api/v1/request/count');
+    revalidateRequests();
   };
 
   return (
@@ -238,10 +238,30 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
 
   const modifyRequest = async (type: 'approve' | 'decline') => {
     setUpdatingType(type);
+    const newStatus =
+      type === 'approve'
+        ? MediaRequestStatus.APPROVED
+        : MediaRequestStatus.DECLINED;
+    const optimisticRequest = requestData
+      ? { ...requestData, status: newStatus }
+      : undefined;
+
     try {
-      await axios.post(`/api/v1/request/${request.id}/${type}`);
-      revalidate();
-      mutate('/api/v1/request/count');
+      if (optimisticRequest) {
+        await revalidate(
+          async () => {
+            await axios.post(`/api/v1/request/${request.id}/${type}`);
+            return optimisticRequest;
+          },
+          {
+            optimisticData: optimisticRequest,
+            rollbackOnError: true,
+          }
+        );
+      } else {
+        await axios.post(`/api/v1/request/${request.id}/${type}`);
+      }
+      revalidateRequests();
     } catch {
       addToast(intl.formatMessage(messages.failedmodify), {
         autoDismiss: true,
@@ -254,8 +274,7 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
 
   const deleteRequest = async () => {
     await axios.delete(`/api/v1/request/${request.id}`);
-    mutate('/api/v1/request?filter=all&take=10&sort=modified&skip=0');
-    mutate('/api/v1/request/count');
+    revalidateRequests();
   };
 
   const retryRequest = async () => {
@@ -601,6 +620,6 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
   );
 };
 
-export default withProperties(RequestCard, {
+export default withProperties(memo(RequestCard), {
   Placeholder: RequestCardPlaceholder,
 });

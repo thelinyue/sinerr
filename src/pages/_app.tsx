@@ -25,26 +25,26 @@ import { Toaster } from 'react-hot-toast';
 import { IntlProvider } from 'react-intl';
 import { SWRConfig } from 'swr';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const localeCache = new Map<string, Promise<any>>();
+type LocaleMessages = Record<string, string>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const loadLocaleData = (locale: AvailableLocale): Promise<any> => {
+const localeCache = new Map<string, Promise<LocaleMessages>>();
+
+const loadLocaleData = (locale: AvailableLocale): Promise<LocaleMessages> => {
   const cached = localeCache.get(locale);
   if (cached) {
     return cached;
   }
 
-  let promise: Promise<any>;
+  let promise: Promise<LocaleMessages>;
   switch (locale) {
     case 'zh-CN':
-      promise = import('../i18n/locale/zh_Hans.json');
+      promise = import('../i18n/locale/zh_Hans.json').then((m) => m.default);
       break;
     case 'zh-TW':
-      promise = import('../i18n/locale/zh_Hant.json');
+      promise = import('../i18n/locale/zh_Hant.json').then((m) => m.default);
       break;
     default:
-      promise = import('../i18n/locale/en.json');
+      promise = import('../i18n/locale/en.json').then((m) => m.default);
   }
 
   localeCache.set(locale, promise);
@@ -215,15 +215,30 @@ CoreApp.getInitialProps = async (initialProps) => {
   if (ctx.res) {
     const axiosConfig = { timeout: 10000 };
 
-    try {
-      const response = await axios.get<PublicSettingsResponse>(
-        `http://${getHostAndPort()}/api/v1/settings/public`,
-        axiosConfig
-      );
+    // Fetch public settings and the authenticated user in parallel instead of
+    // sequentially to cut the first-render latency in half.
+    const [settingsResponse, userResponse] = await Promise.all([
+      axios
+        .get<PublicSettingsResponse>(
+          `http://${getHostAndPort()}/api/v1/settings/public`,
+          axiosConfig
+        )
+        .catch(() => undefined),
+      axios
+        .get<User>(`http://${getHostAndPort()}/api/v1/auth/me`, {
+          ...axiosConfig,
+          headers:
+            ctx.req && ctx.req.headers.cookie
+              ? { cookie: ctx.req.headers.cookie }
+              : undefined,
+        })
+        .catch(() => undefined),
+    ]);
 
-      currentSettings = response.data;
+    if (settingsResponse) {
+      currentSettings = settingsResponse.data;
 
-      if (!response.data.initialized) {
+      if (!settingsResponse.data.initialized) {
         if (!router.pathname.match(/(setup)/)) {
           ctx.res.writeHead(307, { Location: '/setup' });
           ctx.res.end();
@@ -236,47 +251,37 @@ CoreApp.getInitialProps = async (initialProps) => {
           currentSettings,
         };
       }
-
-      try {
-        const userResponse = await axios.get<User>(
-          `http://${getHostAndPort()}/api/v1/auth/me`,
-          {
-            ...axiosConfig,
-            headers:
-              ctx.req && ctx.req.headers.cookie
-                ? { cookie: ctx.req.headers.cookie }
-                : undefined,
-          }
-        );
-        user = userResponse.data;
-
-        if (router.pathname.match(/(setup|login)/)) {
-          ctx.res.writeHead(307, { Location: '/' });
-          ctx.res.end();
-          return {
-            pageProps: {},
-            user,
-            messages: {},
-            locale: 'en' as AvailableLocale,
-            currentSettings,
-          };
-        }
-      } catch {
-        if (!router.pathname.match(/(login|setup|resetpassword)/)) {
-          ctx.res.writeHead(307, { Location: '/login' });
-          ctx.res.end();
-          return {
-            pageProps: {},
-            user,
-            messages: {},
-            locale: 'en' as AvailableLocale,
-            currentSettings,
-          };
-        }
-      }
-    } catch {
+    } else {
       if (!router.pathname.match(/(setup)/)) {
         ctx.res.writeHead(307, { Location: '/setup' });
+        ctx.res.end();
+        return {
+          pageProps: {},
+          user,
+          messages: {},
+          locale: 'en' as AvailableLocale,
+          currentSettings,
+        };
+      }
+    }
+
+    if (userResponse) {
+      user = userResponse.data;
+
+      if (router.pathname.match(/(setup|login)/)) {
+        ctx.res.writeHead(307, { Location: '/' });
+        ctx.res.end();
+        return {
+          pageProps: {},
+          user,
+          messages: {},
+          locale: 'en' as AvailableLocale,
+          currentSettings,
+        };
+      }
+    } else {
+      if (!router.pathname.match(/(login|setup|resetpassword)/)) {
+        ctx.res.writeHead(307, { Location: '/login' });
         ctx.res.end();
         return {
           pageProps: {},
