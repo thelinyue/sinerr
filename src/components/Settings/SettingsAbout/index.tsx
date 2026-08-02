@@ -17,13 +17,8 @@ const messages = defineMessages('components.Settings.SettingsAbout', {
   seerrversion: 'Based on Seerr',
   totalmedia: 'Total Media',
   totalrequests: 'Total Requests',
-  gettingsupport: 'Getting Support',
-  githubdiscussions: 'GitHub Discussions',
   timezone: 'Time Zone',
   appDataPath: 'Data Directory',
-  supportsinerr: 'Support Sinerr',
-  contribute: 'Make a Contribution',
-  documentation: 'Documentation',
   runningDevelop:
     'You are running the <code>develop</code> branch of Sinerr, which is only recommended for those contributing to development or assisting with bleeding-edge testing.',
 });
@@ -89,54 +84,6 @@ const SettingsAbout = () => {
               <code>{data.tz}</code>
             </List.Item>
           )}
-        </List>
-      </div>
-      <div className="section">
-        <List title={intl.formatMessage(messages.gettingsupport)}>
-          <List.Item title={intl.formatMessage(messages.documentation)}>
-            <a
-              href="https://docs.sinerr.dev"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-500 transition duration-300 hover:underline"
-            >
-              https://docs.sinerr.dev
-            </a>
-          </List.Item>
-          <List.Item title={intl.formatMessage(messages.githubdiscussions)}>
-            <a
-              href="https://github.com/thelinyue/sinerr/discussions"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-500 transition duration-300 hover:underline"
-            >
-              https://github.com/thelinyue/sinerr/discussions
-            </a>
-          </List.Item>
-          <List.Item title="Discord">
-            <a
-              href="https://discord.gg/sinerr"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-500 transition duration-300 hover:underline"
-            >
-              https://discord.gg/sinerr
-            </a>
-          </List.Item>
-        </List>
-      </div>
-      <div className="section">
-        <List title={intl.formatMessage(messages.supportsinerr)}>
-          <List.Item title={intl.formatMessage(messages.contribute)}>
-            <a
-              href="https://opencollective.com/sinerr"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-500 transition duration-300 hover:underline"
-            >
-              https://opencollective.com/sinerr
-            </a>
-          </List.Item>
         </List>
       </div>
       <div className="section">
