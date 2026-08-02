@@ -354,9 +354,7 @@ settingsRoutes.get(
     } catch {
       const datedLogs = fs
         .readdirSync(logDir)
-        .filter(
-          (file) => file.startsWith('sinerr-') && file.endsWith('.json')
-        )
+        .filter((file) => file.startsWith('sinerr-') && file.endsWith('.json'))
         .sort();
       if (datedLogs.length === 0) {
         return res.status(200).json({
@@ -695,6 +693,14 @@ settingsRoutes.get('/about/releases', async (_req, res, next) => {
   try {
     const { data } = await axios.get<unknown>(GITHUB_RELEASES_URL, {
       timeout: getSettings().network.apiRequestTimeout,
+      headers: process.env.GITHUB_TOKEN
+        ? {
+            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            'User-Agent': 'sinerr',
+          }
+        : {
+            'User-Agent': 'sinerr',
+          },
     });
     githubReleasesCache = { data, ts: Date.now() };
     return res.status(200).json(data);

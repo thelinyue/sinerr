@@ -14,11 +14,11 @@ import { Permission, hasPermission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
+import { DEFAULT_AVATAR_URL } from '@server/routes/avatarproxy';
 import { getHostname } from '@server/utils/getHostname';
 import { normalizeJellyfinGuid } from '@server/utils/jellyfin';
 import { isOwnProfileOrAdmin } from '@server/utils/profileMiddleware';
 import { Router } from 'express';
-import gravatarUrl from 'gravatar-url';
 import { nanoid } from 'nanoid';
 
 import type { EntityManager } from 'typeorm';
@@ -195,8 +195,7 @@ router.post(
         body.createEmbyAccount &&
         (settings.main.mediaServerType === MediaServerType.JELLYFIN ||
           settings.main.mediaServerType === MediaServerType.EMBY);
-      const avatar =
-        body.avatar ?? gravatarUrl(username, { default: 'mm', size: 200 });
+      const avatar = body.avatar ?? DEFAULT_AVATAR_URL;
 
       const user = new User({
         email: body.email || null,
@@ -246,7 +245,7 @@ router.post(
           user.jellyfinUserId = account.Id;
           user.jellyfinUsername = account.Name;
           user.jellyfinDeviceId = deviceId;
-          user.avatar = `/avatarproxy/${account.Id}`;
+          user.avatar = DEFAULT_AVATAR_URL;
           user.userType =
             settings.main.mediaServerType === MediaServerType.JELLYFIN
               ? UserType.JELLYFIN
@@ -812,7 +811,7 @@ router.post(
             ).toString('base64'),
             username: jellyfinUser?.Name,
             permissions: settings.main.defaultPermissions,
-            avatar: `/avatarproxy/${jellyfinUserId}`,
+            avatar: DEFAULT_AVATAR_URL,
             userType:
               settings.main.mediaServerType === MediaServerType.JELLYFIN
                 ? UserType.JELLYFIN

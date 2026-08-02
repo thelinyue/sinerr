@@ -1,6 +1,6 @@
 import dataSource, { getRepository } from '@server/datasource';
 import { User } from '@server/entity/User';
-import gravatarUrl from 'gravatar-url';
+import { DEFAULT_AVATAR_URL } from '@server/routes/avatarproxy';
 
 export interface SeedDbOptions {
   /** If true, preserves existing data instead of dropping the database */
@@ -30,7 +30,7 @@ async function seedTestUsers(): Promise<void> {
   user.email = 'admin@sinerr.dev';
   user.password = TEST_USER_PASSWORD_HASH;
   user.permissions = 2;
-  user.avatar = gravatarUrl('admin@sinerr.dev', { default: 'mm', size: 200 });
+  user.avatar = DEFAULT_AVATAR_URL;
   await userRepository.save(user);
 
   // Create the other user
@@ -42,10 +42,7 @@ async function seedTestUsers(): Promise<void> {
   otherUser.email = 'friend@sinerr.dev';
   otherUser.password = TEST_USER_PASSWORD_HASH;
   otherUser.permissions = 32;
-  otherUser.avatar = gravatarUrl('friend@sinerr.dev', {
-    default: 'mm',
-    size: 200,
-  });
+  otherUser.avatar = DEFAULT_AVATAR_URL;
   await userRepository.save(otherUser);
 }
 
