@@ -51,18 +51,17 @@ gh 认证账号：`thelinyue`（`gh auth status`）。
    git push origin v1.7.6
    ```
    推送 `v*` 标签即触发 **Sinerr Release** 工作流（`.github/workflows/release.yml`）。
-6. **验证**：
+6. **发布完成判定**：**不监控 Release 工作流**，推送 `v*` 标签即为手动发布流程终点，CI 异步完成后端镜像/正式 release。如需事后查状态：
    ```bash
    gh run list --repo thelinyue/sinerr --branch v1.7.6 --limit 1
-   gh run view <run-id> --repo thelinyue/sinerr
-   gh release view v1.7.6 --repo thelinyue/sinerr   # draft 应为 false
+   gh release view v1.7.6 --repo thelinyue/sinerr   # 最终 draft 应为 false
    ```
 
 ### CI / Release 工作流行为
 
 - **create-tag.yml**：仅 `main` 分支 workflow_dispatch，用 git-cliff 计算下个版本并打 tag（本仓库手动发布不用它）。
 - **release.yml**（推送 `v*` tag 触发）：`Generate changelog`（git-cliff 读 `.github/cliff.toml` 生成 CHANGELOG.md）→ `Create draft release` → `Build`（Docker amd64）→ `Publish multi-arch manifests`（`ghcr.io/thelinyue/sinerr:vX.Y.Z`、`v1.7`、`:latest`）→ `Sign images and create SBOM`（cosign + trivy）→ `Verify` → `Publish release`（draft→正式）。
-- 关键要点：镜像标签 `ghcr.io/thelinyue/sinerr`；发布流程约 7 分钟；最后以 `gh release view` 确认 `isDraft=false`。
+- 关键要点：镜像标签 `ghcr.io/thelinyue/sinerr`；发布流程约 7 分钟；最终以 `gh release view` 确认 `isDraft=false`。
 
 ### 其他注意
 

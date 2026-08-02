@@ -82,18 +82,24 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 
    Pushing the `v*` tag triggers the **Sinerr Release** workflow.
 
-6. **Verify the release**
+6. **Release is considered done after the tag push**
+
+   Do **not** monitor the Release workflow. Pushing the `v*` tag is the end of
+   the manual release process; the GitHub Actions workflow
+   (`Generate changelog` → `Build` → `Create draft release` →
+   `Publish multi-arch manifests` → `Sign images` → `Verify` → `Publish
+   release`) runs asynchronously on GitHub.
+
+   If you need to check status later, run:
 
    ```bash
    gh run list --branch v1.7.5 --limit 1
-   gh run view <run-id>
    gh release view v1.7.5
    ```
 
-   Confirm the workflow completes (`Generate changelog` → `Build` → `Create
-   draft release` → `Publish multi-arch manifests` → `Sign images` → `Verify`
-   → `Publish release`) and that the Docker tags
-   `ghcr.io/thelinyue/sinerr:v1.7.5`, `v1.7`, and `:latest` are updated.
+   Expected final state: `gh release view v1.7.5` shows `isDraft=false` and the
+   Docker tags `ghcr.io/thelinyue/sinerr:v1.7.5`, `v1.7`, and `:latest` are
+   updated.
 
 > Always pass `--repo thelinyue/sinerr` to `gh` if you skipped the pin step;
 > otherwise release commands may target `seerr-team/seerr`.
