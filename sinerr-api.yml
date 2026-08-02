@@ -113,6 +113,32 @@ components:
           type: number
           example: 60
           description: Watched episode percentage 0-100 (series only).
+    UserAchievements:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Achievement'
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: string
+          example: requester10
+        earned:
+          type: boolean
+          example: true
+        progress:
+          type: number
+          example: 100
+          description: Progress towards the target (0-100).
+        target:
+          type: number
+          example: 10
+        current:
+          type: number
+          example: 12
     User:
       type: object
       properties:
@@ -4206,6 +4232,31 @@ paths:
                 $ref: '#/components/schemas/PlaybackProgress'
         '403':
           description: Not permitted to view this user's playback data
+  /user/{userId}/achievements:
+    get:
+      summary: Get user achievements
+      description: |
+        Returns the achievement badges for a user, computed on demand from their
+        request count, votes received, and reported issues.
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Achievement badges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAchievements'
+        '403':
+          description: Not permitted to view this user's achievements
   /activity:
     get:
       summary: Get activity feed
