@@ -31,6 +31,7 @@ const messages = defineMessages('notifications.agents.webpush', {
   issueReopened: 'The {issueType} was reopened by {userName}.',
   viewIssue: 'View Issue',
   viewMedia: 'View Media',
+  requestVoted: '{userName} also wants to see this!',
 });
 
 interface PushNotificationPayload {
@@ -162,6 +163,11 @@ class WebPushAgent
         message = intl.formatMessage(messages.issueReopened, {
           issueType,
           userName: payload.issue?.modifiedBy?.displayName,
+        });
+        break;
+      case Notification.REQUEST_VOTED:
+        message = intl.formatMessage(messages.requestVoted, {
+          userName: payload.votedBy?.displayName,
         });
         break;
       default:

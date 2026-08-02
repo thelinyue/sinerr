@@ -21,6 +21,8 @@ export interface NotificationPayload {
   comment?: IssueComment;
   pendingRequestsCount?: number;
   isAdmin?: boolean;
+  /** 点赞通知中的点赞人（REQUEST_VOTED 事件使用） */
+  votedBy?: User;
 }
 
 export abstract class BaseAgent<T extends NotificationAgentConfig> {

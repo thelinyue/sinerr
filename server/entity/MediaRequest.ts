@@ -25,6 +25,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import Media from './Media';
+import RequestVote from './RequestVote';
 import SeasonRequest from './SeasonRequest';
 import { User } from './User';
 
@@ -414,7 +415,18 @@ export class MediaRequest {
   })
   public seasons: SeasonRequest[];
 
+  @OneToMany(() => RequestVote, (vote) => vote.request, {
+    cascade: ['insert', 'remove'],
+  })
+  public votes: RequestVote[];
+
   public seasonCount?: number;
+
+  /** 点赞数量（非 DB 字段，由路由查询显式填充） */
+  public voteCount?: number;
+
+  /** 当前登录用户是否已点赞（非 DB 字段，由路由查询填充） */
+  public userVoted?: boolean;
 
   @Column({ nullable: true })
   public serverId: number;

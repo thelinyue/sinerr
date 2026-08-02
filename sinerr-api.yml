@@ -1013,9 +1013,42 @@ components:
           type: boolean
           example: false
           description: If true, this request will not count against the user's quota. Requires MANAGE_REQUESTS permission.
+        voteCount:
+          type: number
+          example: 3
+          description: Number of votes ("I also want this") on this request.
+        userVoted:
+          type: boolean
+          example: false
+          description: Whether the current user has voted on this request.
       required:
         - id
         - status
+    RequestVote:
+      type: object
+      properties:
+        voteCount:
+          type: number
+          example: 3
+          description: Total number of votes on the request.
+        userVoted:
+          type: boolean
+          example: true
+          description: Whether the current user has voted on the request.
+    RequestVotes:
+      type: object
+      properties:
+        voteCount:
+          type: number
+          example: 3
+        userVoted:
+          type: boolean
+          example: true
+        results:
+          type: array
+          description: List of users who voted. Only returned to the request owner or users with the `REQUEST_VIEW` permission.
+          items:
+            $ref: '#/components/schemas/User'
     MediaInfo:
       type: object
       properties:
@@ -5891,6 +5924,93 @@ paths:
       responses:
         '204':
           description: Succesfully removed request
+  /request/{requestId}/vote:
+    post:
+      summary: Vote on a request
+      description: |
+        Shows support ("I also want this") for a request submitted by another user.
+
+        Requires the `VOTE` permission or `ADMIN`. Users cannot vote on their own requests.
+      tags:
+        - request
+      parameters:
+        - in: path
+          name: requestId
+          description: Request ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vote already exists (idempotent) or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestVote'
+        '201':
+          description: Vote created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestVote'
+        '400':
+          description: Cannot vote on own request
+        '404':
+          description: Request not found
+    delete:
+      summary: Remove a vote from a request
+      description: |
+        Removes the current user's vote from a request. Idempotent - returns the current state even if no vote exists.
+
+        Requires the `VOTE` permission or `ADMIN`.
+      tags:
+        - request
+      parameters:
+        - in: path
+          name: requestId
+          description: Request ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vote removed (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestVote'
+        '404':
+          description: Request not found
+  /request/{requestId}/votes:
+    get:
+      summary: Get votes on a request
+      description: |
+        Returns the vote count, whether the current user has voted, and the list of voters.
+
+        The full voter list is only visible to the request owner and users with the `REQUEST_VIEW` or `MANAGE_REQUESTS` permission. Other authenticated users only receive the count and their own vote state.
+      tags:
+        - request
+      parameters:
+        - in: path
+          name: requestId
+          description: Request ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vote information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestVotes'
+        '403':
+          description: Not permitted to view votes on this request
+        '404':
+          description: Request not found
   /request/{requestId}/retry:
     post:
       summary: Retry failed request

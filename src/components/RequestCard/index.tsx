@@ -16,6 +16,7 @@ import { withProperties } from '@app/utils/typeHelpers';
 import {
   ArrowPathIcon,
   CheckIcon,
+  HeartIcon,
   PencilIcon,
   TrashIcon,
   XMarkIcon,
@@ -23,6 +24,7 @@ import {
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
 import type { NonFunctionProperties } from '@server/interfaces/api/common';
+import type { RequestVotesResponse } from '@server/interfaces/api/voteInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import axios from 'axios';
@@ -45,6 +47,9 @@ const messages = defineMessages('components.RequestCard', {
   cancelrequest: 'Cancel Request',
   deleterequest: 'Delete Request',
   unknowntitle: 'Unknown Title',
+  vote: 'I Also Want This',
+  voted: 'Remove My Support',
+  votesupport: 'Show support for this request',
 });
 
 const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
@@ -206,6 +211,7 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
   const [updatingType, setUpdatingType] = useState<
     'approve' | 'decline' | null
   >(null);
+  const [isVoting, setIsVoting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const url =
     request.type === 'movie'
@@ -235,6 +241,42 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
   const { mediaUrl } = useDeepLinks({
     mediaUrl: requestData?.media?.mediaUrl,
   });
+
+  // 点赞信息：仅当请求人是本人或具备查看请求权限时拉取完整点赞列表（含头像）
+  const canViewVoters =
+    requestData &&
+    (requestData.requestedBy.id === user?.id ||
+      hasPermission([Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW], {
+        type: 'or',
+      }));
+  const { data: votesData, mutate: revalidateVotes } =
+    useSWR<RequestVotesResponse>(
+      canViewVoters ? `/api/v1/request/${request.id}/votes` : null
+    );
+
+  const toggleVote = async () => {
+    if (!requestData) {
+      return;
+    }
+    setIsVoting(true);
+
+    try {
+      if (requestData.userVoted) {
+        await axios.delete(`/api/v1/request/${request.id}/vote`);
+      } else {
+        await axios.post(`/api/v1/request/${request.id}/vote`);
+      }
+      revalidate();
+      revalidateVotes();
+    } catch {
+      addToast(intl.formatMessage(messages.failedmodify), {
+        autoDismiss: true,
+        appearance: 'error',
+      });
+    } finally {
+      setIsVoting(false);
+    }
+  };
 
   const modifyRequest = async (type: 'approve' | 'decline') => {
     setUpdatingType(type);
@@ -454,6 +496,54 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
               />
             )}
           </div>
+          {requestData.requestedBy.id !== user?.id &&
+            hasPermission(Permission.VOTE) && (
+              <div className="mt-2 flex items-center space-x-1.5 sm:mt-1">
+                <Button
+                  buttonType={requestData.userVoted ? 'primary' : 'ghost'}
+                  buttonSize="sm"
+                  disabled={isVoting}
+                  onClick={() => toggleVote()}
+                  className="!px-2 !py-1"
+                >
+                  <HeartIcon className="h-4 w-4" />
+                  <span className="ml-1.5">
+                    {requestData.userVoted
+                      ? intl.formatMessage(messages.voted)
+                      : intl.formatMessage(messages.vote)}
+                  </span>
+                </Button>
+                {!!(requestData.voteCount ?? 0) && (
+                  <span className="text-sm text-gray-400">
+                    {requestData.voteCount}
+                  </span>
+                )}
+                {!!votesData?.results.length && (
+                  <div className="flex -space-x-2">
+                    {votesData.results.slice(0, 3).map((voter) => (
+                      <Tooltip
+                        content={voter.displayName}
+                        key={`vote-avatar-${voter.id}`}
+                      >
+                        <span className="avatar-sm overflow-hidden rounded-full ring-2 ring-gray-800">
+                          <CachedImage
+                            type="avatar"
+                            src={
+                              voter.avatar ??
+                              'https://gravatar.com/avatar/00000000000000000000000000000000.png'
+                            }
+                            alt=""
+                            className="avatar-sm object-cover"
+                            width={20}
+                            height={20}
+                          />
+                        </span>
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           <div className="flex flex-1 items-end space-x-2">
             {requestData.status === MediaRequestStatus.FAILED &&
               hasPermission(Permission.MANAGE_REQUESTS) && (

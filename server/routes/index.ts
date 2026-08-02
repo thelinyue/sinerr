@@ -47,6 +47,7 @@ import searchRoutes from './search';
 import serviceRoutes from './service';
 import tvRoutes from './tv';
 import user from './user';
+import voteRoutes from './vote';
 
 const router = Router();
 
@@ -72,7 +73,11 @@ router.get('/status/appdata', (_req, res) => {
 router.use('/user', isAuthenticated(), user);
 router.get('/settings/public', async (req, res) => {
   const now = Date.now();
-  if (settingsPublicCache && now - settingsPublicCache.ts < SETTINGS_PUBLIC_TTL && !req.query.nocache) {
+  if (
+    settingsPublicCache &&
+    now - settingsPublicCache.ts < SETTINGS_PUBLIC_TTL &&
+    !req.query.nocache
+  ) {
     return res.status(200).json(settingsPublicCache.data);
   }
 
@@ -123,6 +128,7 @@ router.get(
 router.use('/settings', isAuthenticated(Permission.ADMIN), settingsRoutes);
 router.use('/search', isAuthenticated(), searchRoutes);
 router.use('/discover', isAuthenticated(), discoverRoutes);
+router.use('/request', isAuthenticated(), voteRoutes);
 router.use('/request', isAuthenticated(), requestRoutes);
 router.use('/blocklist', isAuthenticated(), blocklistRoutes);
 router.use(

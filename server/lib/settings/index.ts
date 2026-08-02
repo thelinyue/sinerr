@@ -393,7 +393,7 @@ class Settings {
         applicationTitle: 'Sinerr',
         applicationUrl: '',
         cacheImages: false,
-        defaultPermissions: Permission.REQUEST,
+        defaultPermissions: Permission.REQUEST | Permission.VOTE,
         defaultQuotas: {
           movie: {},
           tv: {},

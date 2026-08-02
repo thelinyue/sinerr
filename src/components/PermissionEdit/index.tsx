@@ -13,6 +13,9 @@ export const messages = defineMessages('components.PermissionEdit', {
   users: 'Manage Users',
   usersDescription:
     'Grant permission to manage users. Users with this permission cannot modify users with or grant the Admin privilege.',
+  vote: 'Vote',
+  voteDescription:
+    'Grant permission to show support ("I also want this") for requests submitted by other users.',
   managerequests: 'Manage Requests',
   managerequestsDescription:
     'Grant permission to manage media requests. All requests made by a user with this permission will be automatically approved.',
@@ -126,6 +129,12 @@ export const PermissionEdit = ({
           permission: Permission.REQUEST_TV,
         },
       ],
+    },
+    {
+      id: 'vote',
+      name: intl.formatMessage(messages.vote),
+      description: intl.formatMessage(messages.voteDescription),
+      permission: Permission.VOTE,
     },
     {
       id: 'autoapprove',

@@ -43,6 +43,7 @@ const messages = defineMessages('notifications.agents.email', {
     'The {issueType} for the {mediaType} {subject} was marked as resolved by {userName}!',
   issueReopened:
     'The {issueType} for the {mediaType} {subject} was reopened by {userName}.',
+  requestVoted: '{userName} also wants to see the {mediaType} {subject}!',
 });
 
 class EmailAgent
@@ -152,6 +153,13 @@ class EmailAgent
           body = intl.formatMessage(messages.failedRequest, {
             mediaType,
             service: 'the download client',
+          });
+          break;
+        case Notification.REQUEST_VOTED:
+          body = intl.formatMessage(messages.requestVoted, {
+            userName: payload.votedBy?.displayName,
+            mediaType,
+            subject: payload.subject,
           });
           break;
       }

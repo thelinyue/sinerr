@@ -13,6 +13,7 @@ import {
   QuotaRestrictedError,
   RequestPermissionError,
 } from '@server/entity/MediaRequest';
+import RequestVote from '@server/entity/RequestVote';
 import SeasonRequest from '@server/entity/SeasonRequest';
 import { User } from '@server/entity/User';
 import type {
@@ -333,6 +334,17 @@ requestRoutes.get('/:requestId', async (req, res, next) => {
         message: 'You do not have permission to view this request.',
       });
     }
+
+    // 填充点赞聚合信息（数量 + 当前用户是否已点赞），供前端 RequestCard 展示
+    const requestVoteRepository = getRepository(RequestVote);
+    request.voteCount = await requestVoteRepository.count({
+      where: { request: { id: request.id } },
+    });
+    request.userVoted =
+      req.user?.id != null &&
+      (await requestVoteRepository.count({
+        where: { request: { id: request.id }, user: { id: req.user.id } },
+      })) > 0;
 
     return res.status(200).json(request);
   } catch (e) {
