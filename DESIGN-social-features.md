@@ -288,6 +288,14 @@ GET /api/v1/activity?take=20&skip=0
   - 前端 `src/components/UserProfile/Achievements`：个人页展示徽章行（含进度与已达成态）。
 - 测试：`review.test.ts`（12 条）+ `user/achievements.test.ts`（4 条）。
 
+#### 阶段 3 增补：剧集短评支持季/集目标
+
+- 数据模型：`MediaReview` 增加可空 `seasonNumber`/`episodeNumber`（与 `Issue.problemSeason/Episode` 同模式）；`(media, seasonNumber, episodeNumber)` 复合索引；双库迁移 `1787000000001-AddMediaReviewTarget`。
+- 目标语义：两者皆空 = 整部剧集（默认）；仅季 = 整季；季+集 = 该集；集必须有季（后端拒绝）。
+- API：`GET /review/:tmdbId/tv?seasonNumber&episodeNumber` 精确过滤目标并计算该目标平均分；`POST` body 携带可选目标；upsert 维度升级为「媒体+用户+目标」。
+- 前端：TV 短评区新增两级 segmented chip 选择器（第一级季含「整部剧集」，选中季出现第二级集含「整季」），移动端横滑；每条评论显示目标徽章（S1E3 / 第2季）。
+- 层级规则（已确认）：整季评论只在「选中该季」时显示，选中具体集时只显示该集评论。
+
 ---
 
 ## 6. 横切关注点
