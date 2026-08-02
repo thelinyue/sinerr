@@ -4,7 +4,6 @@ import PageTitle from '@app/components/Common/PageTitle';
 import ProgressCircle from '@app/components/Common/ProgressCircle';
 import RequestCard from '@app/components/RequestCard';
 import Slider from '@app/components/Slider';
-import TmdbTitleCard from '@app/components/TitleCard/TmdbTitleCard';
 import Achievements from '@app/components/UserProfile/Achievements';
 import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
 import { Permission, useUser } from '@app/hooks/useUser';
@@ -14,7 +13,6 @@ import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import type {
   QuotaResponse,
   UserRequestsResponse,
-  UserWatchDataResponse,
 } from '@server/interfaces/api/userInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
@@ -33,7 +31,6 @@ const messages = defineMessages('components.UserProfile', {
   pastdays: '{type} (past {days} days)',
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
-  recentlywatched: 'Recently Watched',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -69,12 +66,6 @@ const UserProfile = () => {
       ? `/api/v1/user/${user.id}/quota`
       : null
   );
-  const { data: watchData, error: watchDataError } =
-    useSWR<UserWatchDataResponse>(
-      user?.id === currentUser?.id || currentHasPermission(Permission.ADMIN)
-        ? `/api/v1/user/${user?.id}/watch_data`
-        : null
-    );
 
   const updateAvailableTitles = useCallback(
     (requestId: number, mediaTitle: MediaTitle) => {
@@ -293,31 +284,6 @@ const UserProfile = () => {
                 />
               ))}
               placeholder={<RequestCard.Placeholder />}
-            />
-          </>
-        )}
-      {(user.id === currentUser?.id ||
-        currentHasPermission(Permission.ADMIN)) &&
-        (!watchData || !!watchData.recentlyWatched?.length) &&
-        !watchDataError && (
-          <>
-            <div className="slider-header">
-              <div className="slider-title">
-                <span>{intl.formatMessage(messages.recentlywatched)}</span>
-              </div>
-            </div>
-            <Slider
-              sliderKey="media"
-              isLoading={!watchData}
-              items={watchData?.recentlyWatched?.map((item) => (
-                <TmdbTitleCard
-                  key={`media-slider-item-${item.id}`}
-                  id={item.id}
-                  tmdbId={item.tmdbId}
-                  tvdbId={item.tvdbId}
-                  type={item.mediaType}
-                />
-              ))}
             />
           </>
         )}

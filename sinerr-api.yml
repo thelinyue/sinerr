@@ -4818,35 +4818,6 @@ paths:
                   permissions:
                     type: number
                     example: 2
-  /user/{userId}/watch_data:
-    get:
-      summary: Get watch data
-      description: |
-        Returns play count, play duration, and recently watched media.
-
-        Requires the `ADMIN` permission to fetch results for other users.
-      tags:
-        - users
-      parameters:
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: number
-      responses:
-        '200':
-          description: Users
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  recentlyWatched:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MediaInfo'
-                  playCount:
-                    type: number
   /search:
     get:
       summary: Search for movies, TV shows, or people

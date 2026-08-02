@@ -1,6 +1,5 @@
 import BlocklistBlock from '@app/components/BlocklistBlock';
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
 import SlideOver from '@app/components/Common/SlideOver';
 import Tooltip from '@app/components/Common/Tooltip';
@@ -17,15 +16,10 @@ import { CheckCircleIcon, DocumentMinusIcon } from '@heroicons/react/24/solid';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
-import type { MediaWatchDataResponse } from '@server/interfaces/api/mediaInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import axios from 'axios';
-import Link from 'next/link';
 import { useIntl } from 'react-intl';
-import useSWR from 'swr';
-
-import type { JSX } from 'react';
 
 interface DownloadingItem {
   title: string;
@@ -72,11 +66,6 @@ const messages = defineMessages('components.ManageSlideOver', {
   markavailable: 'Mark as Available',
   markallseasonsavailable: 'Mark All Seasons as Available',
   opentautulli: 'Open in Tautulli',
-  plays:
-    '<strong>{playCount, number}</strong> {playCount, plural, one {play} other {plays}}',
-  pastdays: 'Past {days, number} Days',
-  alltime: 'All Time',
-  playedby: 'Played By',
   movie: 'movie',
   tvshow: 'series',
 });
@@ -108,15 +97,10 @@ const ManageSlideOver = ({
   data,
   revalidate,
 }: ManageSlideOverMovieProps | ManageSlideOverTvProps) => {
-  const { user: currentUser, hasPermission } = useUser();
+  const { hasPermission } = useUser();
   const intl = useIntl();
   const { addToast } = useToasts();
   const settings = useSettings();
-  const { data: watchData } = useSWR<MediaWatchDataResponse>(
-    data.mediaInfo && hasPermission(Permission.ADMIN)
-      ? `/api/v1/media/${data.mediaInfo.id}/watch_data`
-      : null
-  );
 
   const deleteMedia = async () => {
     if (data.mediaInfo) {
@@ -153,19 +137,6 @@ const ManageSlideOver = ({
     data.mediaInfo?.issues?.filter(
       (issue) => issue.status === IssueStatus.OPEN
     ) ?? [];
-
-  const styledPlayCount = (playCount: number): JSX.Element => {
-    return (
-      <>
-        {intl.formatMessage(messages.plays, {
-          playCount,
-          strong: (msg: React.ReactNode) => (
-            <strong className="text-2xl font-semibold">{msg}</strong>
-          ),
-        })}
-      </>
-    );
-  };
 
   return (
     <SlideOver
@@ -262,110 +233,23 @@ const ManageSlideOver = ({
           </div>
         )}
         {hasPermission(Permission.ADMIN) &&
-          (data.mediaInfo?.serviceUrl ||
-            data.mediaInfo?.tautulliUrl ||
-            watchData?.data) && (
+          (data.mediaInfo?.serviceUrl || data.mediaInfo?.tautulliUrl) && (
             <div>
               <h3 className="mb-2 text-xl font-bold">
                 {intl.formatMessage(messages.manageModalMedia)}
               </h3>
               <div className="space-y-2">
-                {(watchData?.data || data.mediaInfo?.tautulliUrl) && (
-                  <div>
-                    {!!watchData?.data && (
-                      <div
-                        className={`grid grid-cols-1 divide-y divide-gray-700 overflow-hidden border-gray-700 text-sm text-gray-300 shadow ${
-                          data.mediaInfo?.tautulliUrl
-                            ? 'rounded-t-md border-x border-t'
-                            : 'rounded-md border'
-                        }`}
-                      >
-                        <div className="grid grid-cols-3 divide-x divide-gray-700">
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.pastdays, {
-                                days: 7,
-                              })}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(watchData.data.playCount7Days)}
-                            </div>
-                          </div>
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.pastdays, {
-                                days: 30,
-                              })}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(watchData.data.playCount30Days)}
-                            </div>
-                          </div>
-                          <div className="px-4 py-3">
-                            <div className="font-bold">
-                              {intl.formatMessage(messages.alltime)}
-                            </div>
-                            <div className="text-white">
-                              {styledPlayCount(watchData.data.playCount)}
-                            </div>
-                          </div>
-                        </div>
-                        {!!watchData.data.users.length && (
-                          <div className="flex flex-row space-x-2 px-4 pb-2 pt-3">
-                            <span className="shrink-0 font-bold leading-8">
-                              {intl.formatMessage(messages.playedby)}
-                            </span>
-                            <span className="flex flex-row flex-wrap">
-                              {watchData.data.users.map((user) => (
-                                <Link
-                                  href={
-                                    currentUser?.id === user.id
-                                      ? '/profile'
-                                      : `/users/${user.id}`
-                                  }
-                                  key={`watch-user-${user.id}`}
-                                  className="z-0 -mr-2 mb-1 shrink-0 hover:z-50"
-                                >
-                                  <Tooltip
-                                    key={`watch-user-${user.id}`}
-                                    content={user.displayName}
-                                  >
-                                    <CachedImage
-                                      type="avatar"
-                                      src={user.avatar}
-                                      alt={user.displayName}
-                                      className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
-                                      width={32}
-                                      height={32}
-                                    />
-                                  </Tooltip>
-                                </Link>
-                              ))}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {data.mediaInfo?.tautulliUrl && (
-                      <a
-                        href={data.mediaInfo.tautulliUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Button
-                          buttonType="ghost"
-                          className={`w-full ${
-                            watchData?.data ? 'rounded-t-none' : ''
-                          }`}
-                        >
-                          <Bars4Icon />
-                          <span>
-                            {intl.formatMessage(messages.opentautulli)}
-                          </span>
-                        </Button>
-                      </a>
-                    )}
-                  </div>
+                {data.mediaInfo?.tautulliUrl && (
+                  <a
+                    href={data.mediaInfo.tautulliUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Button buttonType="ghost" className="w-full">
+                      <Bars4Icon />
+                      <span>{intl.formatMessage(messages.opentautulli)}</span>
+                    </Button>
+                  </a>
                 )}
                 {data.mediaInfo?.serviceUrl && (
                   <a
