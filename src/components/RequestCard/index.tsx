@@ -498,7 +498,7 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
           </div>
           {requestData.requestedBy.id !== user?.id &&
             hasPermission(Permission.VOTE) && (
-              <div className="mt-2 flex items-center space-x-1.5 sm:mt-1">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 sm:mt-1">
                 <Button
                   buttonType={requestData.userVoted ? 'primary' : 'ghost'}
                   buttonSize="sm"

@@ -86,20 +86,25 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
         />
       </Link>
       <div className="min-w-0 flex-1 text-sm text-gray-300">
-        <span className="font-semibold text-white">
-          {item.actor.displayName}
-        </span>{' '}
-        {verb}{' '}
-        {mediaTitle ? (
-          <Link href={href} className="font-medium text-white hover:underline">
-            {mediaTitle}
-          </Link>
-        ) : (
-          <span className="text-gray-500">
-            {intl.formatMessage(messages.loadFailed)}
-          </span>
-        )}
-        <span className="ml-1.5 whitespace-nowrap text-xs text-gray-500">
+        <div className="min-w-0 truncate">
+          <span className="font-semibold text-white">
+            {item.actor.displayName}
+          </span>{' '}
+          {verb}{' '}
+          {mediaTitle ? (
+            <Link
+              href={href}
+              className="font-medium text-white hover:underline"
+            >
+              {mediaTitle}
+            </Link>
+          ) : (
+            <span className="text-gray-500">
+              {intl.formatMessage(messages.loadFailed)}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 text-xs text-gray-500">
           <FormattedRelativeTime
             value={Math.floor(
               (new Date(item.createdAt).getTime() - Date.now()) / 1000
@@ -107,7 +112,7 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
             updateIntervalInSeconds={60}
             numeric="auto"
           />
-        </span>
+        </div>
       </div>
       <div className="flex-shrink-0 text-gray-500">
         {item.type === 'vote' ? (

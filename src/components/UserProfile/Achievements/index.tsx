@@ -105,19 +105,19 @@ const Achievements = ({ userId }: { userId: number }) => {
           return (
             <div
               key={badge.id}
-              className={`flex items-center space-x-2 rounded-lg px-3 py-2 text-sm ring-1 transition ${
+              className={`flex w-full min-w-0 items-center space-x-2 rounded-lg px-3 py-2 text-sm ring-1 transition sm:w-auto ${
                 badge.earned
                   ? 'bg-yellow-500/20 text-yellow-300 ring-yellow-500/50'
                   : 'bg-gray-800/50 text-gray-500 ring-gray-700'
               }`}
               data-testid={`achievement-${badge.id}`}
             >
-              <span className="h-5 w-5">{meta.icon}</span>
-              <div className="flex flex-col">
-                <span className="font-semibold">
+              <span className="h-5 w-5 flex-shrink-0">{meta.icon}</span>
+              <div className="min-w-0 flex-col">
+                <span className="block truncate font-semibold">
                   {intl.formatMessage(meta.name)}
                 </span>
-                <span className="text-xs opacity-80">
+                <span className="block truncate text-xs opacity-80">
                   {intl.formatMessage(meta.description)} ({badge.current}/
                   {badge.target})
                 </span>

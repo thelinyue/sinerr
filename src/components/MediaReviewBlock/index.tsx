@@ -153,7 +153,7 @@ const MediaReviewBlock = ({
               </button>
             ))}
           </div>
-          <div className="flex items-end space-x-3">
+          <div className="flex flex-col items-stretch space-y-2 sm:flex-row sm:items-end sm:space-x-3 sm:space-y-0">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
