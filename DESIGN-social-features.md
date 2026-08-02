@@ -193,7 +193,7 @@ REQUEST_VOTED = 8192,
 
 ---
 
-## 4. 阶段 2：用户动态信息流（Activity Feed）
+## 4. 阶段 2：用户动态信息流（Activity Feed）—— ✅ 已实现
 
 ### 4.1 目标
 
@@ -247,6 +247,13 @@ GET /api/v1/activity?take=20&skip=0
 1. 首页出现动态区块，包含请求/声援/Issue 三类动作。
 2. 分页滚动正常，接口响应 < 200ms（聚合查询 + 无 N+1）。
 3. 隐私边界符合 4.5。
+
+### 4.7 实现记录
+
+- 后端 `server/routes/activity.ts`：三次分页查询后内存归并，`GET /api/v1/activity?take&skip`。
+- 前端 `src/components/Discover/ActivityFeed/index.tsx`：单列时间线，标题懒加载（`useInView` + SWR），相对时间展示，「加载更多」分页。
+- 接入首页 `Discover` 滑块之后；OpenAPI 契约已补齐；`activity.test.ts` 覆盖鉴权/归并/分页/空集。
+- 隐私：信息流仅聚合 request/vote/issue（与现有可见范围一致），观看记录不进信息流。
 
 ---
 
