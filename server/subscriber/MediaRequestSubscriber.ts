@@ -1,6 +1,6 @@
 import MediaryAPI from '@server/api/mediary';
 import MoviePilotAPI, {
-  type MoviePilotSubscribeOptions,
+  type MoviePilotSeerrOptions,
   type MoviePilotSubscription,
 } from '@server/api/moviepilot';
 import TheMovieDb from '@server/api/themoviedb';
@@ -353,68 +353,23 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
   }
 
   /**
-   * 构建 MoviePilot 订阅级配置：以服务器默认配置为主，请求级字段可覆盖。
-   * - rootFolder（请求级保存路径）→ save_path
-   * - tags（请求级站点 ID 列表）→ sites
-   * 其余（quality/resolution/effect/downloader/include/exclude）来自服务器默认配置。
+   * 通过 MoviePilot 的 seerr 兼容端点推送订阅并记录结果。
+   * 该端点异步创建订阅（响应先返回、订阅在 MoviePilot 后台任务中创建）。
    */
-  private getMoviePilotConfig(
-    entity: MediaRequest,
-    server: MoviePilotServerSettings
-  ): {
-    quality?: string;
-    resolution?: string;
-    effect?: string;
-    downloader?: string;
-    savePath?: string;
-    sites?: number[];
-    include?: string;
-    exclude?: string;
-  } {
-    return {
-      quality: server.activeQuality,
-      resolution: server.activeResolution,
-      effect: server.activeEffect,
-      downloader: server.activeDownloader,
-      savePath: entity.rootFolder ?? server.activeSavePath,
-      sites:
-        entity.tags && entity.tags.length > 0
-          ? entity.tags
-          : server.activeSites,
-      include: server.activeInclude,
-      exclude: server.activeExclude,
-    };
-  }
-
-  /**
-   * 调用 MoviePilot 新增订阅并记录结果。
-   * 兜底处理：即使预检通过，仍可能因并发请求返回"订阅已存在"（服务端去重），
-   * 此时不视为失败，仅记录为已存在。
-   */
-  private async pushMoviePilotAdd(
+  private async pushMoviePilotSeerr(
     moviepilot: MoviePilotAPI,
     entity: MediaRequest,
-    options: MoviePilotSubscribeOptions
+    options: MoviePilotSeerrOptions
   ): Promise<void> {
-    const data = await moviepilot.addSubscribe(options);
-    const message = String(data?.message ?? '');
-    if (message.includes('已存在')) {
-      logger.info('MoviePilot subscription already exists, skipped', {
-        label: 'Media Request',
-        requestId: entity.id,
-        tmdbId: options.tmdbid,
-        season: options.seasons ? Number(options.seasons) : undefined,
-        message,
-      });
-    } else {
-      logger.info('Sent request to MoviePilot', {
-        label: 'Media Request',
-        requestId: entity.id,
-        mediaId: entity.media.id,
-        tmdbId: options.tmdbid,
-        season: options.seasons ? Number(options.seasons) : undefined,
-      });
-    }
+    await moviepilot.subscribeViaSeerrWebhook(options);
+    logger.info('Sent subscription to MoviePilot (via seerr webhook)', {
+      label: 'Media Request',
+      requestId: entity.id,
+      mediaId: entity.media.id,
+      tmdbId: options.tmdbid,
+      seasons: options.seasons,
+      username: options.username,
+    });
   }
 
   public async sendToMoviePilot(entity: MediaRequest): Promise<void> {
@@ -432,7 +387,14 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
         });
 
         const tmdbId = entity.media.tmdbId;
-        const config = this.getMoviePilotConfig(entity, server);
+
+        // 订阅用户名显示为提交者（来源标注）：如 `ceshi (Sinerr)`。
+        // seerr 端点会取载荷里的 requestedBy_username 作为订阅的 username 字段。
+        const requesterName =
+          entity.requestedBy?.username ?? entity.requestedBy?.displayName ?? '';
+        const sinerrUsername = requesterName
+          ? `${requesterName} (Sinerr)`
+          : 'Sinerr';
 
         // 推送前的去重预检：查询 MoviePilot 中该媒体的既有订阅。
         // MoviePilot 服务端按 tmdbid+season+media_source 精确去重，跨媒体源（如豆瓣来源）
@@ -480,21 +442,24 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
           }
 
           const movie = await tmdb.getMovie({ movieId: tmdbId });
-          await this.pushMoviePilotAdd(moviepilot, entity, {
-            tmdbid: tmdbId,
-            type: 'movie',
-            name: movie.title,
-            year: movie.release_date
-              ? Number(movie.release_date.slice(0, 4))
-              : undefined,
-            ...config,
-          });
+          try {
+            await this.pushMoviePilotSeerr(moviepilot, entity, {
+              tmdbid: tmdbId,
+              type: 'movie',
+              title: movie.title,
+              username: sinerrUsername,
+            });
+          } catch (e) {
+            logger.warn('Failed to send movie subscription to MoviePilot', {
+              label: 'Media Request',
+              requestId: entity.id,
+              tmdbId,
+              errorMessage: e.message,
+            });
+          }
         } else {
           const tv = await tmdb.getTvShow({ tvId: tmdbId });
           const name = tv.name;
-          const year = tv.first_air_date
-            ? Number(tv.first_air_date.slice(0, 4))
-            : undefined;
 
           const seasons = entity.seasons?.map((s) => s.seasonNumber) ?? [];
           // 只推送 MoviePilot 中尚未订阅的季，已订阅的季直接跳过。
@@ -514,22 +479,21 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
             });
           }
 
-          for (const season of missingSeasons) {
+          if (missingSeasons.length > 0) {
             try {
-              await this.pushMoviePilotAdd(moviepilot, entity, {
+              await this.pushMoviePilotSeerr(moviepilot, entity, {
                 tmdbid: tmdbId,
                 type: 'tv',
-                name,
-                year,
-                seasons: String(season),
-                ...config,
+                title: name,
+                username: sinerrUsername,
+                seasons: missingSeasons,
               });
             } catch (e) {
-              logger.warn('Failed to send season to MoviePilot', {
+              logger.warn('Failed to send series subscription to MoviePilot', {
                 label: 'Media Request',
                 requestId: entity.id,
                 tmdbId,
-                season,
+                seasons: missingSeasons,
                 errorMessage: e.message,
               });
             }

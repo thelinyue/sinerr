@@ -101,16 +101,6 @@ export interface MoviePilotServerSettings {
   isDefault: boolean;
   externalUrl?: string;
   syncEnabled: boolean;
-  // 订阅默认配置（对应 Sonarr/Radarr 的 activeProfile/activeDirectory/tags），
-  // 请求推送订阅时作为订阅级字段下发，可被请求级覆盖。
-  activeQuality?: string;
-  activeResolution?: string;
-  activeEffect?: string;
-  activeDownloader?: string;
-  activeSavePath?: string;
-  activeSites?: number[];
-  activeInclude?: string;
-  activeExclude?: string;
 }
 
 interface Quota {

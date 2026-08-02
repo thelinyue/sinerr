@@ -10,7 +10,6 @@ import axios from 'axios';
 import { Field, Formik } from 'formik';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import Select from 'react-select';
 import * as Yup from 'yup';
 
 const messages = defineMessages('components.Settings.MoviePilotModal', {
@@ -43,34 +42,7 @@ const messages = defineMessages('components.Settings.MoviePilotModal', {
     'For clickable links on media pages when the hostname is not reachable from outside your network.',
   syncEnabledHelp:
     'Scan MoviePilot for existing media and request status so users cannot request content already available.',
-  requestConfigTitle: 'Request Configuration',
-  requestConfigDescription:
-    'Applied to subscriptions pushed to this server (MoviePilot equivalents of quality profile, root folder and tags). Test the connection to load downloaders, paths and sites.',
-  quality: 'Quality',
-  qualityHelp: 'e.g. 2160p / 1080p / BluRay',
-  resolution: 'Resolution',
-  resolutionHelp: 'e.g. 4K / 1080p / 720p',
-  effect: 'Video Effect',
-  effectHelp: 'e.g. HDR / HDR10 / Dolby Vision',
-  downloader: 'Downloader',
-  downloaderHelp:
-    'Which downloader MoviePilot uses for subscriptions to this server.',
-  savePath: 'Save Path',
-  savePathHelp: 'Download directory, from MoviePilot download paths.',
-  sites: 'Sites',
-  sitesHelp: 'Sites used to search subscriptions. Empty = all active sites.',
-  include: 'Include Keywords',
-  includeHelp:
-    'Only match results containing these keywords (comma separated).',
-  exclude: 'Exclude Keywords',
-  excludeHelp: 'Exclude results containing these keywords (comma separated).',
 });
-
-interface MoviePilotLookupData {
-  downloaders: { name: string; type?: string }[];
-  paths: { name?: string; save_path?: string; media_type?: string }[];
-  sites: { id: number; name?: string; domain?: string; is_active?: boolean }[];
-}
 
 interface MoviePilotModalProps {
   moviepilot: MoviePilotServerSettings | null;
@@ -88,9 +60,6 @@ const MoviePilotModal = ({
   const { addToast } = useToasts();
   const [isValidated, setIsValidated] = useState(moviepilot ? true : false);
   const [isTesting, setIsTesting] = useState(false);
-  const [lookupData, setLookupData] = useState<MoviePilotLookupData | null>(
-    null
-  );
 
   const MoviePilotSettingsSchema = Yup.object().shape({
     name: Yup.string().required(
@@ -145,18 +114,14 @@ const MoviePilotModal = ({
     }) => {
       setIsTesting(true);
       try {
-        const response = await axios.post<MoviePilotLookupData>(
-          '/api/v1/settings/moviepilot/test',
-          {
-            hostname,
-            apiKey,
-            port: Number(port),
-            baseUrl,
-            useSsl,
-          }
-        );
+        await axios.post('/api/v1/settings/moviepilot/test', {
+          hostname,
+          apiKey,
+          port: Number(port),
+          baseUrl,
+          useSsl,
+        });
 
-        setLookupData(response.data);
         setIsValidated(true);
         if (initialLoad.current) {
           addToast(intl.formatMessage(messages.toastMoviePilotTestSuccess), {
@@ -165,7 +130,6 @@ const MoviePilotModal = ({
           });
         }
       } catch {
-        setLookupData(null);
         setIsValidated(false);
         if (initialLoad.current) {
           addToast(intl.formatMessage(messages.toastMoviePilotTestFailure), {
@@ -181,7 +145,7 @@ const MoviePilotModal = ({
     [addToast, intl]
   );
 
-  // 编辑已有服务器时，挂载即测试一次连接以加载请求级配置下拉（不弹提示）。
+  // 编辑已有服务器时，挂载即测试一次连接以确认可用（不弹提示）。
   useEffect(() => {
     if (moviepilot) {
       testConnection({
@@ -218,14 +182,6 @@ const MoviePilotModal = ({
           isDefault: moviepilot?.isDefault ?? false,
           externalUrl: moviepilot?.externalUrl,
           syncEnabled: moviepilot?.syncEnabled ?? false,
-          activeQuality: moviepilot?.activeQuality ?? '',
-          activeResolution: moviepilot?.activeResolution ?? '',
-          activeEffect: moviepilot?.activeEffect ?? '',
-          activeDownloader: moviepilot?.activeDownloader ?? '',
-          activeSavePath: moviepilot?.activeSavePath ?? '',
-          activeSites: moviepilot?.activeSites ?? [],
-          activeInclude: moviepilot?.activeInclude ?? '',
-          activeExclude: moviepilot?.activeExclude ?? '',
         }}
         validationSchema={MoviePilotSettingsSchema}
         onSubmit={async (values) => {
@@ -240,14 +196,6 @@ const MoviePilotModal = ({
               isDefault: values.isDefault,
               externalUrl: values.externalUrl,
               syncEnabled: values.syncEnabled,
-              activeQuality: values.activeQuality || undefined,
-              activeResolution: values.activeResolution || undefined,
-              activeEffect: values.activeEffect || undefined,
-              activeDownloader: values.activeDownloader || undefined,
-              activeSavePath: values.activeSavePath || undefined,
-              activeSites: values.activeSites,
-              activeInclude: values.activeInclude || undefined,
-              activeExclude: values.activeExclude || undefined,
             };
             if (!moviepilot) {
               await axios.post('/api/v1/settings/moviepilot', submission);
@@ -273,11 +221,6 @@ const MoviePilotModal = ({
           isSubmitting,
           isValid,
         }) => {
-          const siteOptions = (lookupData?.sites ?? []).map((site) => ({
-            value: site.id,
-            label: `${site.name}${site.domain ? ` (${site.domain})` : ''}`,
-          }));
-
           return (
             <Modal
               onCancel={onClose}
@@ -527,207 +470,6 @@ const MoviePilotModal = ({
                       id="syncEnabled"
                       name="syncEnabled"
                     />
-                  </div>
-                </div>
-                <div className="mb-3 mt-6 border-t border-gray-700 pt-4">
-                  <div className="text-lg font-semibold text-white">
-                    {intl.formatMessage(messages.requestConfigTitle)}
-                  </div>
-                  <p className="description">
-                    {intl.formatMessage(messages.requestConfigDescription)}
-                  </p>
-                </div>
-                {!isValidated && (
-                  <p className="mb-4 text-sm text-gray-400">
-                    {intl.formatMessage(globalMessages.test)}
-                  </p>
-                )}
-                <div className="form-row">
-                  <label htmlFor="activeQuality" className="text-label">
-                    {intl.formatMessage(messages.quality)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.qualityHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        id="activeQuality"
-                        name="activeQuality"
-                        type="text"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('activeQuality', e.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeResolution" className="text-label">
-                    {intl.formatMessage(messages.resolution)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.resolutionHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        id="activeResolution"
-                        name="activeResolution"
-                        type="text"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('activeResolution', e.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeEffect" className="text-label">
-                    {intl.formatMessage(messages.effect)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.effectHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        id="activeEffect"
-                        name="activeEffect"
-                        type="text"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('activeEffect', e.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeDownloader" className="text-label">
-                    {intl.formatMessage(messages.downloader)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.downloaderHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        as="select"
-                        id="activeDownloader"
-                        name="activeDownloader"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                          setFieldValue('activeDownloader', e.target.value);
-                        }}
-                      >
-                        <option value="">{''}</option>
-                        {(lookupData?.downloaders ?? []).map((client) => (
-                          <option key={client.name} value={client.name}>
-                            {client.name}
-                          </option>
-                        ))}
-                      </Field>
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeSavePath" className="text-label">
-                    {intl.formatMessage(messages.savePath)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.savePathHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        as="select"
-                        id="activeSavePath"
-                        name="activeSavePath"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                          setFieldValue('activeSavePath', e.target.value);
-                        }}
-                      >
-                        <option value="">{''}</option>
-                        {(lookupData?.paths ?? []).map((path) => (
-                          <option key={path.save_path} value={path.save_path}>
-                            {`${path.name ?? ''} (${path.save_path})`}
-                          </option>
-                        ))}
-                      </Field>
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeSites" className="text-label">
-                    {intl.formatMessage(messages.sites)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.sitesHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <Select<{ value: number; label: string }, true>
-                      name="activeSites"
-                      isMulti
-                      isDisabled={!isValidated}
-                      options={siteOptions}
-                      className="react-select-container react-select-container-dark"
-                      classNamePrefix="react-select"
-                      value={siteOptions.filter((option) =>
-                        values.activeSites.includes(option.value)
-                      )}
-                      onChange={(value) => {
-                        setFieldValue(
-                          'activeSites',
-                          (value ?? []).map((option) => option.value)
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeInclude" className="text-label">
-                    {intl.formatMessage(messages.include)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.includeHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        id="activeInclude"
-                        name="activeInclude"
-                        type="text"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('activeInclude', e.target.value);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <label htmlFor="activeExclude" className="text-label">
-                    {intl.formatMessage(messages.exclude)}
-                    <span className="label-tip">
-                      {intl.formatMessage(messages.excludeHelp)}
-                    </span>
-                  </label>
-                  <div className="form-input-area">
-                    <div className="form-input-field">
-                      <Field
-                        id="activeExclude"
-                        name="activeExclude"
-                        type="text"
-                        disabled={!isValidated}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setFieldValue('activeExclude', e.target.value);
-                        }}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>

@@ -449,32 +449,6 @@ components:
         syncEnabled:
           type: boolean
           example: false
-        activeQuality:
-          type: string
-          example: '2160p'
-        activeResolution:
-          type: string
-          example: '4K'
-        activeEffect:
-          type: string
-          example: 'HDR'
-        activeDownloader:
-          type: string
-          example: 'qb'
-        activeSavePath:
-          type: string
-          example: '/media/video/movie'
-        activeSites:
-          type: array
-          items:
-            type: number
-          example: [4, 6]
-        activeInclude:
-          type: string
-          example: ''
-        activeExclude:
-          type: string
-          example: ''
       required:
         - name
         - hostname
@@ -2384,72 +2358,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MoviePilotSettings'
-  /settings/moviepilot/{moviepilotId}/downloaders:
-    get:
-      summary: Get MoviePilot download clients
-      description: Returns the available download clients of a MoviePilot instance.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: moviepilotId
-          required: true
-          schema:
-            type: integer
-          description: MoviePilot instance ID
-      responses:
-        '200':
-          description: Download clients returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-  /settings/moviepilot/{moviepilotId}/paths:
-    get:
-      summary: Get MoviePilot download paths
-      description: Returns the available download paths of a MoviePilot instance.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: moviepilotId
-          required: true
-          schema:
-            type: integer
-          description: MoviePilot instance ID
-      responses:
-        '200':
-          description: Download paths returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-  /settings/moviepilot/{moviepilotId}/sites:
-    get:
-      summary: Get MoviePilot sites
-      description: Returns the maintained sites of a MoviePilot instance.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: moviepilotId
-          required: true
-          schema:
-            type: integer
-          description: MoviePilot instance ID
-      responses:
-        '200':
-          description: Sites returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
   /settings/public:
     get:
       summary: Get public settings

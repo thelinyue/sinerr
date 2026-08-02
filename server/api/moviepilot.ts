@@ -17,14 +17,12 @@ import { getSettings } from '@server/lib/settings';
  *   `GET /api/subscriptions?limit=1`）。
  * - `GET /api/v1/download/`       → 返回下载任务数组。
  * - `GET /api/v1/system/ping`     → 服务存活检测。
- * - `GET /api/v1/download/clients` → 可用下载器（订阅的 downloader 字段取值）。
- * - `GET /api/v1/download/paths`   → 可用下载路径（订阅的 save_path 字段取值）。
- * - `GET /api/v1/site/`            → 已维护站点列表（订阅的 sites 字段取值）。
  *
  * 写操作契约（来自 MoviePilot v2 源码 app/api/endpoints/subscribe.py）：
- * - `POST /api/v1/subscribe/` 新增订阅：请求体为 Subscribe 的公共可写字段
- *   （`tmdbid`、`media_source`、`media_id`、`type`、`name`、`year`、`season` 等），
- *   `type` 取 MediaType 枚举值：`电影` / `电视剧`；返回 `{success, message, data:{id}}`。
+ * - `POST /api/v1/subscribe/seerr` 创建订阅（OverSeerr/JellySeerr 兼容端点）：
+ *   载荷为 webhook 格式（`notification_type`/`subject`/`media`/`extra`/`request`），
+ *   订阅的 username 取自 `request.requestedBy_username`（用于显示提交者），
+ *   鉴权为 `Authorization: <API_TOKEN>` 请求头；异步创建（后台任务）。
  * - `DELETE /api/v1/subscribe/{subscribe_id}` 按订阅 ID 删除订阅。
  *   → 与 Mediary 相同，删除采用「先查列表 → 按 tmdbid/季过滤 → 逐个删除」的两步模式。
  *
@@ -60,24 +58,15 @@ export interface MoviePilotServerSettings {
 /** MoviePilot MediaType 枚举值（订阅的 `type` 字段）。 */
 const MOVIEPILOT_TYPE_MOVIE = '电影';
 const MOVIEPILOT_TYPE_TV = '电视剧';
-/** 本客户端统一使用 TMDB 作为媒体数据源。 */
-const MOVIEPILOT_MEDIA_SOURCE = 'themoviedb';
 
-export interface MoviePilotSubscribeOptions {
+export interface MoviePilotSeerrOptions {
   tmdbid: number;
   type: 'movie' | 'tv';
-  name?: string;
-  year?: number;
-  seasons?: string;
-  // 订阅级配置（对应 Sonarr/Radarr 的 profile/rootFolder/tags，来自服务器默认配置或请求级覆盖）
-  quality?: string;
-  resolution?: string;
-  effect?: string;
-  downloader?: string;
-  savePath?: string;
-  sites?: number[];
-  include?: string;
-  exclude?: string;
+  title: string;
+  /** 提交者用户名，MoviePilot 侧订阅的 username 字段会显示为该值。 */
+  username: string;
+  /** 剧集订阅的季列表（电影忽略）。 */
+  seasons?: number[];
 }
 
 /** 订阅对象中本客户端用于过滤与状态判断的最小字段集。 */
@@ -133,55 +122,52 @@ class MoviePilotAPI extends ExternalAPI {
     }
   };
 
-  public async addSubscribe(
-    options: MoviePilotSubscribeOptions
+  /**
+   * 通过 MoviePilot 的 OverSeerr/JellySeerr 兼容端点（POST /api/v1/subscribe/seerr）
+   * 创建订阅。该端点会取载荷里的 `requestedBy_username` 作为订阅的 username 字段，
+   * 因此订阅可显示为提交者（如 `sinerr(ceshi)`）。
+   *
+   * 注意：seerr 端点不支持质量/路径/站点等订阅级配置，订阅按 MoviePilot 全局默认创建；
+   * 且为异步执行（响应先返回，订阅在后台任务中创建）。
+   */
+  public async subscribeViaSeerrWebhook(
+    options: MoviePilotSeerrOptions
   ): Promise<Record<string, unknown>> {
     try {
       const payload: Record<string, unknown> = {
-        tmdbid: options.tmdbid,
-        media_source: MOVIEPILOT_MEDIA_SOURCE,
-        media_id: String(options.tmdbid),
-        type:
-          options.type === 'movie' ? MOVIEPILOT_TYPE_MOVIE : MOVIEPILOT_TYPE_TV,
-        name: options.name ?? '',
+        notification_type: 'MEDIA_APPROVED',
+        subject: options.title,
+        media: {
+          media_type: options.type,
+          tmdbId: options.tmdbid,
+        },
+        request: {
+          requestedBy_username: options.username,
+        },
       };
 
-      if (options.year) {
-        payload.year = String(options.year);
-      }
-
-      if (options.type === 'tv' && options.seasons) {
-        payload.season = Number(options.seasons);
-      }
-
-      if (options.quality) {
-        payload.quality = options.quality;
-      }
-      if (options.resolution) {
-        payload.resolution = options.resolution;
-      }
-      if (options.effect) {
-        payload.effect = options.effect;
-      }
-      if (options.downloader) {
-        payload.downloader = options.downloader;
-      }
-      if (options.savePath) {
-        payload.save_path = options.savePath;
-      }
-      if (options.sites && options.sites.length > 0) {
-        payload.sites = options.sites;
-      }
-      if (options.include) {
-        payload.include = options.include;
-      }
-      if (options.exclude) {
-        payload.exclude = options.exclude;
+      if (
+        options.type === 'tv' &&
+        options.seasons &&
+        options.seasons.length > 0
+      ) {
+        payload.extra = [
+          {
+            name: 'Requested Seasons',
+            value: options.seasons.join(', '),
+          },
+        ];
       }
 
       const response = await this.axios.post<Record<string, unknown>>(
-        '/api/v1/subscribe/',
-        payload
+        '/api/v1/subscribe/seerr',
+        payload,
+        {
+          headers: {
+            // seerr 端点鉴权：Authorization 头直接放 API_TOKEN（无 Bearer 前缀）
+            Authorization: this.apiKey,
+          },
+        }
       );
       return response.data;
     } catch (e) {
@@ -189,9 +175,12 @@ class MoviePilotAPI extends ExternalAPI {
       if (e.response?.data) {
         detail += `: ${JSON.stringify(e.response.data)}`;
       }
-      throw new Error(`[MoviePilot] Failed to add subscribe: ${detail}`, {
-        cause: e,
-      });
+      throw new Error(
+        `[MoviePilot] Failed to send seerr subscribe: ${detail}`,
+        {
+          cause: e,
+        }
+      );
     }
   }
 
@@ -323,108 +312,6 @@ class MoviePilotAPI extends ExternalAPI {
       return (wrapped.items ?? wrapped.data ?? []) as Record<string, unknown>[];
     } catch (e) {
       throw new Error(`[MoviePilot] Failed to get downloads: ${e.message}`, {
-        cause: e,
-      });
-    }
-  }
-
-  /**
-   * 查询可用下载器（对应 Sonarr/Radarr 的 quality profile 之外的下载目标选择）。
-   * 实测 `GET /api/v1/download/clients` 返回形如 `[{name: "qb", type: "qbittorrent"}]`。
-   */
-  public async getDownloadClients(): Promise<
-    { name: string; type?: string }[]
-  > {
-    try {
-      const response = await this.axios.get<
-        { name: string; type?: string } | { name: string; type?: string }[]
-      >('/api/v1/download/clients');
-
-      const data = response.data;
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return (data as { data?: { name: string; type?: string }[] }).data ?? [];
-    } catch (e) {
-      throw new Error(
-        `[MoviePilot] Failed to get download clients: ${e.message}`,
-        {
-          cause: e,
-        }
-      );
-    }
-  }
-
-  /**
-   * 查询可用下载路径（对应 Sonarr/Radarr 的 root folder 下拉）。
-   * 实测 `GET /api/v1/download/paths` 返回数组，元素含 `name`/`save_path`/`media_type`。
-   */
-  public async getDownloadPaths(): Promise<
-    { name?: string; save_path?: string; media_type?: string }[]
-  > {
-    try {
-      const response = await this.axios.get<
-        | { name?: string; save_path?: string; media_type?: string }
-        | { name?: string; save_path?: string; media_type?: string }[]
-      >('/api/v1/download/paths');
-
-      const data = response.data;
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return (
-        (
-          data as {
-            data?: { name?: string; save_path?: string; media_type?: string }[];
-          }
-        ).data ?? []
-      );
-    } catch (e) {
-      throw new Error(
-        `[MoviePilot] Failed to get download paths: ${e.message}`,
-        {
-          cause: e,
-        }
-      );
-    }
-  }
-
-  /**
-   * 查询已维护的站点列表（对应 Sonarr/Radarr 的 tag 下拉，用于限定订阅搜索范围）。
-   * 实测 `GET /api/v1/site/` 返回数组，元素含 `id`/`name`/`domain`/`is_active`。
-   */
-  public async getSiteList(): Promise<
-    { id: number; name?: string; domain?: string; is_active?: boolean }[]
-  > {
-    try {
-      const response = await this.axios.get<
-        | { id: number; name?: string; domain?: string; is_active?: boolean }
-        | {
-            id: number;
-            name?: string;
-            domain?: string;
-            is_active?: boolean;
-          }[]
-      >('/api/v1/site/');
-
-      const data = response.data;
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return (
-        (
-          data as {
-            data?: {
-              id: number;
-              name?: string;
-              domain?: string;
-              is_active?: boolean;
-            }[];
-          }
-        ).data ?? []
-      );
-    } catch (e) {
-      throw new Error(`[MoviePilot] Failed to get sites: ${e.message}`, {
         cause: e,
       });
     }
