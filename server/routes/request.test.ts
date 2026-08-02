@@ -105,7 +105,7 @@ async function seedRequest(status = MediaRequestStatus.PENDING) {
       status,
       media,
       requestedBy,
-            updatedAt: new Date('2025-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2025-03-01T00:00:00.000Z'),
     })
   );
 
@@ -158,13 +158,13 @@ describe('DELETE /request/:requestId', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: owner,
-              })
+      })
     );
 
     const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
-    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.status, 403);
   });
 
   it('prevents the owner from deleting an approved request', async () => {
@@ -173,7 +173,7 @@ describe('DELETE /request/:requestId', () => {
     const agent = await loginAs('friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
-    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.status, 403);
   });
 
   it('returns 404 for a non-existent request', async () => {
@@ -277,7 +277,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99001,
         status: MediaStatus.DELETED,
-
       })
     );
 
@@ -287,7 +286,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-                isAutoRequest: true,
+        isAutoRequest: true,
       })
     );
 
@@ -300,7 +299,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     return { media, staleRequest, newRequest, admin };
@@ -333,7 +332,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99003,
         status: MediaStatus.UNKNOWN,
-
       })
     );
 
@@ -343,7 +341,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-                isAutoRequest: true,
+        isAutoRequest: true,
       })
     );
 
@@ -356,7 +354,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -404,7 +402,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99004,
         status: MediaStatus.UNKNOWN,
-
       })
     );
 
@@ -414,7 +411,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-                isAutoRequest: true,
+        isAutoRequest: true,
       })
     );
 
@@ -427,7 +424,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.APPROVED,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -455,7 +452,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99002,
         status: MediaStatus.PENDING,
-
       })
     );
 
@@ -465,7 +461,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     await requestRepo.save(
@@ -474,7 +470,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.PENDING,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -500,7 +496,6 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         mediaType: MediaType.MOVIE,
         tmdbId: 99005,
         status: MediaStatus.PARTIALLY_AVAILABLE,
-
       })
     );
 
@@ -510,7 +505,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
         status: MediaRequestStatus.COMPLETED,
         media,
         requestedBy: admin,
-              })
+      })
     );
 
     const agent = await loginAs('admin@sinerr.dev', 'test1234');
@@ -522,8 +517,3 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     assert.strictEqual(updated.status, MediaStatus.PARTIALLY_AVAILABLE);
   });
 });
-
-
-
-
-
