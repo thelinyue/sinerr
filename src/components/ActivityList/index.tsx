@@ -1,6 +1,7 @@
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
+import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
 import { useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
@@ -18,8 +19,8 @@ import { useInView } from 'react-intersection-observer';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 import useSWR from 'swr';
 
-const messages = defineMessages('components.Discover.ActivityFeed', {
-  activity: 'Recent Activity',
+const messages = defineMessages('components.ActivityList', {
+  activity: 'Activity',
   loadmore: 'Load More',
   noactivity: 'No recent activity yet.',
   actorrequested: 'requested',
@@ -68,7 +69,7 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
   return (
     <div
       ref={ref}
-      className="flex items-center space-x-3 py-3"
+      className="flex items-center space-x-4 px-4 py-4 sm:px-6"
       data-testid="activity-item"
     >
       <Link
@@ -80,9 +81,9 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
           type="avatar"
           src={item.actor.avatar}
           alt=""
-          className="h-8 w-8 rounded-full object-cover"
-          width={32}
-          height={32}
+          className="h-10 w-10 rounded-full object-cover"
+          width={40}
+          height={40}
         />
       </Link>
       <div className="min-w-0 flex-1 text-sm text-gray-300">
@@ -129,10 +130,10 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
   );
 };
 
-const ActivityFeed = () => {
+const ActivityList = () => {
   const intl = useIntl();
   const { user } = useUser();
-  const [take, setTake] = useState(10);
+  const [take, setTake] = useState(20);
 
   const { data, error, isValidating } = useSWR<{ results: ActivityItem[] }>(
     user ? `/api/v1/activity?take=${take}` : null
@@ -140,7 +141,7 @@ const ActivityFeed = () => {
 
   if (!data && !error) {
     return (
-      <div className="flex items-center justify-center py-10">
+      <div className="flex items-center justify-center py-16">
         <LoadingSpinner />
       </div>
     );
@@ -151,36 +152,43 @@ const ActivityFeed = () => {
   }
 
   if (data.results.length === 0) {
-    return null;
+    return (
+      <>
+        <PageTitle title={intl.formatMessage(messages.activity)} />
+        <div className="rounded-lg bg-gray-800/50 p-8 text-center text-sm text-gray-500 shadow ring-1 ring-gray-700">
+          {intl.formatMessage(messages.noactivity)}
+        </div>
+      </>
+    );
   }
 
   const hasMore = data.results.length >= take;
 
   return (
-    <div className="mx-4 mb-8 rounded-lg bg-gray-800/50 p-4 shadow ring-1 ring-gray-700">
-      <div className="slider-header">
-        <div className="slider-title">
-          <span>{intl.formatMessage(messages.activity)}</span>
+    <>
+      <PageTitle title={intl.formatMessage(messages.activity)} />
+      <div className="mx-4 mb-8 max-w-4xl lg:mx-auto">
+        <div className="overflow-hidden rounded-lg bg-gray-800/50 shadow ring-1 ring-gray-700">
+          <div className="divide-y divide-gray-700/60">
+            {data.results.map((item) => (
+              <ActivityFeedItem key={`${item.type}-${item.id}`} item={item} />
+            ))}
+          </div>
         </div>
+        {hasMore && !isValidating && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              buttonType="ghost"
+              buttonSize="sm"
+              onClick={() => setTake(take + 20)}
+            >
+              {intl.formatMessage(messages.loadmore)}
+            </Button>
+          </div>
+        )}
       </div>
-      <div className="divide-y divide-gray-700/60">
-        {data.results.map((item) => (
-          <ActivityFeedItem key={`${item.type}-${item.id}`} item={item} />
-        ))}
-      </div>
-      {hasMore && !isValidating && (
-        <div className="mt-4 flex justify-center">
-          <Button
-            buttonType="ghost"
-            buttonSize="sm"
-            onClick={() => setTake(take + 10)}
-          >
-            {intl.formatMessage(messages.loadmore)}
-          </Button>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
-export default ActivityFeed;
+export default ActivityList;
