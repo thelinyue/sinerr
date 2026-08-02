@@ -344,9 +344,28 @@ settingsRoutes.get(
         filter = ['debug', 'info', 'warn', 'error'];
     }
 
-    const logFile = process.env.CONFIG_DIRECTORY
-      ? `${process.env.CONFIG_DIRECTORY}/logs/.machinelogs.json`
-      : path.join(__dirname, '../../../config/logs/.machinelogs.json');
+    const logDir = process.env.CONFIG_DIRECTORY
+      ? `${process.env.CONFIG_DIRECTORY}/logs`
+      : path.join(__dirname, '../../../config/logs');
+    const symlinkFile = path.join(logDir, 'sinerr.log');
+    let logFile = symlinkFile;
+    try {
+      fs.statSync(symlinkFile);
+    } catch {
+      const datedLogs = fs
+        .readdirSync(logDir)
+        .filter(
+          (file) => file.startsWith('sinerr-') && file.endsWith('.json')
+        )
+        .sort();
+      if (datedLogs.length === 0) {
+        return res.status(200).json({
+          pageInfo: { pages: 0, pageSize, results: 0, page: 1 },
+          results: [],
+        } as LogsResultsResponse);
+      }
+      logFile = path.join(logDir, datedLogs[datedLogs.length - 1]);
+    }
     const logMessageProperties = [
       'timestamp',
       'level',
