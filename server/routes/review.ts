@@ -110,12 +110,23 @@ reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
         .where('review.mediaId = :mediaId', { mediaId: media.id });
 
       // 目标过滤：完全匹配（季/集）
-      query.andWhere('review.seasonNumber IS :seasonNumber', {
-        seasonNumber: target.seasonNumber,
-      });
-      query.andWhere('review.episodeNumber IS :episodeNumber', {
-        episodeNumber: target.episodeNumber,
-      });
+      // 注意：null 目标必须用 IS NULL，不能用 IS :param（postgres 下参数绑定到 IS 会语法错误）
+      query.andWhere(
+        target.seasonNumber === null
+          ? 'review.seasonNumber IS NULL'
+          : 'review.seasonNumber = :seasonNumber',
+        target.seasonNumber === null
+          ? {}
+          : { seasonNumber: target.seasonNumber }
+      );
+      query.andWhere(
+        target.episodeNumber === null
+          ? 'review.episodeNumber IS NULL'
+          : 'review.episodeNumber = :episodeNumber',
+        target.episodeNumber === null
+          ? {}
+          : { episodeNumber: target.episodeNumber }
+      );
 
       const reviews = await query.orderBy('review.createdAt', 'DESC').getMany();
 

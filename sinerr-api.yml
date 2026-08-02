@@ -7100,6 +7100,100 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MoviePilotSettings'
+  /service/mediary/status:
+    get:
+      summary: Get Mediary subscription status
+      description: Returns the Mediary subscription status for a media item.
+      tags:
+        - service
+      parameters:
+        - in: query
+          name: tmdbId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: mediaType
+          required: true
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                  status:
+                    type: object
+                  error:
+                    type: boolean
+        '400':
+          description: Missing tmdbId or mediaType
+  /service/moviepilot/status:
+    get:
+      summary: Get MoviePilot subscription status
+      description: Returns the MoviePilot subscription status for a media item.
+      tags:
+        - service
+      parameters:
+        - in: query
+          name: tmdbId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: mediaType
+          required: true
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured:
+                    type: boolean
+                  status:
+                    type: object
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                  subscribed:
+                    type: boolean
+                  completed:
+                    type: boolean
+                  error:
+                    type: boolean
+        '400':
+          description: Missing tmdbId or mediaType
+  /service/moviepilot/sync:
+    post:
+      summary: Sync MoviePilot subscriptions
+      description: Imports the current MoviePilot active subscriptions as Sinerr requests. Requires the `ADMIN` permission.
+      tags:
+        - service
+      responses:
+        '200':
+          description: Imported subscription count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: number
+        '500':
+          description: Failed to sync MoviePilot subscriptions
   /regions:
     get:
       summary: Regions supported by TMDB
