@@ -3,9 +3,11 @@ import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
 import dataSource, { getRepository } from '@server/datasource';
 import Issue from '@server/entity/Issue';
+import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import { User } from '@server/entity/User';
 import { UserPushSubscription } from '@server/entity/UserPushSubscription';
+import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
 import type {
   Achievement,
   QuotaResponse,
@@ -967,5 +969,145 @@ router.get<{ id: string }, UserAchievementsResponse>(
     }
   }
 );
+
+/**
+ * 播放进度接口
+ *
+ * 返回指定用户对某部媒体（电影/剧集）的观看状态，数据来自
+ * Jellyfin/Emby 的 Playback Reporting 插件（PlaybackActivity 表）。
+ *
+ * - 电影：存在该电影的播放记录即视为已看，返回播放次数与累计时长。
+ * - 剧集：遍历该剧所有季的所有集，统计该用户看过的集数，
+ *   返回已看集数 / 总集数 / 百分比。
+ *
+ * 可见范围：本人或具备 MANAGE_USERS / MANAGE_REQUESTS 权限。
+ */
+router.get<
+  { id: string; tmdbId: string; mediaType: string },
+  PlaybackProgressResponse
+>('/:id/media/:tmdbId/:mediaType/playback', async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id);
+
+    if (
+      userId !== req.user?.id &&
+      !req.user?.hasPermission(
+        [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+        { type: 'or' }
+      )
+    ) {
+      return next({
+        status: 403,
+        message: 'You do not have permission to view this user.',
+      });
+    }
+
+    const targetUser = await getRepository(User).findOneOrFail({
+      where: { id: userId },
+    });
+
+    // 需要 Jellyfin 用户 ID 才能查询播放记录
+    if (!targetUser.jellyfinUserId) {
+      return res.status(200).json({
+        played: false,
+        playCount: 0,
+        playDurationSeconds: 0,
+      });
+    }
+
+    const settings = getSettings();
+    const mediaRepository = getRepository(Media);
+
+    const media = await mediaRepository.findOne({
+      where: {
+        tmdbId: Number(req.params.tmdbId),
+        mediaType: req.params.mediaType as Media['mediaType'],
+      },
+    });
+
+    if (!media?.jellyfinMediaId) {
+      return res.status(200).json({
+        played: false,
+        playCount: 0,
+        playDurationSeconds: 0,
+      });
+    }
+
+    const hostname = getHostname();
+    const jellyfinClient = new JellyfinAPI(
+      hostname,
+      settings.jellyfin.apiKey,
+      'BOT_sinerr',
+      settings.main.mediaServerType
+    );
+
+    const isMovie = req.params.mediaType === 'movie';
+
+    if (isMovie) {
+      const [playback] = await jellyfinClient.getUserPlaybackActivity(
+        targetUser.jellyfinUserId,
+        'Movie',
+        [media.jellyfinMediaId]
+      );
+
+      return res.status(200).json({
+        played: !!playback && playback.PlayCount > 0,
+        playCount: playback?.PlayCount ?? 0,
+        playDurationSeconds: playback?.PlayDurationSeconds ?? 0,
+      });
+    }
+
+    // 剧集：遍历所有季的所有集，收集 Episode ItemId
+    const seriesId = media.jellyfinMediaId;
+    const seasons = await jellyfinClient.getSeasons(seriesId);
+    const episodeIds: string[] = [];
+
+    for (const season of seasons) {
+      try {
+        const episodes = await jellyfinClient.getEpisodes(seriesId, season.Id);
+        episodeIds.push(...episodes.map((episode) => episode.Id));
+      } catch (e) {
+        logger.debug('Failed to fetch season episodes for playback stats', {
+          label: 'API',
+          seriesId,
+          seasonId: season.Id,
+          errorMessage: e.message,
+        });
+      }
+    }
+
+    if (episodeIds.length === 0) {
+      return res.status(200).json({
+        played: false,
+        playCount: 0,
+        playDurationSeconds: 0,
+      });
+    }
+
+    const watchedEpisodes = await jellyfinClient.getUserPlaybackActivity(
+      targetUser.jellyfinUserId,
+      'Episode',
+      episodeIds
+    );
+
+    const watchedCount = watchedEpisodes.length;
+    const totalEpisodes = episodeIds.length;
+    const watchedPercent = Math.round((watchedCount / totalEpisodes) * 100);
+
+    return res.status(200).json({
+      played: watchedCount > 0,
+      playCount: watchedEpisodes.reduce((sum, item) => sum + item.PlayCount, 0),
+      playDurationSeconds: watchedEpisodes.reduce(
+        (sum, item) => sum + item.PlayDurationSeconds,
+        0
+      ),
+      watchedEpisodes: watchedCount,
+      totalEpisodes,
+      watchedPercent,
+    });
+  } catch (e) {
+    next({ status: 404, message: e.message });
+  }
+});
 
 export default router;

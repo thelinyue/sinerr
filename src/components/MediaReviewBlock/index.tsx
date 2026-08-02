@@ -4,8 +4,14 @@ import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Tooltip from '@app/components/Common/Tooltip';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
-import { StarIcon, TrashIcon } from '@heroicons/react/24/solid';
+import {
+  CheckCircleIcon,
+  StarIcon,
+  TrashIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/solid';
 import type MediaReview from '@server/entity/MediaReview';
+import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
 import type { MediaReviewsResponse } from '@server/interfaces/api/reviewInterfaces';
 import axios from 'axios';
 import Link from 'next/link';
@@ -31,6 +37,10 @@ const messages = defineMessages('components.MediaReviewBlock', {
   episode: 'Episode {number}',
   seasonBadge: 'Season {season}',
   episodeBadge: 'S{season}E{episode}',
+  watchedMovie: 'Watched',
+  unwatchedMovie: 'Not watched',
+  watchedSeries: 'Watched {watched}/{total} episodes ({percent}%)',
+  unwatchedSeries: 'Not watched yet',
 });
 
 /** 季信息（仅用 TvDetails 已加载的字段） */
@@ -91,6 +101,13 @@ const MediaReviewBlock = ({
     mutate,
   } = useSWR<MediaReviewsResponse>(
     `/api/v1/review/${tmdbId}/${mediaType}${query}`
+  );
+
+  // 当前用户的观看进度（来自 Playback Reporting 插件）
+  const { data: playback } = useSWR<PlaybackProgressResponse>(
+    user
+      ? `/api/v1/user/${user.id}/media/${tmdbId}/${mediaType}/playback`
+      : null
   );
 
   // 选中季的集数（来自 TvDetails 已加载的 seasons）
@@ -169,6 +186,29 @@ const MediaReviewBlock = ({
           <span>{intl.formatMessage(messages.reviews)}</span>
         </div>
       </div>
+
+      {playback && (
+        <div className="mb-4 flex items-center space-x-2">
+          {playback.played ? (
+            <CheckCircleIcon className="h-5 w-5 flex-shrink-0 text-green-500" />
+          ) : (
+            <XCircleIcon className="h-5 w-5 flex-shrink-0 text-gray-500" />
+          )}
+          <span className="text-sm text-gray-300">
+            {isTv
+              ? playback.watchedEpisodes && playback.totalEpisodes
+                ? intl.formatMessage(messages.watchedSeries, {
+                    watched: playback.watchedEpisodes,
+                    total: playback.totalEpisodes,
+                    percent: playback.watchedPercent,
+                  })
+                : intl.formatMessage(messages.unwatchedSeries)
+              : playback.played
+                ? intl.formatMessage(messages.watchedMovie)
+                : intl.formatMessage(messages.unwatchedMovie)}
+          </span>
+        </div>
+      )}
 
       {isTv && !!seasons?.length && (
         <div className="mb-4 space-y-2">

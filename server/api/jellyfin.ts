@@ -165,6 +165,19 @@ export interface JellyfinPlaybackReportItem {
   PlayCount: number;
 }
 
+/**
+ * 单用户对某个媒体项的播放统计（来自 Playback Reporting 插件的 PlaybackActivity 表）
+ */
+export interface JellyfinUserPlaybackItem {
+  ItemId: string;
+  ItemName: string;
+  ItemType: string;
+  /** 播放次数 */
+  PlayCount: number;
+  /** 累计播放时长（秒，已扣除暂停） */
+  PlayDurationSeconds: number;
+}
+
 class JellyfinAPI extends ExternalAPI {
   private userId?: string;
   private mediaServerType: MediaServerType;
@@ -712,6 +725,89 @@ class JellyfinAPI extends ExternalAPI {
     } catch (e) {
       logger.error(
         `Something went wrong while getting playback report from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return [];
+    }
+  }
+
+  /**
+   * 查询指定用户对指定媒体项（按 ItemId）的播放统计
+   *
+   * 数据来自 Playback Reporting 插件的 PlaybackActivity 表：
+   * 表字段为 DateCreated / UserId / ItemId / ItemType / ItemName /
+   * PlaybackMethod / ClientName / DeviceName / PlayDuration / PauseDuration。
+   *
+   * 通过 POST /user_usage_stats/submit_custom_query 执行自定义 SQL，
+   * 按 UserId + ItemId 过滤并聚合出每个媒体项的播放次数与累计时长。
+   */
+  public async getUserPlaybackActivity(
+    userId: string,
+    itemType?: 'Movie' | 'Episode' | 'Series',
+    itemIds?: string[]
+  ): Promise<JellyfinUserPlaybackItem[]> {
+    try {
+      const conditions: string[] = ["UserId = '" + userId + "'"];
+      if (itemType) {
+        conditions.push(`ItemType = '${itemType}'`);
+      }
+      if (itemIds && itemIds.length > 0) {
+        conditions.push(
+          `ItemId IN ('${itemIds.map((id) => id.replace(/'/g, "''")).join("', '")}')`
+        );
+      }
+
+      const whereClause = `WHERE ${conditions.join(' AND ')}`;
+
+      const query = [
+        'SELECT ItemId, ItemName, ItemType, COUNT(1) AS PlayCount,',
+        'SUM(PlayDuration - PauseDuration) AS PlayDurationSeconds',
+        'FROM PlaybackActivity',
+        whereClause,
+        'GROUP BY ItemId',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      logger.info('Executing user playback activity query', {
+        label: 'Jellyfin API',
+        userId,
+        query,
+      });
+
+      const response = await this.post<{
+        colums: string[];
+        results: unknown[][];
+        message: string;
+      }>('/user_usage_stats/submit_custom_query', {
+        CustomQueryString: query,
+        ReplaceUserId: false,
+      });
+
+      if (!response?.colums || !response?.results) {
+        logger.warn('User playback activity returned unexpected format', {
+          label: 'Jellyfin API',
+          responseKeys: response ? Object.keys(response) : 'null',
+          responseType: typeof response,
+        });
+        return [];
+      }
+
+      const colIdx: Record<string, number> = {};
+      response.colums.forEach((col, i) => {
+        colIdx[col] = i;
+      });
+
+      return response.results.map((row) => ({
+        ItemId: String(row[colIdx['ItemId']] ?? ''),
+        ItemName: String(row[colIdx['ItemName']] ?? ''),
+        ItemType: String(row[colIdx['ItemType']] ?? ''),
+        PlayCount: Number(row[colIdx['PlayCount']] ?? 0),
+        PlayDurationSeconds: Number(row[colIdx['PlayDurationSeconds']] ?? 0),
+      }));
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting user playback activity from the Jellyfin/Emby server: ${e.message}`,
         { label: 'Jellyfin API', error: e.response?.status }
       );
       return [];
