@@ -81,23 +81,23 @@ const VersionStatus = ({ onClick }: VersionStatusProps) => {
         )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-100">
+        <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-gray-100">
           <span
             className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${dotClass}`}
           />
           <span className="truncate">{versionStream}</span>
-        </span>
-        <span className="mt-0.5 truncate font-mono text-[10px] leading-none text-gray-400">
-          {isLocal ? (
-            '(⌐■_■)'
-          ) : (
-            <>
-              v
-              <code className="bg-transparent p-0">
-                {data.version.replace('develop-', '')}
-              </code>
-            </>
-          )}
+          <span className="shrink-0 truncate font-mono text-[10px] font-normal leading-none text-gray-400">
+            {isLocal ? (
+              '(⌐■_■)'
+            ) : (
+              <>
+                v
+                <code className="bg-transparent p-0">
+                  {data.version.replace('develop-', '')}
+                </code>
+              </>
+            )}
+          </span>
         </span>
         {data.seerrVersion && data.seerrVersion !== 'unknown' && (
           <span className="mt-1 truncate text-[10px] leading-none text-gray-500">
