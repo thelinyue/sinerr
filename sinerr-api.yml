@@ -3165,6 +3165,32 @@ paths:
                   appDataPath:
                     type: string
                     example: /app/config
+  /settings/about/releases:
+    get:
+      summary: Get GitHub releases
+      description: Returns the latest GitHub releases for the project, proxied through the server.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Returned list of GitHub releases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    tag_name:
+                      type: string
+                    html_url:
+                      type: string
+                    body:
+                      type: string
+                    created_at:
+                      type: string
   /auth/me:
     get:
       summary: Get logged-in user
@@ -3178,7 +3204,7 @@ paths:
           content:
             application/json:
               schema:
-                 $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/User'
   /auth/jellyfin:
     post:
       summary: Sign in using a Jellyfin username and password
@@ -3515,7 +3541,7 @@ paths:
               schema:
                 type: array
                 items:
-                   $ref: '#/components/schemas/User'
+                  $ref: '#/components/schemas/User'
   /user/import-from-jellyfin:
     post:
       summary: Import all users from Jellyfin
@@ -4235,8 +4261,8 @@ paths:
               required:
                 - newPassword
       responses:
-         '204':
-           description: User password updated
+        '204':
+          description: User password updated
   /user/{userId}/settings/linked-accounts/jellyfin:
     post:
       summary: Link the provided Jellyfin account to the current user

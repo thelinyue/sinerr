@@ -28,8 +28,7 @@ const messages = defineMessages('components.Settings.SettingsAbout.Releases', {
   viewchangelog: 'View Changelog',
 });
 
-const REPO_RELEASE_API =
-  'https://api.github.com/repos/thelinyue/sinerr/releases?per_page=20';
+const REPO_RELEASE_API = '/api/v1/settings/about/releases';
 
 interface GitHubRelease {
   url: string;

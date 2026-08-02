@@ -26,6 +26,7 @@ import { appDataPath } from '@server/utils/appDataVolume';
 import { getAppVersion, getSeerrVersion } from '@server/utils/appVersion';
 import { dnsCache } from '@server/utils/dnsCache';
 import { getHostname } from '@server/utils/getHostname';
+import axios from 'axios';
 import type { DnsEntries, DnsStats } from 'dns-caching';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
@@ -346,7 +347,6 @@ settingsRoutes.get(
     const logFile = process.env.CONFIG_DIRECTORY
       ? `${process.env.CONFIG_DIRECTORY}/logs/.machinelogs.json`
       : path.join(__dirname, '../../../config/logs/.machinelogs.json');
-    const logs: LogMessage[] = [];
     const logMessageProperties = [
       'timestamp',
       'level',
@@ -401,7 +401,11 @@ settingsRoutes.get(
             leftover = lines.shift() ?? '';
           }
 
-          for (let i = lines.length - 1; i >= 0 && logs.length < targetResults; i--) {
+          for (
+            let i = lines.length - 1;
+            i >= 0 && logs.length < targetResults;
+            i--
+          ) {
             const line = lines[i];
             if (!line.length) continue;
             try {
@@ -425,7 +429,8 @@ settingsRoutes.get(
                   !deepValueStrings(logMessage.data ?? {}).some((val) =>
                     searchRegexp.test(val)
                   )
-                ) continue;
+                )
+                  continue;
               }
               logs.push(logMessage);
             } catch {
@@ -652,6 +657,38 @@ settingsRoutes.get('/about', async (req, res) => {
     tz: process.env.TZ,
     appDataPath: appDataPath(),
   } as SettingsAboutResponse);
+});
+
+const GITHUB_RELEASES_URL =
+  'https://api.github.com/repos/thelinyue/sinerr/releases?per_page=20';
+
+let githubReleasesCache: { data: unknown; ts: number } | null = null;
+const GITHUB_RELEASES_TTL = 5 * 60 * 1000;
+
+settingsRoutes.get('/about/releases', async (_req, res, next) => {
+  if (
+    githubReleasesCache &&
+    Date.now() - githubReleasesCache.ts < GITHUB_RELEASES_TTL
+  ) {
+    return res.status(200).json(githubReleasesCache.data);
+  }
+
+  try {
+    const { data } = await axios.get<unknown>(GITHUB_RELEASES_URL, {
+      timeout: getSettings().network.apiRequestTimeout,
+    });
+    githubReleasesCache = { data, ts: Date.now() };
+    return res.status(200).json(data);
+  } catch (e) {
+    logger.warn('Failed to fetch GitHub releases', {
+      label: 'Settings',
+      errorMessage: e instanceof Error ? e.message : 'Unknown error',
+    });
+    return next({
+      status: 502,
+      message: 'Unable to fetch release data from GitHub.',
+    });
+  }
 });
 
 export default settingsRoutes;
