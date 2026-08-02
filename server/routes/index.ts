@@ -33,6 +33,7 @@ let settingsPublicCache: { data: unknown; ts: number } | null = null;
 const SETTINGS_PUBLIC_TTL = 30_000;
 
 import { Router } from 'express';
+import activityRoutes from './activity';
 import authRoutes from './auth';
 import blocklistRoutes from './blocklist';
 import collectionRoutes from './collection';
@@ -71,6 +72,7 @@ router.get('/status/appdata', (_req, res) => {
 });
 
 router.use('/user', isAuthenticated(), user);
+router.use('/activity', isAuthenticated(), activityRoutes);
 router.get('/settings/public', async (req, res) => {
   const now = Date.now();
   if (

@@ -3,6 +3,7 @@ import ConfirmButton from '@app/components/Common/ConfirmButton';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
+import ActivityFeed from '@app/components/Discover/ActivityFeed';
 import MovieGenreSlider from '@app/components/Discover/MovieGenreSlider';
 import NetworkSlider from '@app/components/Discover/NetworkSlider';
 import RecentRequestsSlider from '@app/components/Discover/RecentRequestsSlider';
@@ -504,6 +505,7 @@ const Discover = () => {
           <div key={`discover-slider-${slider.id}`}>{sliderComponent}</div>
         );
       })}
+      <ActivityFeed />
     </>
   );
 };

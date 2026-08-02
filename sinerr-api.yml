@@ -971,6 +971,47 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WatchProviders'
+    ActivityFeed:
+      type: object
+      properties:
+        results:
+          type: array
+          description: Merged activity items sorted by recency
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: number
+          readOnly: true
+        type:
+          type: string
+          enum: [request, vote, issue]
+        createdAt:
+          type: string
+          format: date-time
+        actor:
+          type: object
+          properties:
+            id:
+              type: number
+            displayName:
+              type: string
+            avatar:
+              type: string
+        payload:
+          type: object
+          properties:
+            tmdbId:
+              type: number
+            mediaType:
+              type: string
+              enum: [movie, tv]
+            requestId:
+              type: number
+            issueId:
+              type: number
     MediaRequest:
       type: object
       properties:
@@ -4055,6 +4096,37 @@ paths:
                       restricted:
                         type: boolean
                         example: false
+  /activity:
+    get:
+      summary: Get activity feed
+      description: |
+        Returns the merged activity feed (recent requests, votes, and issue reports) sorted by recency.
+
+        Requires authentication. Any authenticated user can view the feed.
+      tags:
+        - activity
+      parameters:
+        - in: query
+          name: take
+          description: Number of items to return
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: skip
+          description: Number of items to skip
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeed'
   /blocklist:
     get:
       summary: Returns blocklisted items
