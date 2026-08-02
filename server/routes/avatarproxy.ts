@@ -13,6 +13,8 @@ import { createHash } from 'node:crypto';
 
 const router = Router();
 
+const DEFAULT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#4b5563"/><circle cx="100" cy="82" r="38" fill="#d1d5db"/><path d="M42 176c4-42 32-60 58-60s54 18 58 60" fill="#d1d5db"/></svg>`;
+
 let _avatarImageProxy: ImageProxy | null = null;
 
 async function initAvatarImageProxy() {
@@ -57,11 +59,14 @@ export async function checkAvatarChanged(
       return { changed: false };
     }
 
+    const settings = getSettings();
     const jellyfinAvatarUrl = getJellyfinAvatarUrl(user.jellyfinUserId);
 
     let headResponse;
     try {
-      headResponse = await axios.head(jellyfinAvatarUrl);
+      headResponse = await axios.head(jellyfinAvatarUrl, {
+        timeout: settings.network.apiRequestTimeout,
+      });
       if (headResponse.status !== 200) {
         return { changed: false };
       }
@@ -69,7 +74,6 @@ export async function checkAvatarChanged(
       return { changed: false };
     }
 
-    const settings = getSettings();
     let remoteVersion: string;
     if (settings.main.mediaServerType === MediaServerType.JELLYFIN) {
       const remoteLastModifiedStr = headResponse.headers['last-modified'] || '';
@@ -176,6 +180,11 @@ router.get('/:jellyfinUserId', async (req, res) => {
     logger.error('Failed to proxy avatar image', {
       errorMessage: e.message,
     });
+    res
+      .status(200)
+      .set('Content-Type', 'image/svg+xml')
+      .set('Cache-Control', 'public, max-age=3600')
+      .send(DEFAULT_AVATAR_SVG);
   }
 });
 

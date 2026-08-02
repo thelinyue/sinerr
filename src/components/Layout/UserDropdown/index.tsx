@@ -54,7 +54,7 @@ const UserDropdown = () => {
     const response = await axios.post('/api/v1/auth/logout');
 
     if (response.data?.status === 'ok') {
-      revalidate();
+      revalidate(undefined, false);
     }
   };
 

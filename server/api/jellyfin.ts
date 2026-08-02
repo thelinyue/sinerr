@@ -237,10 +237,6 @@ class JellyfinAPI extends ExternalAPI {
         ip: ClientIP,
       });
 
-      if (!e.response?.status) {
-        throw new ApiError(404, ApiErrorCode.InvalidUrl);
-      }
-
       if (e.response?.status === 401) {
         throw new ApiError(e.response?.status, ApiErrorCode.InvalidCredentials);
       }
@@ -261,6 +257,10 @@ class JellyfinAPI extends ExternalAPI {
           ip: ClientIP,
         }
       );
+
+      if (!e.response?.status) {
+        throw new ApiError(404, ApiErrorCode.InvalidUrl);
+      }
 
       throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
     }

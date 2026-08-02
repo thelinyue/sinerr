@@ -489,6 +489,7 @@ authRoutes.post('/logout', async (req, res, next) => {
                 : getAppVersion()
             }", Token="${settings.jellyfin.apiKey}"`,
           },
+          timeout: settings.network.apiRequestTimeout,
         })
         .catch((error) => {
           logger.error('Failed to delete Jellyfin device', {

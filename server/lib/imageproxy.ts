@@ -1,3 +1,4 @@
+import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { proxyRequestInterceptor } from '@server/utils/customProxyAgent';
 import axios, { type AxiosInstance } from 'axios';
@@ -146,6 +147,7 @@ class ImageProxy {
     this.axios = axios.create({
       baseURL: baseUrl,
       headers: options.headers,
+      timeout: getSettings().network.apiRequestTimeout,
     });
     this.axios.interceptors.request.use(proxyRequestInterceptor);
 
