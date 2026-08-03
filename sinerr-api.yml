@@ -4367,7 +4367,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [all, request, vote, issue, playback]
+            enum: [all, request, vote, issue, playback, review]
             default: all
         - in: query
           name: userId
