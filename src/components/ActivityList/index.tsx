@@ -100,35 +100,31 @@ const ActivityFeedItem = ({
   return (
     <div
       ref={ref}
-      className={`flex items-center space-x-4 px-4 py-4 sm:px-6 ${
+      className={`flex items-center gap-4 px-4 py-4 sm:gap-5 sm:px-8 sm:py-5 ${
         isMine ? 'bg-indigo-500/5' : ''
       }`}
       data-testid="activity-item"
     >
-      {/* 海报缩略图 */}
-      <Link
-        href={href}
-        className="hidden flex-shrink-0 sm:block"
-        aria-label={mediaTitle ?? ''}
-      >
+      {/* 海报缩略图（移动端缩小显示，桌面端放大） */}
+      <Link href={href} className="flex-shrink-0" aria-label={mediaTitle ?? ''}>
         <CachedImage
           type="tmdb"
           src={
             title?.posterPath
-              ? `https://image.tmdb.org/t/p/w92${title.posterPath}`
+              ? `https://image.tmdb.org/t/p/w154${title.posterPath}`
               : '/images/sinerr_poster_not_found.png'
           }
           alt=""
-          className="w-11 rounded-md object-cover"
-          width={44}
-          height={66}
+          className="h-16 w-11 rounded-md object-cover sm:h-24 sm:w-16"
+          width={64}
+          height={96}
         />
       </Link>
       {/* 头像 */}
       <button
         type="button"
         onClick={() => onFilterUser(item.actor.id)}
-        className="relative flex-shrink-0"
+        className="flex-shrink-0"
         aria-label={item.actor.displayName}
         title={item.actor.displayName}
       >
@@ -136,24 +132,24 @@ const ActivityFeedItem = ({
           type="avatar"
           src={item.actor.avatar}
           alt=""
-          className={`h-10 w-10 rounded-full object-cover ${
+          className={`h-10 w-10 rounded-full object-cover sm:h-14 sm:w-14 ${
             isMine ? 'ring-2 ring-indigo-400' : ''
           }`}
-          width={40}
-          height={40}
+          width={56}
+          height={56}
         />
       </button>
-      <div className="min-w-0 flex-1 text-sm text-gray-300">
-        <div className="min-w-0 truncate">
+      <div className="min-w-0 flex-1 text-sm text-gray-300 sm:text-base">
+        <div className="flex flex-wrap items-baseline gap-x-1.5">
           <span className="font-semibold text-white">
             {item.actor.displayName}
           </span>
           {isMine && (
-            <span className="ml-1.5 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">
+            <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">
               {intl.formatMessage(messages.me)}
             </span>
-          )}{' '}
-          {verb}{' '}
+          )}
+          <span>{verb}</span>
           {mediaTitle ? (
             <Link
               href={href}
@@ -167,7 +163,7 @@ const ActivityFeedItem = ({
             </span>
           )}
         </div>
-        <div className="mt-0.5 text-xs text-gray-500">
+        <div className="mt-1 text-xs text-gray-500 sm:text-sm">
           <FormattedRelativeTime
             value={Math.floor(
               (new Date(item.createdAt).getTime() - Date.now()) / 1000
@@ -179,14 +175,14 @@ const ActivityFeedItem = ({
       </div>
       <div className="flex-shrink-0 text-gray-500">
         {item.type === 'vote' ? (
-          <HeartIcon className="h-5 w-5 text-pink-500" />
+          <HeartIcon className="h-6 w-6 text-pink-500" />
         ) : item.type === 'issue' ? (
-          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+          <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
         ) : item.type === 'playback' ? (
-          <PlayIcon className="h-5 w-5 text-green-500" />
+          <PlayIcon className="h-6 w-6 text-green-500" />
         ) : (
           <Tooltip content={intl.formatMessage(messages.activity)}>
-            <TicketIcon className="h-5 w-5 text-indigo-400" />
+            <TicketIcon className="h-6 w-6 text-indigo-400" />
           </Tooltip>
         )}
       </div>
@@ -264,15 +260,15 @@ const ActivityList = () => {
   return (
     <>
       <PageTitle title={intl.formatMessage(messages.activity)} />
-      <div className="mx-4 mb-8 max-w-4xl lg:mx-auto">
+      <div className="mb-8 px-4 sm:px-8">
         {/* 类型过滤 tabs */}
-        <div className="hide-scrollbar mb-4 flex items-center space-x-2 overflow-x-auto">
+        <div className="hide-scrollbar mb-6 flex items-center space-x-2 overflow-x-auto">
           {typeTabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setFilter({ type: tab.key })}
-              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium ring-1 transition ${
                 activeType === tab.key
                   ? 'bg-indigo-600 text-white ring-indigo-500'
                   : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
@@ -321,7 +317,7 @@ const ActivityList = () => {
               </div>
             </div>
             {data.results.length >= take && !isValidating && (
-              <div className="mt-4 flex justify-center">
+              <div className="mt-6 flex justify-center">
                 <Button
                   buttonType="ghost"
                   buttonSize="sm"
