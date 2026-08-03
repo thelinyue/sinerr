@@ -1,10 +1,10 @@
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import {
+  CheckBadgeIcon,
   HeartIcon,
-  ShieldCheckIcon,
+  SparklesIcon,
   StarIcon,
-  TicketIcon,
   TrophyIcon,
 } from '@heroicons/react/24/solid';
 import type { Achievement } from '@server/interfaces/api/userInterfaces';
@@ -39,32 +39,32 @@ const badgeMeta: Record<
   requester10: {
     name: messages.requester10,
     description: messages.requester10Description,
-    icon: <TicketIcon className="h-5 w-5" />,
+    icon: <SparklesIcon className="h-5 w-5 text-sky-400" />,
   },
   requester50: {
     name: messages.requester50,
     description: messages.requester50Description,
-    icon: <TicketIcon className="h-5 w-5" />,
+    icon: <SparklesIcon className="h-5 w-5 text-sky-400" />,
   },
   requester100: {
     name: messages.requester100,
     description: messages.requester100Description,
-    icon: <StarIcon className="h-5 w-5" />,
+    icon: <StarIcon className="h-5 w-5 text-amber-400" />,
   },
   voted5: {
     name: messages.voted5,
     description: messages.voted5Description,
-    icon: <HeartIcon className="h-5 w-5" />,
+    icon: <HeartIcon className="h-5 w-5 text-pink-400" />,
   },
   voted25: {
     name: messages.voted25,
     description: messages.voted25Description,
-    icon: <HeartIcon className="h-5 w-5" />,
+    icon: <HeartIcon className="h-5 w-5 text-pink-400" />,
   },
   helper3: {
     name: messages.helper3,
     description: messages.helper3Description,
-    icon: <ShieldCheckIcon className="h-5 w-5" />,
+    icon: <CheckBadgeIcon className="h-5 w-5 text-green-400" />,
   },
 };
 
