@@ -2,6 +2,7 @@ import type { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Issue from '@server/entity/Issue';
 import { MediaRequest } from '@server/entity/MediaRequest';
+import MediaReview from '@server/entity/MediaReview';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
@@ -126,6 +127,50 @@ async function collectIssues(
 }
 
 /**
+ * 媒体短评聚合
+ *
+ * 与请求/声援/Issue 一致：按 createdAt 倒序拉取，输出评分与短评内容。
+ * 可见性：短评发表需 REQUEST 权限，属于「表达意向」类社交行为，默认登录可见。
+ */
+async function collectReviews(
+  take: number,
+  userId?: number
+): Promise<ActivityItem[]> {
+  const reviewRepository = getRepository(MediaReview);
+  let query = reviewRepository
+    .createQueryBuilder('review')
+    .leftJoinAndSelect('review.user', 'user')
+    .leftJoinAndSelect('review.media', 'media')
+    .orderBy('review.createdAt', 'DESC')
+    .take(take);
+
+  if (userId) {
+    query = query.andWhere('user.id = :userId', { userId });
+  }
+
+  const reviews = await query.getMany();
+
+  return reviews.map((review) => ({
+    id: review.id,
+    type: 'review' as const,
+    createdAt: review.createdAt,
+    actor: {
+      id: review.user.id,
+      displayName: review.user.displayName,
+      avatar: review.user.avatar,
+    },
+    payload: {
+      tmdbId: review.media.tmdbId,
+      mediaType: review.media.mediaType as MediaType,
+      rating: review.rating,
+      message: review.message,
+      seasonNumber: review.seasonNumber,
+      episodeNumber: review.episodeNumber,
+    },
+  }));
+}
+
+/**
  * 播放记录聚合
  *
  * 可见性规则（隐私）：
@@ -189,6 +234,7 @@ async function collectPlayback(
       tmdbId: event.tmdbId,
       mediaType: event.mediaType as MediaType,
       completed: event.completed,
+      durationSeconds: event.durationSeconds,
       seasonNumber: event.seasonNumber,
       episodeNumber: event.episodeNumber,
     },
@@ -232,6 +278,12 @@ activityRoutes.get<Record<string, string>, ActivityResponse>(
         collectors.push({
           type: 'playback',
           run: () => collectPlayback(pageSize + skip, req.user, userId),
+        });
+      }
+      if (typeFilter === 'all' || typeFilter === 'review') {
+        collectors.push({
+          type: 'review',
+          run: () => collectReviews(pageSize + skip, userId),
         });
       }
 

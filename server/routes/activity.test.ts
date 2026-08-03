@@ -9,6 +9,7 @@ import {
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
+import MediaReview from '@server/entity/MediaReview';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
@@ -181,6 +182,7 @@ describe('GET /activity playback records', () => {
         tmdbId: 77701,
         mediaType: MediaType.MOVIE,
         completed: true,
+        durationSeconds: 3600,
       }),
       new PlaybackEvent({
         user: friend,
@@ -189,6 +191,7 @@ describe('GET /activity playback records', () => {
         completed: false,
         seasonNumber: 1,
         episodeNumber: 2,
+        durationSeconds: 1800,
       }),
     ]);
 
@@ -210,6 +213,19 @@ describe('GET /activity playback records', () => {
       (item: { payload: { completed: boolean } }) => item.payload.completed
     );
     assert.strictEqual(completed.payload.tmdbId, 77701);
+
+    // 剧集播放记录带集数信息
+    const tvPlayback = playback.find(
+      (item: { payload: { tmdbId: number } }) => item.payload.tmdbId === 77702
+    );
+    assert.strictEqual(tvPlayback.payload.seasonNumber, 1);
+    assert.strictEqual(tvPlayback.payload.episodeNumber, 2);
+
+    // 播放时长字段
+    const moviePlayback = playback.find(
+      (item: { payload: { tmdbId: number } }) => item.payload.tmdbId === 77701
+    );
+    assert.strictEqual(moviePlayback.payload.durationSeconds, 3600);
   });
 
   it('filters by type=playback', async () => {
@@ -288,6 +304,86 @@ describe('GET /activity playback records', () => {
     assert.ok(
       res.body.results.every(
         (item: { actor: { id: number } }) => item.actor.id === friend.id
+      )
+    );
+  });
+});
+
+describe('GET /activity review records', () => {
+  async function seedReview() {
+    const userRepo = getRepository(User);
+    const mediaRepo = getRepository(Media);
+    const reviewRepo = getRepository(MediaReview);
+
+    const admin = await userRepo.findOneOrFail({
+      where: { email: 'admin@sinerr.dev' },
+    });
+
+    const media = await mediaRepo.save(
+      new Media({
+        mediaType: MediaType.TV,
+        tmdbId: 77703,
+        status: MediaStatus.UNKNOWN,
+      })
+    );
+
+    await reviewRepo.save(
+      new MediaReview({
+        media,
+        user: admin,
+        rating: 5,
+        message: '非常好看！',
+        seasonNumber: 1,
+        episodeNumber: 2,
+      })
+    );
+
+    return { admin };
+  }
+
+  it('includes media reviews in the merged feed with rating and message', async () => {
+    await seedReview();
+
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get('/activity');
+
+    assert.strictEqual(res.status, 200);
+    const review = res.body.results.find(
+      (item: { type: string }) => item.type === 'review'
+    );
+    assert.ok(review, 'expected a review item in the feed');
+    assert.strictEqual(review.payload.tmdbId, 77703);
+    assert.strictEqual(review.payload.mediaType, 'tv');
+    assert.strictEqual(review.payload.rating, 5);
+    assert.strictEqual(review.payload.message, '非常好看！');
+    assert.strictEqual(review.payload.seasonNumber, 1);
+    assert.strictEqual(review.payload.episodeNumber, 2);
+  });
+
+  it('filters by type=review', async () => {
+    await seedReview();
+
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get('/activity?type=review');
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.results.length >= 1);
+    assert.ok(
+      res.body.results.every((item: { type: string }) => item.type === 'review')
+    );
+  });
+
+  it('filters reviews by userId', async () => {
+    const { admin } = await seedReview();
+
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get(`/activity?type=review&userId=${admin.id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.results.length >= 1);
+    assert.ok(
+      res.body.results.every(
+        (item: { actor: { id: number } }) => item.actor.id === admin.id
       )
     );
   });

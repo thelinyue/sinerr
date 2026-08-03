@@ -225,6 +225,81 @@ async function handlePlaybackEvent(
   }
 
   const playbackEventRepository = getRepository(PlaybackEvent);
+
+  // 播放记录去重：同一用户重复观看同一媒体（剧集或电影）时不刷屏。
+  // 剧集维度 = user + tmdbId + tv；电影维度 = user + tmdbId + movie。
+  // 重复播放规则：
+  // - 已看完的内容再次播放 → 忽略（不刷新时间）
+  // - 仍未看完再次播放 → 忽略（避免反复 stop 把记录顶到动态流顶部）
+  // - 从未看完 → 看完 → 更新完成状态并刷新时间
+  // 剧集额外支持：播放到新的一集时，推进为最新集并刷新时间。
+  if (mediaType === MediaType.TV || mediaType === MediaType.MOVIE) {
+    const existing = await playbackEventRepository.findOne({
+      where: { user: { id: user.id }, tmdbId, mediaType },
+    });
+    if (existing) {
+      // 剧集播放到新的一集：正常推进为最新集
+      const isNewTvEpisode =
+        mediaType === MediaType.TV &&
+        !(
+          existing.seasonNumber === seasonNumber &&
+          existing.episodeNumber === episodeNumber
+        );
+
+      if (isNewTvEpisode) {
+        existing.completed = completed;
+        existing.durationSeconds = durationSeconds;
+        existing.seasonNumber = seasonNumber;
+        existing.episodeNumber = episodeNumber;
+        existing.createdAt = new Date();
+        await playbackEventRepository.save(existing);
+
+        logger.info('Updated latest playback event for series', {
+          label: 'Webhook',
+          event,
+          tmdbId,
+          completed,
+          durationSeconds,
+          seasonNumber,
+          episodeNumber,
+          user: user.displayName,
+        });
+        return;
+      }
+
+      // 同一部电影或同一集重复播放：
+      // 已看完再次播放、或仍未看完再次播放 → 忽略；
+      // 仅「从未看完 → 看完」更新完成状态并刷新时间
+      if (existing.completed || !completed) {
+        logger.debug('Skipping repeat playback event', {
+          label: 'Webhook',
+          event,
+          tmdbId,
+          mediaType,
+          seasonNumber,
+          episodeNumber,
+          user: user.displayName,
+        });
+        return;
+      }
+
+      existing.completed = true;
+      existing.durationSeconds = durationSeconds;
+      existing.createdAt = new Date();
+      await playbackEventRepository.save(existing);
+
+      logger.info('Marked media as completed on repeat play', {
+        label: 'Webhook',
+        event,
+        tmdbId,
+        mediaType,
+        durationSeconds,
+        user: user.displayName,
+      });
+      return;
+    }
+  }
+
   await playbackEventRepository.save(
     new PlaybackEvent({
       user,

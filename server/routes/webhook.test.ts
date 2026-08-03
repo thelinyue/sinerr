@@ -197,4 +197,207 @@ describe('POST /webhook/emby', () => {
     // PositionTicks 25000000000 / 10000000 = 2500 秒
     assert.strictEqual(event.durationSeconds, 2500);
   });
+
+  it('keeps only the latest playback record per series for the same user', async () => {
+    const userRepo = getRepository(User);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+    friend.jellyfinUserId = 'dedupe-user-1';
+    await userRepo.save(friend);
+
+    // 同一用户连续观看同一剧集的 S01E01、S01E02
+    for (const ep of [1, 2]) {
+      const res = await request(app)
+        .post('/webhook/emby')
+        .send({
+          Event: 'playback.stop',
+          UserId: 'dedupe-user-1',
+          ItemType: 'Episode',
+          Name: `Some Episode ${ep}`,
+          Provider_tmdb: '88888',
+          SeasonNumber: 1,
+          EpisodeNumber: ep,
+          PlayedToCompletion: true,
+        });
+      assert.strictEqual(res.status, 204);
+    }
+
+    const events = await getRepository(PlaybackEvent)
+      .createQueryBuilder('event')
+      .where('event.tmdbId = :tmdbId', { tmdbId: 88888 })
+      .getMany();
+    assert.strictEqual(events.length, 1, '同一剧集应只保留一条播放记录');
+    assert.strictEqual(events[0].episodeNumber, 2);
+    assert.strictEqual(events[0].completed, true);
+  });
+
+  it('does not refresh the timestamp when the same episode is replayed', async () => {
+    const userRepo = getRepository(User);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+    friend.jellyfinUserId = 'dedupe-user-3';
+    await userRepo.save(friend);
+
+    const send = () =>
+      request(app).post('/webhook/emby').send({
+        Event: 'playback.stop',
+        UserId: 'dedupe-user-3',
+        ItemType: 'Episode',
+        Name: 'Same Episode',
+        Provider_tmdb: '88889',
+        SeasonNumber: 1,
+        EpisodeNumber: 3,
+        PlayedToCompletion: true,
+      });
+
+    const res1 = await send();
+    assert.strictEqual(res1.status, 204);
+
+    const repo = getRepository(PlaybackEvent);
+    const first = await repo.findOneOrFail({
+      where: { tmdbId: 88889 },
+    });
+    const firstCreatedAt = first.createdAt.getTime();
+
+    // 稍作等待后再重复播放同一集
+    await new Promise((r) => setTimeout(r, 20));
+    const res2 = await send();
+    assert.strictEqual(res2.status, 204);
+
+    const events = await repo.find({ where: { tmdbId: 88889 } });
+    assert.strictEqual(events.length, 1, '重复播放同一集不应新增记录');
+    assert.strictEqual(
+      events[0].createdAt.getTime(),
+      firstCreatedAt,
+      '已看完的同一集重复播放不应刷新时间'
+    );
+  });
+
+  it('marks a partially watched episode as completed on repeat play', async () => {
+    const userRepo = getRepository(User);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+    friend.jellyfinUserId = 'dedupe-user-4';
+    await userRepo.save(friend);
+
+    // 第一次未看完
+    await request(app).post('/webhook/emby').send({
+      Event: 'playback.stop',
+      UserId: 'dedupe-user-4',
+      ItemType: 'Episode',
+      Name: 'Some Episode',
+      Provider_tmdb: '88890',
+      SeasonNumber: 2,
+      EpisodeNumber: 5,
+      PlayedToCompletion: false,
+    });
+
+    const repo = getRepository(PlaybackEvent);
+    const partial = await repo.findOneOrFail({ where: { tmdbId: 88890 } });
+    assert.strictEqual(partial.completed, false);
+    const partialCreatedAt = partial.createdAt.getTime();
+
+    // 第二次看完：应更新完成状态并刷新时间
+    await new Promise((r) => setTimeout(r, 20));
+    await request(app).post('/webhook/emby').send({
+      Event: 'playback.stop',
+      UserId: 'dedupe-user-4',
+      ItemType: 'Episode',
+      Name: 'Some Episode',
+      Provider_tmdb: '88890',
+      SeasonNumber: 2,
+      EpisodeNumber: 5,
+      PlayedToCompletion: true,
+    });
+
+    const completed = await repo.findOneOrFail({ where: { tmdbId: 88890 } });
+    assert.strictEqual(completed.completed, true);
+    assert.notStrictEqual(
+      completed.createdAt.getTime(),
+      partialCreatedAt,
+      '从未看完到看完应刷新时间'
+    );
+  });
+
+  it('does not refresh the timestamp when the same movie is replayed', async () => {
+    const userRepo = getRepository(User);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+    friend.jellyfinUserId = 'dedupe-user-2';
+    await userRepo.save(friend);
+
+    const send = () =>
+      request(app).post('/webhook/emby').send({
+        Event: 'playback.stop',
+        UserId: 'dedupe-user-2',
+        ItemType: 'Movie',
+        Name: 'Some Movie',
+        Provider_tmdb: '77777',
+        PlayedToCompletion: true,
+      });
+
+    const res1 = await send();
+    assert.strictEqual(res1.status, 204);
+
+    const repo = getRepository(PlaybackEvent);
+    const first = await repo.findOneOrFail({ where: { tmdbId: 77777 } });
+    const firstCreatedAt = first.createdAt.getTime();
+
+    await new Promise((r) => setTimeout(r, 20));
+    const res2 = await send();
+    assert.strictEqual(res2.status, 204);
+
+    const events = await repo.find({ where: { tmdbId: 77777 } });
+    assert.strictEqual(events.length, 1, '重复播放同一部电影不应新增记录');
+    assert.strictEqual(
+      events[0].createdAt.getTime(),
+      firstCreatedAt,
+      '已看完的电影重复播放不应刷新时间'
+    );
+  });
+
+  it('marks a partially watched movie as completed on replay', async () => {
+    const userRepo = getRepository(User);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+    friend.jellyfinUserId = 'dedupe-user-5';
+    await userRepo.save(friend);
+
+    await request(app).post('/webhook/emby').send({
+      Event: 'playback.stop',
+      UserId: 'dedupe-user-5',
+      ItemType: 'Movie',
+      Name: 'Some Movie',
+      Provider_tmdb: '77778',
+      PlayedToCompletion: false,
+    });
+
+    const repo = getRepository(PlaybackEvent);
+    const partial = await repo.findOneOrFail({ where: { tmdbId: 77778 } });
+    assert.strictEqual(partial.completed, false);
+    const partialCreatedAt = partial.createdAt.getTime();
+
+    await new Promise((r) => setTimeout(r, 20));
+    await request(app).post('/webhook/emby').send({
+      Event: 'playback.stop',
+      UserId: 'dedupe-user-5',
+      ItemType: 'Movie',
+      Name: 'Some Movie',
+      Provider_tmdb: '77778',
+      PlayedToCompletion: true,
+    });
+
+    const completed = await repo.findOneOrFail({ where: { tmdbId: 77778 } });
+    assert.strictEqual(completed.completed, true);
+    assert.notStrictEqual(
+      completed.createdAt.getTime(),
+      partialCreatedAt,
+      '电影从未看完到看完应刷新时间'
+    );
+  });
 });

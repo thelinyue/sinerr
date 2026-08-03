@@ -1054,7 +1054,7 @@ components:
           readOnly: true
         type:
           type: string
-          enum: [request, vote, issue, playback]
+          enum: [request, vote, issue, playback, review]
         createdAt:
           type: string
           format: date-time
@@ -1082,12 +1082,21 @@ components:
             completed:
               type: boolean
               description: Whether the playback was completed (playback records only)
+            durationSeconds:
+              type: number
+              description: Watch duration in seconds (playback records only)
             seasonNumber:
               type: number
               nullable: true
             episodeNumber:
               type: number
               nullable: true
+            rating:
+              type: number
+              description: Star rating 1-5 (review records only)
+            message:
+              type: string
+              description: Short review content (review records only)
     MediaRequest:
       type: object
       properties:
@@ -4310,7 +4319,7 @@ paths:
     get:
       summary: Get activity feed
       description: |
-        Returns the merged activity feed (recent requests, votes, issues, and playback records) sorted by recency.
+        Returns the merged activity feed (recent requests, votes, issues, playback records, and media reviews) sorted by recency.
 
         Playback records are public by default but can be hidden by the user; administrators always see them.
 
