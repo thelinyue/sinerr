@@ -1655,6 +1655,8 @@
   "components.UserProfile.seriesrequest": "Series Requests",
   "components.UserProfile.watchtimeToday": "Watched Today",
   "components.UserProfile.watchtimeTotal": "Total Watch Time",
+  "components.UserProfile.recentlyWatched": "Recently Watched",
+  "components.UserProfile.noRecentlyWatched": "No playback records yet.",
   "components.UserProfile.totalrequests": "Total Requests",
   "components.UserProfile.unlimited": "Unlimited",
   "components.UserProfile.UserSettings.LinkJellyfinModal.description": "Enter your {mediaServerName} credentials to link your account with {applicationName}.",

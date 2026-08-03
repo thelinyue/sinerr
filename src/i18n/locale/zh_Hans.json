@@ -365,6 +365,8 @@
   "components.UserProfile.seriesrequest": "电视节目请求",
   "components.UserProfile.watchtimeToday": "今日观看时长",
   "components.UserProfile.watchtimeTotal": "累计观看时长",
+  "components.UserProfile.recentlyWatched": "最近观看",
+  "components.UserProfile.noRecentlyWatched": "暂无播放记录。",
   "components.UserProfile.requestsperdays": "剩余 {limit}",
   "components.UserProfile.recentrequests": "最新请求",
   "components.UserProfile.pastdays": "{type}（前 {days} 天）",

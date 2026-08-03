@@ -1,3 +1,4 @@
+import CachedImage from '@app/components/Common/CachedImage';
 import ImageFader from '@app/components/Common/ImageFader';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
@@ -12,6 +13,7 @@ import defineMessages from '@app/utils/defineMessages';
 import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import type {
   QuotaResponse,
+  RecentlyWatchedItem,
   UserRequestsResponse,
   UserWatchTimeResponse,
 } from '@server/interfaces/api/userInterfaces';
@@ -34,6 +36,8 @@ const messages = defineMessages('components.UserProfile', {
   seriesrequest: 'Series Requests',
   watchtimeToday: 'Watched Today',
   watchtimeTotal: 'Total Watch Time',
+  recentlyWatched: 'Recently Watched',
+  noRecentlyWatched: 'No playback records yet.',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -46,6 +50,52 @@ const formatDuration = (totalSeconds: number): string => {
   }
   const display = hours % 1 === 0 ? Math.round(hours) : hours;
   return `${display}h`;
+};
+
+/** 最近观看单条海报卡片：懒加载媒体详情拿海报与标题 */
+const RecentlyWatchedCard = ({ item }: { item: RecentlyWatchedItem }) => {
+  const url =
+    item.mediaType === 'movie'
+      ? `/api/v1/movie/${item.tmdbId}`
+      : `/api/v1/tv/${item.tmdbId}`;
+  const { data } = useSWR<MovieDetails | TvDetails>(url);
+  const href =
+    item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
+  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
+    (m as MovieDetails).title !== undefined;
+  const title = data ? (isMovie(data) ? data.title : data.name) : null;
+
+  return (
+    <Link href={href} className="w-28 flex-shrink-0 sm:w-32">
+      <div className="relative">
+        <CachedImage
+          type="tmdb"
+          src={
+            data?.posterPath
+              ? `https://image.tmdb.org/t/p/w342${data.posterPath}`
+              : '/images/sinerr_poster_not_found.png'
+          }
+          alt=""
+          className="h-40 w-28 rounded-lg object-cover sm:h-48 sm:w-32"
+          width={128}
+          height={192}
+        />
+        {item.completed && (
+          <span className="absolute right-1 top-1 rounded bg-green-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            ✓
+          </span>
+        )}
+        {item.mediaType === 'tv' && item.episodeNumber != null && (
+          <span className="absolute bottom-1 left-1 rounded bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-200">
+            {item.seasonNumber != null
+              ? `S${item.seasonNumber}E${item.episodeNumber}`
+              : `E${item.episodeNumber}`}
+          </span>
+        )}
+      </div>
+      <div className="mt-1 line-clamp-1 text-xs text-gray-300">{title}</div>
+    </Link>
+  );
 };
 
 const UserProfile = () => {
@@ -87,6 +137,17 @@ const UserProfile = () => {
           { type: 'or' }
         ))
       ? `/api/v1/user/${user.id}/watchtime`
+      : null
+  );
+
+  const { data: recentlyWatched } = useSWR<{ results: RecentlyWatchedItem[] }>(
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user.id}/recently-watched`
       : null
   );
 
@@ -337,6 +398,31 @@ const UserProfile = () => {
             />
           </>
         )}
+
+      {recentlyWatched && !!recentlyWatched.results.length && (
+        <div className="relative z-40 mt-8">
+          <div className="slider-header">
+            <div className="slider-title">
+              <span>{intl.formatMessage(messages.recentlyWatched)}</span>
+            </div>
+          </div>
+          <Slider
+            sliderKey="recently-watched"
+            isLoading={!recentlyWatched}
+            isEmpty={recentlyWatched.results.length === 0}
+            emptyMessage={intl.formatMessage(messages.noRecentlyWatched)}
+            items={recentlyWatched.results.map((item) => (
+              <RecentlyWatchedCard
+                key={`recently-watched-${item.mediaType}-${item.tmdbId}`}
+                item={item}
+              />
+            ))}
+            placeholder={
+              <div className="h-40 w-28 animate-pulse rounded-lg bg-gray-800 sm:h-48 sm:w-32" />
+            }
+          />
+        </div>
+      )}
     </>
   );
 };

@@ -63,7 +63,7 @@ const IssueBlock = ({ issue }: IssueBlockProps) => {
           </div>
         </div>
         <div className="ml-2 flex flex-shrink-0 flex-wrap">
-          <Link href={`/issues/${issue.id}`} passHref legacyBehavior>
+          <Link href={`/issues/${issue.id}`}>
             <Button buttonType="primary" as="a">
               <EyeIcon />
             </Button>

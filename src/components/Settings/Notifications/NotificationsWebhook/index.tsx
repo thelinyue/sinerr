@@ -364,11 +364,7 @@ const NotificationsWebhook = () => {
             </div>
             {values.supportVariables && (
               <div className="mt-2">
-                <Link
-                  href="https://docs.sinerr.dev/using-sinerr/notifications/webhook#template-variables"
-                  passHref
-                  legacyBehavior
-                >
+                <Link href="https://docs.sinerr.dev/using-sinerr/notifications/webhook#template-variables">
                   <Button
                     as="a"
                     buttonSize="sm"
@@ -532,11 +528,7 @@ const NotificationsWebhook = () => {
                     <ArrowPathIcon />
                     <span>{intl.formatMessage(messages.resetPayload)}</span>
                   </Button>
-                  <Link
-                    href="https://docs.sinerr.dev/using-sinerr/notifications/webhook#template-variables"
-                    passHref
-                    legacyBehavior
-                  >
+                  <Link href="https://docs.sinerr.dev/using-sinerr/notifications/webhook#template-variables">
                     <Button
                       as="a"
                       buttonSize="sm"

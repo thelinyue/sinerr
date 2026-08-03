@@ -52,3 +52,27 @@ export interface Achievement {
 export interface UserAchievementsResponse {
   results: Achievement[];
 }
+
+/**
+ * 用户最近观看条目（来自 PlaybackEvent 时间倒序）
+ */
+export interface RecentlyWatchedItem {
+  /** 媒体 tmdbId */
+  tmdbId: number;
+  /** 媒体类型 */
+  mediaType: 'movie' | 'tv';
+  /** 是否看完 */
+  completed: boolean;
+  /** 观看时长（秒） */
+  durationSeconds: number;
+  /** 剧集：季号 */
+  seasonNumber?: number | null;
+  /** 剧集：集号 */
+  episodeNumber?: number | null;
+  /** 观看时间 */
+  createdAt: Date;
+}
+
+export interface RecentlyWatchedResponse {
+  results: RecentlyWatchedItem[];
+}

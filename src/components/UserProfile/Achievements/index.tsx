@@ -70,17 +70,25 @@ const badgeMeta: Record<
 
 const Achievements = ({ userId }: { userId: number }) => {
   const intl = useIntl();
-  const { user: currentUser, hasPermission } = useUser();
+  const { user: currentUser, hasPermission, loading } = useUser();
 
+  // 当前用户未就绪时不要急于判定无权（否则页面导航瞬间 canView 会误判为
+  // false 导致组件隐藏，表现为「刷新显示一下就消失」的抖动）
   const canView =
     userId === currentUser?.id ||
-    hasPermission([Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS], {
-      type: 'or',
-    });
+    (currentUser &&
+      hasPermission([Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS], {
+        type: 'or',
+      }));
 
   const { data } = useSWR<{ results: Achievement[] }>(
     canView ? `/api/v1/user/${userId}/achievements` : null
   );
+
+  // 等 currentUser 就绪后再决定是否隐藏，避免闪现抖动
+  if (loading) {
+    return null;
+  }
 
   if (!data || data.results.length === 0) {
     return null;

@@ -124,6 +124,36 @@ components:
           type: number
           example: 864000
           description: Total watch time in seconds.
+    RecentlyWatched:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentlyWatchedItem'
+    RecentlyWatchedItem:
+      type: object
+      properties:
+        tmdbId:
+          type: number
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        completed:
+          type: boolean
+          description: Whether the media was finished.
+        durationSeconds:
+          type: number
+          description: Watch duration in seconds.
+        seasonNumber:
+          type: number
+          nullable: true
+        episodeNumber:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
     UserAchievements:
       type: object
       properties:
@@ -4246,6 +4276,31 @@ paths:
                       restricted:
                         type: boolean
                         example: false
+  /user/{userId}/recently-watched:
+    get:
+      summary: Get recently watched media
+      description: |
+        Returns the user's recently watched media, newest first, from local
+        playback records (PlaybackEvent).
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Recently watched items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentlyWatched'
+        '403':
+          description: Not permitted to view this user's recently watched items
   /user/{userId}/watchtime:
     get:
       summary: Get user watch time

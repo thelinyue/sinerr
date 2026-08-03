@@ -12,6 +12,7 @@ import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackIn
 import type {
   Achievement,
   QuotaResponse,
+  RecentlyWatchedResponse,
   UserAchievementsResponse,
   UserRequestsResponse,
   UserResultsResponse,
@@ -966,6 +967,56 @@ router.get<{ id: string }, UserAchievementsResponse>(
       }));
 
       return res.status(200).json({ results });
+    } catch (e) {
+      next({ status: 404, message: e.message });
+    }
+  }
+);
+
+/**
+ * 用户最近观看记录
+ *
+ * 数据源为本地 PlaybackEvent（webhook 写入，按 user+tmdbId 保存最新播放），
+ * 按 createdAt 时间倒序返回。可见范围：本人或 MANAGE_USERS / MANAGE_REQUESTS。
+ */
+router.get<{ id: string }, RecentlyWatchedResponse>(
+  '/:id/recently-watched',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const events = await getRepository(PlaybackEvent)
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.user', 'user')
+        .where('user.id = :userId', { userId })
+        .orderBy('event.createdAt', 'DESC')
+        .take(24)
+        .getMany();
+
+      return res.status(200).json({
+        results: events.map((event) => ({
+          tmdbId: event.tmdbId,
+          mediaType: event.mediaType,
+          completed: event.completed,
+          durationSeconds: event.durationSeconds,
+          seasonNumber: event.seasonNumber,
+          episodeNumber: event.episodeNumber,
+          createdAt: event.createdAt,
+        })),
+      });
     } catch (e) {
       next({ status: 404, message: e.message });
     }
