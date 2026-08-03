@@ -3,19 +3,27 @@ import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
+import type { User } from '@app/hooks/useUser';
 import { useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import {
   ExclamationTriangleIcon,
   HeartIcon,
+  PlayIcon,
   TicketIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/solid';
-import type { ActivityItem } from '@server/interfaces/api/activityInterfaces';
+import type {
+  ActivityItem,
+  ActivityType,
+} from '@server/interfaces/api/activityInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useMemo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
+import type { MessageDescriptor } from 'react-intl';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 import useSWR from 'swr';
 
@@ -26,7 +34,17 @@ const messages = defineMessages('components.ActivityList', {
   actorrequested: 'requested',
   actorvoted: 'also wants',
   actorissue: 'reported an issue for',
+  actorplayback: 'watched',
+  actorplaybackpartial: 'is watching',
   loadFailed: 'Unable to load activity.',
+  filterAll: 'All',
+  filterRequest: 'Requests',
+  filterVote: 'Votes',
+  filterIssue: 'Issues',
+  filterPlayback: 'Playback',
+  filterByUser: 'Filtering by {name}',
+  clearFilter: 'Clear',
+  me: 'me',
 });
 
 const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
@@ -35,9 +53,15 @@ const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
 
 interface ActivityFeedItemProps {
   item: ActivityItem;
+  currentUserId?: number;
+  onFilterUser: (userId: number) => void;
 }
 
-const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
+const ActivityFeedItem = ({
+  item,
+  currentUserId,
+  onFilterUser,
+}: ActivityFeedItemProps) => {
   const intl = useIntl();
   const { ref, inView } = useInView({ triggerOnce: true });
   const url = item.payload.tmdbId
@@ -54,6 +78,7 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
     item.payload.mediaType === 'movie'
       ? `/movie/${item.payload.tmdbId}`
       : `/tv/${item.payload.tmdbId}`;
+  const isMine = currentUserId === item.actor.id;
 
   const verb = (() => {
     switch (item.type) {
@@ -63,34 +88,71 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
         return intl.formatMessage(messages.actorvoted);
       case 'issue':
         return intl.formatMessage(messages.actorissue);
+      case 'playback':
+        return intl.formatMessage(
+          item.payload.completed
+            ? messages.actorplayback
+            : messages.actorplaybackpartial
+        );
     }
   })();
 
   return (
     <div
       ref={ref}
-      className="flex items-center space-x-4 px-4 py-4 sm:px-6"
+      className={`flex items-center space-x-4 px-4 py-4 sm:px-6 ${
+        isMine ? 'bg-indigo-500/5' : ''
+      }`}
       data-testid="activity-item"
     >
+      {/* 海报缩略图 */}
       <Link
-        href={`/users/${item.actor.id}`}
-        className="flex-shrink-0"
+        href={href}
+        className="hidden flex-shrink-0 sm:block"
+        aria-label={mediaTitle ?? ''}
+      >
+        <CachedImage
+          type="tmdb"
+          src={
+            title?.posterPath
+              ? `https://image.tmdb.org/t/p/w92${title.posterPath}`
+              : '/images/sinerr_poster_not_found.png'
+          }
+          alt=""
+          className="w-11 rounded-md object-cover"
+          width={44}
+          height={66}
+        />
+      </Link>
+      {/* 头像 */}
+      <button
+        type="button"
+        onClick={() => onFilterUser(item.actor.id)}
+        className="relative flex-shrink-0"
         aria-label={item.actor.displayName}
+        title={item.actor.displayName}
       >
         <CachedImage
           type="avatar"
           src={item.actor.avatar}
           alt=""
-          className="h-10 w-10 rounded-full object-cover"
+          className={`h-10 w-10 rounded-full object-cover ${
+            isMine ? 'ring-2 ring-indigo-400' : ''
+          }`}
           width={40}
           height={40}
         />
-      </Link>
+      </button>
       <div className="min-w-0 flex-1 text-sm text-gray-300">
         <div className="min-w-0 truncate">
           <span className="font-semibold text-white">
             {item.actor.displayName}
-          </span>{' '}
+          </span>
+          {isMine && (
+            <span className="ml-1.5 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">
+              {intl.formatMessage(messages.me)}
+            </span>
+          )}{' '}
           {verb}{' '}
           {mediaTitle ? (
             <Link
@@ -120,6 +182,8 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
           <HeartIcon className="h-5 w-5 text-pink-500" />
         ) : item.type === 'issue' ? (
           <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+        ) : item.type === 'playback' ? (
+          <PlayIcon className="h-5 w-5 text-green-500" />
         ) : (
           <Tooltip content={intl.formatMessage(messages.activity)}>
             <TicketIcon className="h-5 w-5 text-indigo-400" />
@@ -130,14 +194,60 @@ const ActivityFeedItem = ({ item }: ActivityFeedItemProps) => {
   );
 };
 
+const typeTabs: { key: ActivityType | 'all'; label: MessageDescriptor }[] = [
+  { key: 'all', label: messages.filterAll },
+  { key: 'request', label: messages.filterRequest },
+  { key: 'vote', label: messages.filterVote },
+  { key: 'issue', label: messages.filterIssue },
+  { key: 'playback', label: messages.filterPlayback },
+];
+
 const ActivityList = () => {
   const intl = useIntl();
   const { user } = useUser();
+  const router = useRouter();
   const [take, setTake] = useState(20);
 
-  const { data, error, isValidating } = useSWR<{ results: ActivityItem[] }>(
-    user ? `/api/v1/activity?take=${take}` : null
+  const activeType = (router.query.type as ActivityType | 'all') ?? 'all';
+  const filterUserId = router.query.userId
+    ? Number(router.query.userId)
+    : undefined;
+
+  const { data: filterUser } = useSWR<User>(
+    filterUserId ? `/api/v1/user/${filterUserId}` : null
   );
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('take', String(take));
+    if (activeType !== 'all') {
+      params.set('type', activeType);
+    }
+    if (filterUserId) {
+      params.set('userId', String(filterUserId));
+    }
+    return params.toString();
+  }, [take, activeType, filterUserId]);
+
+  const { data, error, isValidating } = useSWR<{ results: ActivityItem[] }>(
+    user ? `/api/v1/activity?${query}` : null
+  );
+
+  const setFilter = (updates: {
+    type?: ActivityType | 'all';
+    userId?: number | null;
+  }) => {
+    const params = new URLSearchParams();
+    const type = updates.type ?? activeType;
+    if (type !== 'all') {
+      params.set('type', type);
+    }
+    if (updates.userId) {
+      params.set('userId', String(updates.userId));
+    }
+    const qs = params.toString();
+    router.push({ pathname: '/activity', query: qs || undefined });
+  };
 
   if (!data && !error) {
     return (
@@ -151,40 +261,77 @@ const ActivityList = () => {
     return null;
   }
 
-  if (data.results.length === 0) {
-    return (
-      <>
-        <PageTitle title={intl.formatMessage(messages.activity)} />
-        <div className="rounded-lg bg-gray-800/50 p-8 text-center text-sm text-gray-500 shadow ring-1 ring-gray-700">
-          {intl.formatMessage(messages.noactivity)}
-        </div>
-      </>
-    );
-  }
-
-  const hasMore = data.results.length >= take;
-
   return (
     <>
       <PageTitle title={intl.formatMessage(messages.activity)} />
       <div className="mx-4 mb-8 max-w-4xl lg:mx-auto">
-        <div className="overflow-hidden rounded-lg bg-gray-800/50 shadow ring-1 ring-gray-700">
-          <div className="divide-y divide-gray-700/60">
-            {data.results.map((item) => (
-              <ActivityFeedItem key={`${item.type}-${item.id}`} item={item} />
-            ))}
-          </div>
+        {/* 类型过滤 tabs */}
+        <div className="hide-scrollbar mb-4 flex items-center space-x-2 overflow-x-auto">
+          {typeTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilter({ type: tab.key })}
+              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
+                activeType === tab.key
+                  ? 'bg-indigo-600 text-white ring-indigo-500'
+                  : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+              }`}
+            >
+              {intl.formatMessage(tab.label)}
+            </button>
+          ))}
         </div>
-        {hasMore && !isValidating && (
-          <div className="mt-4 flex justify-center">
+
+        {/* 用户筛选提示 */}
+        {filterUserId && (
+          <div className="mb-4 flex items-center space-x-2 text-sm text-gray-300">
+            <span>
+              {intl.formatMessage(messages.filterByUser, {
+                name: filterUser?.displayName ?? `#${filterUserId}`,
+              })}
+            </span>
             <Button
               buttonType="ghost"
               buttonSize="sm"
-              onClick={() => setTake(take + 20)}
+              onClick={() => setFilter({ userId: null })}
             >
-              {intl.formatMessage(messages.loadmore)}
+              <XMarkIcon className="h-4 w-4" />
+              <span>{intl.formatMessage(messages.clearFilter)}</span>
             </Button>
           </div>
+        )}
+
+        {data.results.length === 0 ? (
+          <div className="rounded-lg bg-gray-800/50 p-8 text-center text-sm text-gray-500 shadow ring-1 ring-gray-700">
+            {intl.formatMessage(messages.noactivity)}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-hidden rounded-lg bg-gray-800/50 shadow ring-1 ring-gray-700">
+              <div className="divide-y divide-gray-700/60">
+                {data.results.map((item) => (
+                  <ActivityFeedItem
+                    key={`${item.type}-${item.id}`}
+                    item={item}
+                    currentUserId={user?.id}
+                    onFilterUser={(uid) => setFilter({ userId: uid })}
+                  />
+                ))}
+              </div>
+            </div>
+            {data.results.length >= take && !isValidating && (
+              <div className="mt-4 flex justify-center">
+                <Button
+                  buttonType="ghost"
+                  buttonSize="sm"
+                  onClick={() => setTake(take + 20)}
+                >
+                  {intl.formatMessage(messages.loadmore)}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

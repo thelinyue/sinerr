@@ -70,6 +70,10 @@ export class UserSettings {
   @Column({ nullable: true })
   public pushoverSound?: string;
 
+  /** 播放记录是否公开（动态信息流可见）；默认公开，管理员始终可见 */
+  @Column({ nullable: true, default: true })
+  public playbackVisible?: boolean;
+
   @Column({ nullable: true })
   public telegramChatId?: string;
 

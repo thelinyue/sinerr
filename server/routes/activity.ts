@@ -2,27 +2,40 @@ import type { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Issue from '@server/entity/Issue';
 import { MediaRequest } from '@server/entity/MediaRequest';
+import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
+import { User } from '@server/entity/User';
 import type {
   ActivityItem,
   ActivityResponse,
+  ActivityType,
 } from '@server/interfaces/api/activityInterfaces';
+import { Permission } from '@server/lib/permissions';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
+
 const activityRoutes = Router();
 
 /**
  * 拉取某一类动作的最新记录，并统一为 ActivityItem 结构
  */
-async function collectRequests(take: number): Promise<ActivityItem[]> {
+async function collectRequests(
+  take: number,
+  userId?: number
+): Promise<ActivityItem[]> {
   const requestRepository = getRepository(MediaRequest);
-  const requests = await requestRepository
+  let query = requestRepository
     .createQueryBuilder('request')
     .leftJoinAndSelect('request.requestedBy', 'requestedBy')
     .leftJoinAndSelect('request.media', 'media')
     .orderBy('request.createdAt', 'DESC')
-    .take(take)
-    .getMany();
+    .take(take);
+
+  if (userId) {
+    query = query.andWhere('requestedBy.id = :userId', { userId });
+  }
+
+  const requests = await query.getMany();
 
   return requests.map((request) => ({
     id: request.id,
@@ -41,16 +54,24 @@ async function collectRequests(take: number): Promise<ActivityItem[]> {
   }));
 }
 
-async function collectVotes(take: number): Promise<ActivityItem[]> {
+async function collectVotes(
+  take: number,
+  userId?: number
+): Promise<ActivityItem[]> {
   const requestVoteRepository = getRepository(RequestVote);
-  const votes = await requestVoteRepository
+  let query = requestVoteRepository
     .createQueryBuilder('vote')
     .leftJoinAndSelect('vote.user', 'user')
     .leftJoinAndSelect('vote.request', 'request')
     .leftJoinAndSelect('request.media', 'media')
     .orderBy('vote.createdAt', 'DESC')
-    .take(take)
-    .getMany();
+    .take(take);
+
+  if (userId) {
+    query = query.andWhere('user.id = :userId', { userId });
+  }
+
+  const votes = await query.getMany();
 
   return votes.map((vote) => ({
     id: vote.id,
@@ -69,15 +90,23 @@ async function collectVotes(take: number): Promise<ActivityItem[]> {
   }));
 }
 
-async function collectIssues(take: number): Promise<ActivityItem[]> {
+async function collectIssues(
+  take: number,
+  userId?: number
+): Promise<ActivityItem[]> {
   const issueRepository = getRepository(Issue);
-  const issues = await issueRepository
+  let query = issueRepository
     .createQueryBuilder('issue')
     .leftJoinAndSelect('issue.createdBy', 'createdBy')
     .leftJoinAndSelect('issue.media', 'media')
     .orderBy('issue.createdAt', 'DESC')
-    .take(take)
-    .getMany();
+    .take(take);
+
+  if (userId) {
+    query = query.andWhere('createdBy.id = :userId', { userId });
+  }
+
+  const issues = await query.getMany();
 
   return issues.map((issue) => ({
     id: issue.id,
@@ -96,6 +125,76 @@ async function collectIssues(take: number): Promise<ActivityItem[]> {
   }));
 }
 
+/**
+ * 播放记录聚合
+ *
+ * 可见性规则（隐私）：
+ * - 播放记录属于「默认全站可见」，但用户可以关闭（settings.playbackVisible = false）
+ * - 管理员（MANAGE_USERS）始终可见所有播放记录
+ * - 本人始终可见自己的播放记录
+ * - 通过 userId 过滤时，仅当请求者是目标用户本人或管理员时返回播放记录
+ */
+async function collectPlayback(
+  take: number,
+  viewer: User | undefined,
+  userId?: number
+): Promise<ActivityItem[]> {
+  const playbackRepository = getRepository(PlaybackEvent);
+
+  let query = playbackRepository
+    .createQueryBuilder('event')
+    .leftJoinAndSelect('event.user', 'user')
+    .orderBy('event.createdAt', 'DESC')
+    .take(take);
+
+  // 播放记录可见性过滤：
+  // 1. 未指定 userId：默认全站可见，但排除已关闭 playbackVisible 的用户；
+  //    管理员查看时不过滤
+  // 2. 指定 userId：仅本人或管理员可查看该用户的播放记录
+  const isAdmin = viewer?.hasPermission(Permission.MANAGE_USERS);
+
+  if (userId) {
+    // 仅本人或管理员可查指定用户的播放记录
+    if (!isAdmin && viewer?.id !== userId) {
+      return [];
+    }
+    query = query.andWhere('user.id = :userId', { userId });
+  } else if (!isAdmin) {
+    // 非管理员：排除关闭播放可见性的用户
+    const hiddenUserIds = (
+      await getRepository(User).find({
+        where: { settings: { playbackVisible: false } },
+        select: ['id'],
+      })
+    ).map((u) => u.id);
+    if (hiddenUserIds.length > 0) {
+      query = query.andWhere('user.id NOT IN (:...hiddenUserIds)', {
+        hiddenUserIds,
+      });
+    }
+  }
+
+  const events = await query.getMany();
+
+  return events.map((event) => ({
+    id: event.id,
+    type: 'playback' as const,
+    createdAt: event.createdAt,
+    actor: {
+      id: event.user.id,
+      displayName: event.user.displayName,
+      avatar: event.user.avatar,
+    },
+    payload: {
+      tmdbId: event.tmdbId,
+      mediaType: event.mediaType as MediaType,
+      completed: event.completed,
+      seasonNumber: event.seasonNumber,
+      episodeNumber: event.episodeNumber,
+    },
+  }));
+}
+
 activityRoutes.get<Record<string, string>, ActivityResponse>(
   '/',
   isAuthenticated(),
@@ -103,18 +202,48 @@ activityRoutes.get<Record<string, string>, ActivityResponse>(
     try {
       const pageSize = req.query.take ? Number(req.query.take) : 20;
       const skip = req.query.skip ? Number(req.query.skip) : 0;
+      const typeFilter = (req.query.type as ActivityType | undefined) ?? 'all';
+      const userId = req.query.userId ? Number(req.query.userId) : undefined;
 
-      const [requests, votes, issues] = await Promise.all([
-        collectRequests(pageSize + skip),
-        collectVotes(pageSize + skip),
-        collectIssues(pageSize + skip),
-      ]);
+      const collectors: {
+        type: ActivityType;
+        run: () => Promise<ActivityItem[]>;
+      }[] = [];
+
+      if (typeFilter === 'all' || typeFilter === 'request') {
+        collectors.push({
+          type: 'request',
+          run: () => collectRequests(pageSize + skip, userId),
+        });
+      }
+      if (typeFilter === 'all' || typeFilter === 'vote') {
+        collectors.push({
+          type: 'vote',
+          run: () => collectVotes(pageSize + skip, userId),
+        });
+      }
+      if (typeFilter === 'all' || typeFilter === 'issue') {
+        collectors.push({
+          type: 'issue',
+          run: () => collectIssues(pageSize + skip, userId),
+        });
+      }
+      if (typeFilter === 'all' || typeFilter === 'playback') {
+        collectors.push({
+          type: 'playback',
+          run: () => collectPlayback(pageSize + skip, req.user, userId),
+        });
+      }
+
+      const results = await Promise.all(collectors.map((c) => c.run()));
 
       // 按时间归并排序后截取当前页
-      const merged = [...requests, ...votes, ...issues].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const merged = results
+        .flat()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
 
       return res.status(200).json({
         results: merged.slice(skip, skip + pageSize),

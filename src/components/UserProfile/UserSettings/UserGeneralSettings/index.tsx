@@ -57,6 +57,9 @@ const messages = defineMessages(
     originallanguageTip: 'Filter content by original language',
     streamingRegion: 'Streaming Region',
     streamingRegionTip: 'Show streaming sites by regional availability',
+    playbackVisible: 'Show My Watch History',
+    playbackVisibleTip:
+      'Show my playback records in the activity feed. Administrators always see them.',
     movierequestlimit: 'Movie Request Limit',
     seriesrequestlimit: 'Series Request Limit',
     enableOverride: 'Override Global Limit',
@@ -138,6 +141,8 @@ const UserGeneralSettings = () => {
           discoverRegion: data?.discoverRegion,
           streamingRegion: data?.streamingRegion,
           originalLanguage: data?.originalLanguage,
+          playbackVisible:
+            data?.playbackVisible !== undefined ? data.playbackVisible : true,
           movieQuotaLimit: data?.movieQuotaLimit,
           movieQuotaDays: data?.movieQuotaDays,
           tvQuotaLimit: data?.tvQuotaLimit,
@@ -155,6 +160,7 @@ const UserGeneralSettings = () => {
               discoverRegion: values.discoverRegion,
               streamingRegion: values.streamingRegion,
               originalLanguage: values.originalLanguage,
+              playbackVisible: values.playbackVisible,
               movieQuotaLimit: movieQuotaEnabled
                 ? values.movieQuotaLimit
                 : null,
@@ -404,6 +410,31 @@ const UserGeneralSettings = () => {
                       regionType="streaming"
                       disableAll
                     />
+                  </div>
+                </div>
+              </div>
+              <div className="form-row">
+                <label htmlFor="playbackVisible" className="text-label">
+                  <span>{intl.formatMessage(messages.playbackVisible)}</span>
+                  <span className="label-tip">
+                    {intl.formatMessage(messages.playbackVisibleTip)}
+                  </span>
+                </label>
+                <div className="form-input-area">
+                  <div className="flex items-center">
+                    <input
+                      id="playbackVisible"
+                      name="playbackVisible"
+                      type="checkbox"
+                      checked={!!values.playbackVisible}
+                      onChange={(e) =>
+                        setFieldValue('playbackVisible', e.target.checked)
+                      }
+                      className="rounded border-gray-600"
+                    />
+                    <span className="ml-2 text-gray-300">
+                      {intl.formatMessage(messages.playbackVisible)}
+                    </span>
                   </div>
                 </div>
               </div>

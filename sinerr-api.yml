@@ -207,6 +207,10 @@ components:
           type: string
           nullable: true
           example: 'en'
+        playbackVisible:
+          type: boolean
+          nullable: true
+          description: 'Whether playback records are shown in the activity feed. Public by default; admins always see them.'
         movieQuotaLimit:
           type: number
           nullable: true
@@ -1039,7 +1043,7 @@ components:
           readOnly: true
         type:
           type: string
-          enum: [request, vote, issue]
+          enum: [request, vote, issue, playback]
         createdAt:
           type: string
           format: date-time
@@ -1064,6 +1068,15 @@ components:
               type: number
             issueId:
               type: number
+            completed:
+              type: boolean
+              description: Whether the playback was completed (playback records only)
+            seasonNumber:
+              type: number
+              nullable: true
+            episodeNumber:
+              type: number
+              nullable: true
     MediaRequest:
       type: object
       properties:
@@ -4261,7 +4274,9 @@ paths:
     get:
       summary: Get activity feed
       description: |
-        Returns the merged activity feed (recent requests, votes, and issue reports) sorted by recency.
+        Returns the merged activity feed (recent requests, votes, issues, and playback records) sorted by recency.
+
+        Playback records are public by default but can be hidden by the user; administrators always see them.
 
         Requires authentication. Any authenticated user can view the feed.
       tags:
@@ -4281,6 +4296,20 @@ paths:
           schema:
             type: integer
             default: 0
+        - in: query
+          name: type
+          description: Filter activity by type
+          required: false
+          schema:
+            type: string
+            enum: [all, request, vote, issue, playback]
+            default: all
+        - in: query
+          name: userId
+          description: Filter activity by a specific user. Playback records for other users are only visible to admins.
+          required: false
+          schema:
+            type: number
       responses:
         '200':
           description: Activity feed

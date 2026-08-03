@@ -53,6 +53,7 @@ userSettingsRoutes.get<{ id: string }, UserSettingsGeneralResponse>(
         discoverRegion: user.settings?.discoverRegion,
         streamingRegion: user.settings?.streamingRegion,
         originalLanguage: user.settings?.originalLanguage,
+        playbackVisible: user.settings?.playbackVisible,
         movieQuotaLimit: user.movieQuotaLimit,
         movieQuotaDays: user.movieQuotaDays,
         tvQuotaLimit: user.tvQuotaLimit,
@@ -125,12 +126,19 @@ userSettingsRoutes.post<
         discoverRegion: req.body.discoverRegion,
         streamingRegion: req.body.streamingRegion,
         originalLanguage: req.body.originalLanguage,
+        playbackVisible:
+          req.body.playbackVisible !== undefined
+            ? req.body.playbackVisible
+            : true,
       });
     } else {
       user.settings.locale = req.body.locale;
       user.settings.discoverRegion = req.body.discoverRegion;
       user.settings.streamingRegion = req.body.streamingRegion;
       user.settings.originalLanguage = req.body.originalLanguage;
+      if (req.body.playbackVisible !== undefined) {
+        user.settings.playbackVisible = req.body.playbackVisible;
+      }
     }
 
     const savedUser = await userRepository.save(user);
@@ -142,6 +150,7 @@ userSettingsRoutes.post<
       discoverRegion: savedUser.settings?.discoverRegion,
       streamingRegion: savedUser.settings?.streamingRegion,
       originalLanguage: savedUser.settings?.originalLanguage,
+      playbackVisible: savedUser.settings?.playbackVisible,
       email: savedUser.email ?? undefined,
     });
   } catch (e) {

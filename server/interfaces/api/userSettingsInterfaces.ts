@@ -8,6 +8,7 @@ export interface UserSettingsGeneralResponse {
   discoverRegion?: string;
   streamingRegion?: string;
   originalLanguage?: string;
+  playbackVisible?: boolean;
   movieQuotaLimit?: number;
   movieQuotaDays?: number;
   tvQuotaLimit?: number;
