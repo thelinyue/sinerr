@@ -34,37 +34,18 @@ const messages = defineMessages('components.UserProfile', {
   seriesrequest: 'Series Requests',
   watchtimeToday: 'Watched Today',
   watchtimeTotal: 'Total Watch Time',
-  watchtimeHours: '{count, plural, one {# hour} other {# hours}}',
-  watchtimeMinutes: '{count, plural, one {# minute} other {# minutes}}',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
 
-/** 把秒数格式化为「x小时 y分钟」，不足一小时只显示分钟 */
-const formatDuration = (
-  intl: ReturnType<typeof useIntl>,
-  totalSeconds: number
-): string => {
-  const totalMinutes = Math.round(totalSeconds / 60);
-  if (totalMinutes < 1) {
-    return '0m';
+/** 把秒数格式化为小时（保留一位小数），不足 0.1 小时显示为 0.1h */
+const formatDuration = (totalSeconds: number): string => {
+  const hours = Math.round((totalSeconds / 3600) * 10) / 10;
+  if (hours < 0.1) {
+    return '0.1h';
   }
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours === 0) {
-    return intl.formatMessage(messages.watchtimeMinutes, {
-      count: minutes,
-    });
-  }
-  const hoursText = intl.formatMessage(messages.watchtimeHours, {
-    count: hours,
-  });
-  if (minutes === 0) {
-    return hoursText;
-  }
-  return `${hoursText} ${intl.formatMessage(messages.watchtimeMinutes, {
-    count: minutes,
-  })}`;
+  const display = hours % 1 === 0 ? Math.round(hours) : hours;
+  return `${display}h`;
 };
 
 const UserProfile = () => {
@@ -304,7 +285,7 @@ const UserProfile = () => {
                   {intl.formatMessage(messages.watchtimeToday)}
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-white">
-                  {formatDuration(intl, watchTime.todaySeconds)}
+                  {formatDuration(watchTime.todaySeconds)}
                 </dd>
               </div>
               <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
@@ -312,7 +293,7 @@ const UserProfile = () => {
                   {intl.formatMessage(messages.watchtimeTotal)}
                 </dt>
                 <dd className="mt-1 text-3xl font-semibold text-white">
-                  {formatDuration(intl, watchTime.totalSeconds)}
+                  {formatDuration(watchTime.totalSeconds)}
                 </dd>
               </div>
             </dl>
