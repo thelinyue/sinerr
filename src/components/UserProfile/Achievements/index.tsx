@@ -86,8 +86,6 @@ const Achievements = ({ userId }: { userId: number }) => {
     return null;
   }
 
-  const earned = data.results.filter((b) => b.earned);
-
   return (
     <div className="mt-6">
       <div className="flex items-center space-x-2 text-gray-300">
@@ -127,12 +125,6 @@ const Achievements = ({ userId }: { userId: number }) => {
             </div>
           );
         })}
-        {earned.length === 0 && (
-          <span className="text-sm text-gray-500">
-            {intl.formatMessage(messages.achievements)} —{' '}
-            {intl.formatMessage(messages.requester10Description)}
-          </span>
-        )}
       </div>
     </div>
   );
