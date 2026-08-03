@@ -22,12 +22,12 @@ import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
 import type { MessageDescriptor } from 'react-intl';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
 import useSWR from 'swr';
-
+import useSWRInfinite from 'swr/infinite';
 const messages = defineMessages('components.ActivityList', {
   activity: 'Activity',
   loadmore: 'Load More',
@@ -295,12 +295,12 @@ const dayDiff = (date: Date): number => {
   return Math.round((startOfToday.getTime() - target.getTime()) / 86400000);
 };
 
+const PAGE_SIZE = 20;
+
 const ActivityList = () => {
   const intl = useIntl();
   const { user } = useUser();
   const router = useRouter();
-  const [take, setTake] = useState(20);
-  const [hasMore, setHasMore] = useState(true);
 
   const activeType = (router.query.type as ActivityType | 'all') ?? 'all';
   const filterUserId = router.query.userId
@@ -311,23 +311,45 @@ const ActivityList = () => {
     filterUserId ? `/api/v1/user/${filterUserId}` : null
   );
 
-  const query = useMemo(() => {
+  // 实时刷新：每 60s 静默轮询，新动作自动出现
+  // 无限滚动：固定页大小（take=20）+ skip 分页，useSWRInfinite 自动累积追加
+  const getKey = (pageIndex: number): string | null => {
+    if (!user) {
+      return null;
+    }
     const params = new URLSearchParams();
-    params.set('take', String(take));
+    params.set('take', String(PAGE_SIZE));
+    params.set('skip', String(pageIndex * PAGE_SIZE));
     if (activeType !== 'all') {
       params.set('type', activeType);
     }
     if (filterUserId) {
       params.set('userId', String(filterUserId));
     }
-    return params.toString();
-  }, [take, activeType, filterUserId]);
+    return `/api/v1/activity?${params.toString()}`;
+  };
 
-  // 实时刷新：每 60s 静默轮询，新动作自动出现
-  const { data, error, isValidating } = useSWR<{ results: ActivityItem[] }>(
-    user ? `/api/v1/activity?${query}` : null,
-    { refreshInterval: 60000, revalidateOnFocus: true }
+  const { data, error, isValidating, size, setSize } = useSWRInfinite<{
+    results: ActivityItem[];
+  }>(getKey, {
+    refreshInterval: 60000,
+    revalidateOnFocus: true,
+  });
+
+  // 累积追加的所有条目（各页 results 平铺）
+  const allItems = useMemo(
+    () => data?.flatMap((page) => page.results) ?? [],
+    [data]
   );
+
+  // 还有更多：最后加载的一页返回了满页数据
+  const lastPage = data?.[data.length - 1];
+  const hasMore = (lastPage?.results.length ?? 0) >= PAGE_SIZE;
+
+  // 过滤条件变化时重置分页（key 变化后 useSWRInfinite 自动从第一页开始）
+  useEffect(() => {
+    setSize(1);
+  }, [activeType, filterUserId, setSize]);
 
   const setFilter = (updates: {
     type?: ActivityType | 'all';
@@ -345,21 +367,16 @@ const ActivityList = () => {
     router.push({ pathname: '/activity', query: qs || undefined });
   };
 
-  // 无限滚动：列表底部 sentinel 进入视口时加载更多
-  // useInView 返回 [ref, inView] 元组，inView 才是布尔值
+  // 无限滚动：列表底部 sentinel 进入视口时加载下一页
   const [sentinelRef, sentinelInView] = useInView({
     rootMargin: '200px',
-    skip: !hasMore || !data?.results.length,
+    skip: !hasMore || allItems.length === 0,
   });
   useEffect(() => {
-    if (sentinelInView && !isValidating && data?.results.length) {
-      setTake((t) => t + 20);
+    if (sentinelInView && hasMore && !isValidating) {
+      setSize((s) => s + 1);
     }
-  }, [sentinelInView, isValidating, data?.results.length]);
-
-  useEffect(() => {
-    setHasMore((data?.results.length ?? 0) >= take);
-  }, [data?.results.length, take]);
+  }, [sentinelInView, hasMore, isValidating, setSize]);
 
   // 日期分组：今天 / 昨天 / 更早
   const grouped = useMemo(() => {
@@ -368,13 +385,13 @@ const ActivityList = () => {
       { label: messages.yesterday, items: [] },
       { label: messages.earlier, items: [] },
     ];
-    for (const item of data?.results ?? []) {
+    for (const item of allItems) {
       const diff = dayDiff(new Date(item.createdAt));
       const idx = diff <= 0 ? 0 : diff === 1 ? 1 : 2;
       groups[idx].items.push(item);
     }
     return groups.filter((g) => g.items.length > 0);
-  }, [data?.results]);
+  }, [allItems]);
 
   if (!data && !error) {
     return (
@@ -507,7 +524,7 @@ const ActivityList = () => {
             ))}
             {/* 无限滚动 sentinel */}
             <div ref={sentinelRef} className="mt-4" />
-            {isValidating && take > 20 && (
+            {isValidating && size > 1 && (
               <div className="flex items-center justify-center py-4">
                 <LoadingSpinner />
               </div>
