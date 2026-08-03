@@ -998,6 +998,32 @@ router.get<{ id: string }, UserWatchTimeResponse>(
         });
       }
 
+      const targetUser = await getRepository(User).findOneOrFail({
+        where: { id: userId },
+      });
+
+      // 优先从 Playback Report 插件读取（含历史数据）
+      if (targetUser.jellyfinUserId) {
+        const settings = getSettings();
+        const hostname = getHostname();
+        const jellyfinClient = new JellyfinAPI(
+          hostname,
+          settings.jellyfin.apiKey,
+          'BOT_sinerr',
+          settings.main.mediaServerType
+        );
+        const pluginWatchTime = await jellyfinClient.getUserWatchTime(
+          targetUser.jellyfinUserId
+        );
+        // 插件返回 0 无法区分「没数据」还是「无插件」；若配置了插件但查询失败，
+        // 方法内部已返回 0 并记日志。为兼容未装插件的部署，当总时长为 0 时
+        // 回退到 webhook 的 PlaybackEvent 聚合。
+        if (pluginWatchTime.totalSeconds > 0) {
+          return res.status(200).json(pluginWatchTime);
+        }
+      }
+
+      // 回退：从 webhook 写入的 PlaybackEvent 聚合
       const playbackRepository = getRepository(PlaybackEvent);
 
       const startOfToday = new Date();

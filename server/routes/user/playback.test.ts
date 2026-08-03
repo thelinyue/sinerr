@@ -61,6 +61,11 @@ const getUserPlaybackActivityMock = mock.method(
   'getUserPlaybackActivity',
   async () => []
 ).mock;
+const getUserWatchTimeMock = mock.method(
+  JellyfinAPI.prototype,
+  'getUserWatchTime',
+  async () => ({ todaySeconds: 0, totalSeconds: 0 })
+).mock;
 const getSeasonsMock = mock.method(
   JellyfinAPI.prototype,
   'getSeasons',
@@ -74,9 +79,14 @@ const getEpisodesMock = mock.method(
 
 beforeEach(() => {
   getUserPlaybackActivityMock.resetCalls();
+  getUserWatchTimeMock.resetCalls();
   getSeasonsMock.resetCalls();
   getEpisodesMock.resetCalls();
   getUserPlaybackActivityMock.mockImplementation(async () => []);
+  getUserWatchTimeMock.mockImplementation(async () => ({
+    todaySeconds: 0,
+    totalSeconds: 0,
+  }));
   getSeasonsMock.mockImplementation(async () => []);
   getEpisodesMock.mockImplementation(async () => []);
 });
@@ -328,5 +338,21 @@ describe('GET /user/:id/watchtime', () => {
     const res = await agent.get(`/user/${admin.id}/watchtime`);
 
     assert.strictEqual(res.status, 403);
+  });
+
+  it('prefers Playback Report plugin data over webhook fallback', async () => {
+    const { friend } = await seedUserAndMedia();
+    // 插件返回非零数据，应直接采用，不触发 webhook 回退
+    getUserWatchTimeMock.mockImplementation(async () => ({
+      todaySeconds: 900,
+      totalSeconds: 99900,
+    }));
+
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const res = await agent.get(`/user/${friend.id}/watchtime`);
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.todaySeconds, 900);
+    assert.strictEqual(res.body.totalSeconds, 99900);
   });
 });

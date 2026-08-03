@@ -813,6 +813,77 @@ class JellyfinAPI extends ExternalAPI {
       return [];
     }
   }
+
+  /**
+   * 查询指定用户的播放时长统计（秒）
+   *
+   * 数据来自 Playback Reporting 插件的 PlaybackActivity 表，净播放时长 =
+   * PlayDuration - PauseDuration。可带 since（ISO 日期字符串）过滤到指定时间点之后。
+   */
+  public async getUserWatchTime(
+    userId: string,
+    since?: string
+  ): Promise<{ todaySeconds: number; totalSeconds: number }> {
+    try {
+      const conditions: string[] = ["UserId = '" + userId + "'"];
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sinceDate = since ?? today.toISOString();
+
+      const query = [
+        'SELECT',
+        "SUM(CASE WHEN DateCreated >= '" +
+          sinceDate +
+          "' THEN (PlayDuration - PauseDuration) ELSE 0 END) AS TodaySeconds,",
+        'SUM(PlayDuration - PauseDuration) AS TotalSeconds',
+        'FROM PlaybackActivity',
+        'WHERE ' + conditions.join(' AND '),
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      logger.info('Executing user watch time query', {
+        label: 'Jellyfin API',
+        userId,
+        query,
+      });
+
+      const response = await this.post<{
+        colums: string[];
+        results: unknown[][];
+        message: string;
+      }>('/user_usage_stats/submit_custom_query', {
+        CustomQueryString: query,
+        ReplaceUserId: false,
+      });
+
+      if (
+        !response?.colums ||
+        !response?.results ||
+        response.results.length === 0
+      ) {
+        return { todaySeconds: 0, totalSeconds: 0 };
+      }
+
+      const colIdx: Record<string, number> = {};
+      response.colums.forEach((col, i) => {
+        colIdx[col] = i;
+      });
+
+      const row = response.results[0];
+      return {
+        todaySeconds: Number(row[colIdx['TodaySeconds']] ?? 0),
+        totalSeconds: Number(row[colIdx['TotalSeconds']] ?? 0),
+      };
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting user watch time from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return { todaySeconds: 0, totalSeconds: 0 };
+    }
+  }
 }
 
 export default JellyfinAPI;
