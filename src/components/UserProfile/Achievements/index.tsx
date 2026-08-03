@@ -33,38 +33,38 @@ const badgeMeta: Record<
   {
     name: MessageDescriptor;
     description: MessageDescriptor;
-    icon: React.ReactNode;
+    icon: React.ReactElement;
   }
 > = {
   requester10: {
     name: messages.requester10,
     description: messages.requester10Description,
-    icon: <TicketIcon />,
+    icon: <TicketIcon className="h-5 w-5" />,
   },
   requester50: {
     name: messages.requester50,
     description: messages.requester50Description,
-    icon: <TicketIcon />,
+    icon: <TicketIcon className="h-5 w-5" />,
   },
   requester100: {
     name: messages.requester100,
     description: messages.requester100Description,
-    icon: <StarIcon />,
+    icon: <StarIcon className="h-5 w-5" />,
   },
   voted5: {
     name: messages.voted5,
     description: messages.voted5Description,
-    icon: <HeartIcon />,
+    icon: <HeartIcon className="h-5 w-5" />,
   },
   voted25: {
     name: messages.voted25,
     description: messages.voted25Description,
-    icon: <HeartIcon />,
+    icon: <HeartIcon className="h-5 w-5" />,
   },
   helper3: {
     name: messages.helper3,
     description: messages.helper3Description,
-    icon: <ShieldCheckIcon />,
+    icon: <ShieldCheckIcon className="h-5 w-5" />,
   },
 };
 
@@ -112,8 +112,10 @@ const Achievements = ({ userId }: { userId: number }) => {
               }`}
               data-testid={`achievement-${badge.id}`}
             >
-              <span className="h-5 w-5 flex-shrink-0">{meta.icon}</span>
-              <div className="min-w-0 flex-col">
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                {meta.icon}
+              </span>
+              <div className="flex min-w-0 flex-col">
                 <span className="block truncate font-semibold">
                   {intl.formatMessage(meta.name)}
                 </span>
