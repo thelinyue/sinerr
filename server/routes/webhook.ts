@@ -1,3 +1,4 @@
+import JellyfinAPI from '@server/api/jellyfin';
 import { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
@@ -5,48 +6,133 @@ import { User } from '@server/entity/User';
 import { jellyfinRecentScanner } from '@server/lib/scanners/jellyfin';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
+import { getHostname } from '@server/utils/getHostname';
 import { Router } from 'express';
 
 const webhookRoutes = Router();
 
 /**
- * 解析 Emby/Jellyfin Webhook 载荷中的 tmdbId
+ * Emby/Jellyfin Webhook 载荷中的媒体信息
  *
- * Jellyfin Webhook 插件会提供 `Provider_tmdb` 字段（BaseItem 的
- * Provider_{providerId_lowercase}）。部分 Emby 版本用 `ProviderIds.Tmdb`。
+ * 兼容两种格式：
+ * - Jellyfin Webhook 插件：扁平字段（Provider_tmdb / UserId / SeasonNumber ...）
+ * - Emby 官方 Webhooks 通知服务：嵌套对象（Item.* / User.Id / PlaybackInfo.* ...）
+ */
+interface PlaybackBody {
+  Event?: string;
+  // Jellyfin 扁平字段
+  UserId?: string;
+  Provider_tmdb?: string;
+  ProviderIds?: Record<string, unknown>;
+  ItemType?: string;
+  SeasonNumber?: unknown;
+  EpisodeNumber?: unknown;
+  PlayedToCompletion?: unknown;
+  // Emby 嵌套对象
+  User?: { Id?: string; Name?: string };
+  Item?: {
+    Id?: string;
+    Type?: string;
+    IndexNumber?: number;
+    ParentIndexNumber?: number;
+    SeriesId?: string;
+    ProviderIds?: Record<string, unknown>;
+    Path?: string;
+  };
+  PlaybackInfo?: {
+    MediaSource?: {
+      RunTimeTicks?: number;
+    };
+    PositionTicks?: number;
+  };
+}
+
+/**
+ * 解析载荷中的 tmdbId（分层提取）
+ *
+ * 优先级：
+ * 1. Jellyfin 顶层 Provider_tmdb
+ * 2. Jellyfin 顶层 ProviderIds.Tmdb
+ * 3. Emby Item.ProviderIds.Tmdb / TheMovieDb
+ * 4. Emby Item.Path 中的 {tmdb-xxxx}（strm 目录约定，如 MoviePilot 生成）
  */
 function extractTmdbId(body: Record<string, unknown>): number | undefined {
-  const providerTmdb = body.Provider_tmdb;
-  if (providerTmdb != null && providerTmdb !== '') {
-    const parsed = Number(providerTmdb);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
+  const b = body as PlaybackBody;
+  const tryParse = (v: unknown): number | undefined => {
+    if (v == null || v === '') return undefined;
+    const parsed = Number(v);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  };
+
+  // 1. Jellyfin 顶层
+  const topLevel = tryParse(b.Provider_tmdb);
+  if (topLevel) return topLevel;
+
+  // 2. 顶层 ProviderIds
+  const topProviderIds = (body.ProviderIds ?? {}) as Record<string, unknown>;
+  const topNested = tryParse(topProviderIds.Tmdb ?? topProviderIds.tmdb);
+  if (topNested) return topNested;
+
+  // 3. Emby Item.ProviderIds
+  if (b.Item?.ProviderIds) {
+    const itemNested = tryParse(
+      b.Item.ProviderIds.Tmdb ?? b.Item.ProviderIds.TheMovieDb
+    );
+    if (itemNested) return itemNested;
+  }
+
+  // 4. Emby Item.Path 中的 {tmdb-xxxx}
+  if (b.Item?.Path) {
+    const match = b.Item.Path.match(/\{tmdb-(\d+)\}/i);
+    if (match) {
+      const fromPath = tryParse(match[1]);
+      if (fromPath) return fromPath;
     }
   }
-  const providerIds = (body.ProviderIds ?? {}) as Record<string, unknown>;
-  const nestedTmdb = providerIds.Tmdb ?? providerIds.tmdb;
-  if (nestedTmdb != null && nestedTmdb !== '') {
-    const parsed = Number(nestedTmdb);
-    if (!Number.isNaN(parsed)) {
-      return parsed;
-    }
-  }
+
   return undefined;
+}
+
+/**
+ * 通过 Emby API 按 ItemId 反查 tmdbId（最后兜底）
+ */
+async function lookupTmdbByItemId(itemId: string): Promise<number | undefined> {
+  try {
+    const settings = getSettings();
+    const hostname = getHostname();
+    const jellyfinClient = new JellyfinAPI(
+      hostname,
+      settings.jellyfin.apiKey,
+      'BOT_sinerr',
+      settings.main.mediaServerType
+    );
+    const item = await jellyfinClient.getItemData(itemId);
+    const providerIds = item?.ProviderIds;
+    if (!providerIds) return undefined;
+    const parsed = Number(providerIds.Tmdb ?? providerIds.TheMovieDb);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  } catch (e) {
+    logger.debug('Failed to look up tmdbId by Emby ItemId', {
+      label: 'Webhook',
+      itemId,
+      message: e instanceof Error ? e.message : 'Unknown error',
+    });
+    return undefined;
+  }
 }
 
 /**
  * 处理播放通知，写入播放记录
  *
- * 仅处理 playback.start / playback.stop。stop 事件携带 PlayedToCompletion
- * 用于标记是否看完；对没有该字段的版本，stop 即视为产生一次播放记录。
+ * 仅处理 playback.start / playback.stop。stop 事件优先使用 PlayedToCompletion，
+ * 否则用播放位置/总时长计算完成度（>=90% 视为看完）。
  */
 async function handlePlaybackEvent(
   body: Record<string, unknown>
 ): Promise<void> {
-  const event = body.Event as string | undefined;
-  const userId = (body.UserId ?? (body.User as Record<string, unknown>)?.Id) as
-    | string
-    | undefined;
+  const b = body as PlaybackBody;
+  const event = b.Event;
+  const userId = b.UserId ?? b.User?.Id;
 
   if (!userId) {
     logger.debug('Playback webhook missing UserId, skipping', {
@@ -70,17 +156,23 @@ async function handlePlaybackEvent(
     return;
   }
 
-  const tmdbId = extractTmdbId(body);
+  let tmdbId = extractTmdbId(body);
+
+  // 兜底：用 ItemId 调 Emby API 反查
+  if (!tmdbId && b.Item?.Id) {
+    tmdbId = await lookupTmdbByItemId(b.Item.Id);
+  }
+
   if (!tmdbId) {
     logger.debug('Playback webhook missing tmdbId, skipping', {
       label: 'Webhook',
       event,
-      itemName: body.Name,
+      itemName: b.Item?.Path ?? body.Name,
     });
     return;
   }
 
-  const itemType = body.ItemType as string | undefined;
+  const itemType = b.Item?.Type ?? (body.ItemType as string | undefined);
   let mediaType: MediaType;
   if (itemType === 'Episode') {
     mediaType = MediaType.TV;
@@ -102,10 +194,28 @@ async function handlePlaybackEvent(
     return;
   }
 
-  const completed =
-    event === 'playback.stop'
-      ? body.PlayedToCompletion === true || body.PlayedToCompletion === 'true'
-      : false;
+  // 完成度判断
+  let completed =
+    event === 'playback.stop' &&
+    (b.PlayedToCompletion === true || b.PlayedToCompletion === 'true');
+
+  // stop 事件无显式完成标记时，用播放位置/总时长估算
+  if (
+    event === 'playback.stop' &&
+    !completed &&
+    b.PlaybackInfo?.MediaSource?.RunTimeTicks
+  ) {
+    const position = b.PlaybackInfo.PositionTicks ?? 0;
+    const runtime = b.PlaybackInfo.MediaSource.RunTimeTicks;
+    completed = runtime > 0 && position / runtime >= 0.9;
+  }
+
+  const seasonNumber =
+    b.Item?.ParentIndexNumber ??
+    (body.SeasonNumber != null ? Number(body.SeasonNumber) : null);
+  const episodeNumber =
+    b.Item?.IndexNumber ??
+    (body.EpisodeNumber != null ? Number(body.EpisodeNumber) : null);
 
   const playbackEventRepository = getRepository(PlaybackEvent);
   await playbackEventRepository.save(
@@ -114,10 +224,8 @@ async function handlePlaybackEvent(
       tmdbId,
       mediaType,
       completed,
-      seasonNumber:
-        body.SeasonNumber != null ? Number(body.SeasonNumber) : null,
-      episodeNumber:
-        body.EpisodeNumber != null ? Number(body.EpisodeNumber) : null,
+      seasonNumber,
+      episodeNumber,
     })
   );
 
@@ -127,6 +235,8 @@ async function handlePlaybackEvent(
     tmdbId,
     mediaType,
     completed,
+    seasonNumber,
+    episodeNumber,
     user: user.displayName,
   });
 }
@@ -149,6 +259,15 @@ webhookRoutes.post('/emby', async (req, res) => {
     itemType,
     itemName,
   });
+
+  // 调试：打印播放事件完整载荷，用于确认字段（UserId/tmdbId/ItemType/完成度）
+  if (event === 'playback.start' || event === 'playback.stop') {
+    logger.debug('Playback webhook full payload', {
+      label: 'Webhook',
+      event,
+      body: req.body,
+    });
+  }
 
   if (event === 'playback.start' || event === 'playback.stop') {
     // 播放事件同步处理（写入较快），失败不影响 webhook 响应
