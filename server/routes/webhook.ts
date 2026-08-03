@@ -217,6 +217,13 @@ async function handlePlaybackEvent(
     b.Item?.IndexNumber ??
     (body.EpisodeNumber != null ? Number(body.EpisodeNumber) : null);
 
+  // 本次播放时长（秒）：stop 事件用 PositionTicks（10ms 单位）计算
+  // start 事件没有有效时长，记 0
+  let durationSeconds = 0;
+  if (event === 'playback.stop' && b.PlaybackInfo?.PositionTicks != null) {
+    durationSeconds = Math.round(b.PlaybackInfo.PositionTicks / 10000000);
+  }
+
   const playbackEventRepository = getRepository(PlaybackEvent);
   await playbackEventRepository.save(
     new PlaybackEvent({
@@ -224,6 +231,7 @@ async function handlePlaybackEvent(
       tmdbId,
       mediaType,
       completed,
+      durationSeconds,
       seasonNumber,
       episodeNumber,
     })
@@ -235,6 +243,7 @@ async function handlePlaybackEvent(
     tmdbId,
     mediaType,
     completed,
+    durationSeconds,
     seasonNumber,
     episodeNumber,
     user: user.displayName,

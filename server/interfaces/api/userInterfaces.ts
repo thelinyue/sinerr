@@ -24,6 +24,16 @@ export interface QuotaResponse {
 }
 
 /**
+ * 用户播放时长统计（来自 PlaybackEvent.durationSeconds 聚合）
+ */
+export interface UserWatchTimeResponse {
+  /** 今日累计播放秒数 */
+  todaySeconds: number;
+  /** 累计播放秒数 */
+  totalSeconds: number;
+}
+
+/**
  * 用户成就徽章定义
  */
 export interface Achievement {

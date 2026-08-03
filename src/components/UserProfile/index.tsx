@@ -13,6 +13,7 @@ import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import type {
   QuotaResponse,
   UserRequestsResponse,
+  UserWatchTimeResponse,
 } from '@server/interfaces/api/userInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
@@ -31,9 +32,40 @@ const messages = defineMessages('components.UserProfile', {
   pastdays: '{type} (past {days} days)',
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
+  watchtimeToday: 'Watched Today',
+  watchtimeTotal: 'Total Watch Time',
+  watchtimeHours: '{count, plural, one {# hour} other {# hours}}',
+  watchtimeMinutes: '{count, plural, one {# minute} other {# minutes}}',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
+
+/** 把秒数格式化为「x小时 y分钟」，不足一小时只显示分钟 */
+const formatDuration = (
+  intl: ReturnType<typeof useIntl>,
+  totalSeconds: number
+): string => {
+  const totalMinutes = Math.round(totalSeconds / 60);
+  if (totalMinutes < 1) {
+    return '0m';
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return intl.formatMessage(messages.watchtimeMinutes, {
+      count: minutes,
+    });
+  }
+  const hoursText = intl.formatMessage(messages.watchtimeHours, {
+    count: hours,
+  });
+  if (minutes === 0) {
+    return hoursText;
+  }
+  return `${hoursText} ${intl.formatMessage(messages.watchtimeMinutes, {
+    count: minutes,
+  })}`;
+};
 
 const UserProfile = () => {
   const intl = useIntl();
@@ -64,6 +96,16 @@ const UserProfile = () => {
           { type: 'and' }
         ))
       ? `/api/v1/user/${user.id}/quota`
+      : null
+  );
+  const { data: watchTime } = useSWR<UserWatchTimeResponse>(
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user.id}/watchtime`
       : null
   );
 
@@ -244,6 +286,33 @@ const UserProfile = () => {
                       {intl.formatMessage(messages.unlimited)}
                     </span>
                   )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        )}
+      {watchTime &&
+        (user.id === currentUser?.id ||
+          currentHasPermission(
+            [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+            { type: 'or' }
+          )) && (
+          <div className="relative z-40">
+            <dl className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
+                <dt className="truncate text-sm font-bold text-gray-300">
+                  {intl.formatMessage(messages.watchtimeToday)}
+                </dt>
+                <dd className="mt-1 text-3xl font-semibold text-white">
+                  {formatDuration(intl, watchTime.todaySeconds)}
+                </dd>
+              </div>
+              <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
+                <dt className="truncate text-sm font-bold text-gray-300">
+                  {intl.formatMessage(messages.watchtimeTotal)}
+                </dt>
+                <dd className="mt-1 text-3xl font-semibold text-white">
+                  {formatDuration(intl, watchTime.totalSeconds)}
                 </dd>
               </div>
             </dl>

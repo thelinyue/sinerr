@@ -113,6 +113,17 @@ components:
           type: number
           example: 60
           description: Watched episode percentage 0-100 (series only).
+    UserWatchTime:
+      type: object
+      properties:
+        todaySeconds:
+          type: number
+          example: 3600
+          description: Watch time today in seconds.
+        totalSeconds:
+          type: number
+          example: 864000
+          description: Total watch time in seconds.
     UserAchievements:
       type: object
       properties:
@@ -4206,6 +4217,31 @@ paths:
                       restricted:
                         type: boolean
                         example: false
+  /user/{userId}/watchtime:
+    get:
+      summary: Get user watch time
+      description: |
+        Returns the user's watch time in seconds, both for today and in total,
+        aggregated from playback records.
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Watch time details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWatchTime'
+        '403':
+          description: Not permitted to view this user's watch time
   /user/{userId}/media/{tmdbId}/{mediaType}/playback:
     get:
       summary: Get playback progress for a media item

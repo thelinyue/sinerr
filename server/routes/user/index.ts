@@ -5,6 +5,7 @@ import dataSource, { getRepository } from '@server/datasource';
 import Issue from '@server/entity/Issue';
 import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
+import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
 import { UserPushSubscription } from '@server/entity/UserPushSubscription';
 import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
@@ -14,6 +15,7 @@ import type {
   UserAchievementsResponse,
   UserRequestsResponse,
   UserResultsResponse,
+  UserWatchTimeResponse,
 } from '@server/interfaces/api/userInterfaces';
 import { Permission, hasPermission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
@@ -964,6 +966,63 @@ router.get<{ id: string }, UserAchievementsResponse>(
       }));
 
       return res.status(200).json({ results });
+    } catch (e) {
+      next({ status: 404, message: e.message });
+    }
+  }
+);
+
+/**
+ * 播放时长统计接口
+ *
+ * 返回指定用户今日与累计的播放时长（秒），数据来自 PlaybackEvent.durationSeconds。
+ *
+ * 可见范围：本人或具备 MANAGE_USERS / MANAGE_REQUESTS 权限。
+ */
+router.get<{ id: string }, UserWatchTimeResponse>(
+  '/:id/watchtime',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const playbackRepository = getRepository(PlaybackEvent);
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const [todayRow, totalRow] = await Promise.all([
+        playbackRepository
+          .createQueryBuilder('event')
+          .leftJoinAndSelect('event.user', 'user')
+          .select('SUM(event.durationSeconds)', 'total')
+          .where('user.id = :userId', { userId })
+          .andWhere('event.createdAt >= :startOfToday', { startOfToday })
+          .getRawOne<{ total: string | null }>(),
+        playbackRepository
+          .createQueryBuilder('event')
+          .leftJoinAndSelect('event.user', 'user')
+          .select('SUM(event.durationSeconds)', 'total')
+          .where('user.id = :userId', { userId })
+          .getRawOne<{ total: string | null }>(),
+      ]);
+
+      return res.status(200).json({
+        todaySeconds: Number(todayRow?.total ?? 0),
+        totalSeconds: Number(totalRow?.total ?? 0),
+      });
     } catch (e) {
       next({ status: 404, message: e.message });
     }

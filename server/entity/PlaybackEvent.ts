@@ -44,6 +44,10 @@ class PlaybackEvent {
   @Column({ default: false })
   public completed: boolean;
 
+  /** 本次播放时长（秒）。playback.stop 时用 PositionTicks 计算 */
+  @Column({ type: 'integer', default: 0 })
+  public durationSeconds: number;
+
   @Column({ type: 'integer', nullable: true })
   public seasonNumber?: number | null;
 

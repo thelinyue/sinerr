@@ -6,6 +6,7 @@ import JellyfinAPI from '@server/api/jellyfin';
 import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
+import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
 import { getSettings } from '@server/lib/settings';
 import { checkUser } from '@server/middleware/auth';
@@ -260,5 +261,72 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
 
     // admin 拥有 MANAGE_USERS 权限，允许访问
     assert.strictEqual(res.status, 200);
+  });
+});
+
+describe('GET /user/:id/watchtime', () => {
+  it('aggregates today and total watch time from playback events', async () => {
+    const { friend } = await seedUserAndMedia();
+    const playbackRepo = getRepository(PlaybackEvent);
+
+    // 今日一条 1 小时、一条 30 分钟；历史一条 2 小时
+    await playbackRepo.save([
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: 55501,
+        mediaType: MediaType.MOVIE,
+        durationSeconds: 3600,
+      }),
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: 55502,
+        mediaType: MediaType.TV,
+        durationSeconds: 1800,
+      }),
+    ]);
+    // 昨天的一条（createdAt 手动改为昨天）
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    await playbackRepo.save(
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: 55501,
+        mediaType: MediaType.MOVIE,
+        durationSeconds: 7200,
+        createdAt: yesterday,
+      })
+    );
+
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const res = await agent.get(`/user/${friend.id}/watchtime`);
+
+    assert.strictEqual(res.status, 200);
+    // 今日 = 3600 + 1800 = 5400
+    assert.strictEqual(res.body.todaySeconds, 5400);
+    // 累计 = 3600 + 1800 + 7200 = 12600
+    assert.strictEqual(res.body.totalSeconds, 12600);
+  });
+
+  it('returns zero when there are no playback events', async () => {
+    const { friend } = await seedUserAndMedia();
+
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const res = await agent.get(`/user/${friend.id}/watchtime`);
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.todaySeconds, 0);
+    assert.strictEqual(res.body.totalSeconds, 0);
+  });
+
+  it('forbids viewing another user watch time without permission', async () => {
+    const userRepo = getRepository(User);
+    const admin = await userRepo.findOneOrFail({
+      where: { email: 'admin@sinerr.dev' },
+    });
+
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const res = await agent.get(`/user/${admin.id}/watchtime`);
+
+    assert.strictEqual(res.status, 403);
   });
 });

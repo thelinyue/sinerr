@@ -194,5 +194,7 @@ describe('POST /webhook/emby', () => {
     const event = events.find((e) => e.tmdbId === 291392);
     assert.ok(event);
     assert.strictEqual(event.completed, true);
+    // PositionTicks 25000000000 / 10000000 = 2500 秒
+    assert.strictEqual(event.durationSeconds, 2500);
   });
 });
