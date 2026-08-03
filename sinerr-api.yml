@@ -1216,6 +1216,35 @@ components:
         updatedAt:
           type: string
           format: date-time
+        edited:
+          type: boolean
+          description: Whether the review has been edited (updatedAt > createdAt).
+        progress:
+          nullable: true
+          oneOf:
+            - type: object
+              properties:
+                status:
+                  type: string
+                  enum: [completed]
+            - type: object
+              properties:
+                status:
+                  type: string
+                  enum: [watching]
+                seasonNumber:
+                  type: integer
+                episodeNumber:
+                  type: integer
+            - type: object
+              properties:
+                status:
+                  type: string
+                  enum: [unwatched]
+          description: >-
+            Viewer playback progress for the review author. `completed` = finished,
+            `watching` = latest episode reached (series only), `unwatched` = played
+            but not finished, `null` = no playback record or visibility disabled.
         user:
           $ref: '#/components/schemas/User'
         media:

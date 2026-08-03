@@ -14,10 +14,35 @@ export interface MediaReviewRequestBody {
   episodeNumber?: number | null;
 }
 
+/**
+ * 评论人观看进度（来自本地 PlaybackEvent）
+ *
+ * - completed：该媒体已看完
+ * - watching：剧集最新看到 seasonNumber/episodeNumber
+ * - unwatched：有播放记录但未看完（电影未看完也归此类）
+ * - null：无播放记录或该用户关闭播放可见性
+ */
+export type ReviewProgress =
+  | { status: 'completed' }
+  | {
+      status: 'watching';
+      seasonNumber: number;
+      episodeNumber: number;
+    }
+  | { status: 'unwatched' };
+
+/** 附带展示字段的短评 */
+export interface MediaReviewItem extends MediaReview {
+  /** 是否被编辑过（updatedAt > createdAt） */
+  edited: boolean;
+  /** 评论人观看进度；null 表示无播放记录或不可见 */
+  progress: ReviewProgress | null;
+}
+
 export interface MediaReviewsResponse {
   /** 平均评分（0-5），无短评时为 0 */
   averageRating: number;
   /** 短评总数 */
   reviewCount: number;
-  results: MediaReview[];
+  results: MediaReviewItem[];
 }

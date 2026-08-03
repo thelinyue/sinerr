@@ -6,13 +6,17 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import {
   CheckCircleIcon,
+  PencilIcon,
   StarIcon,
   TrashIcon,
   XCircleIcon,
 } from '@heroicons/react/24/solid';
 import type MediaReview from '@server/entity/MediaReview';
 import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
-import type { MediaReviewsResponse } from '@server/interfaces/api/reviewInterfaces';
+import type {
+  MediaReviewItem,
+  MediaReviewsResponse,
+} from '@server/interfaces/api/reviewInterfaces';
 import axios from 'axios';
 import Link from 'next/link';
 import type { FormEvent } from 'react';
@@ -23,13 +27,17 @@ import useSWR from 'swr';
 const messages = defineMessages('components.MediaReviewBlock', {
   reviews: 'Reviews',
   submitreview: 'Submit Review',
+  updatereview: 'Update Review',
+  canceledit: 'Cancel',
   rating: 'Rating',
   reviewplaceholder: 'What did you think of this title?',
   reviewrequired: 'Please enter a review message.',
   reviewsuccess: 'Review submitted successfully.',
   reviewfailed: 'Something went wrong submitting your review.',
   deletereview: 'Delete Review',
+  editreview: 'Edit Review',
   deletefailed: 'Something went wrong deleting your review.',
+  edited: 'Edited',
   avgrating: 'Average: {rating} / 5',
   wholeseries: 'Whole Series',
   season: 'Season {number}',
@@ -41,6 +49,10 @@ const messages = defineMessages('components.MediaReviewBlock', {
   unwatchedMovie: 'Not watched',
   watchedSeries: 'Watched {watched}/{total} episodes ({percent}%)',
   unwatchedSeries: 'Not watched yet',
+  progressCompleted: 'Watched',
+  progressWatching: 'Watching S{season}E{episode}',
+  progressUnwatched: 'Not watched',
+  progressHidden: '',
 });
 
 /** 季信息（仅用 TvDetails 已加载的字段） */
@@ -74,6 +86,10 @@ const MediaReviewBlock = ({
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 正在编辑的短评（null = 新增模式）；编辑时锁定季/集目标（不支持改目标）
+  const [editingReview, setEditingReview] = useState<MediaReviewItem | null>(
+    null
+  );
 
   // 评论目标：默认整部剧集（movie 固定为整部）
   const [target, setTarget] = useState<ReviewTarget>({
@@ -128,14 +144,27 @@ const MediaReviewBlock = ({
     setIsSubmitting(true);
 
     try {
+      // 编辑态锁定原短评的季/集目标（不支持改目标）
+      const targetSeason = editingReview
+        ? (editingReview.seasonNumber ?? null)
+        : isTv
+          ? target.seasonNumber
+          : undefined;
+      const targetEpisode = editingReview
+        ? (editingReview.episodeNumber ?? null)
+        : isTv
+          ? target.episodeNumber
+          : undefined;
+
       await axios.post(`/api/v1/review/${tmdbId}/${mediaType}`, {
         rating,
         message,
-        seasonNumber: isTv ? target.seasonNumber : undefined,
-        episodeNumber: isTv ? target.episodeNumber : undefined,
+        seasonNumber: targetSeason,
+        episodeNumber: targetEpisode,
       });
       await mutate();
       setMessage('');
+      setEditingReview(null);
     } catch {
       setError(intl.formatMessage(messages.reviewfailed));
     } finally {
@@ -152,6 +181,25 @@ const MediaReviewBlock = ({
     }
   };
 
+  // 进入编辑态：回填评分/内容/目标（目标锁定）
+  const startEditReview = (review: MediaReviewItem) => {
+    setEditingReview(review);
+    setRating(review.rating);
+    setMessage(review.message);
+    setTarget({
+      seasonNumber: review.seasonNumber ?? null,
+      episodeNumber: review.episodeNumber ?? null,
+    });
+    setError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingReview(null);
+    setRating(5);
+    setMessage('');
+    setError(null);
+  };
+
   const reviewTargetLabel = (review: MediaReview): string => {
     if (review.seasonNumber && review.episodeNumber) {
       return intl.formatMessage(messages.episodeBadge, {
@@ -165,6 +213,23 @@ const MediaReviewBlock = ({
       });
     }
     return intl.formatMessage(messages.wholeseries);
+  };
+
+  // 评论人观看进度文案（无进度返回 null，不展示）
+  const progressLabel = (review: MediaReviewItem): string | null => {
+    switch (review.progress?.status) {
+      case 'completed':
+        return intl.formatMessage(messages.progressCompleted);
+      case 'watching':
+        return intl.formatMessage(messages.progressWatching, {
+          season: review.progress.seasonNumber,
+          episode: review.progress.episodeNumber,
+        });
+      case 'unwatched':
+        return intl.formatMessage(messages.progressUnwatched);
+      default:
+        return null;
+    }
   };
 
   if (!data && !loadError) {
@@ -216,13 +281,16 @@ const MediaReviewBlock = ({
           <div className="hide-scrollbar flex items-center space-x-2 overflow-x-auto">
             <button
               type="button"
+              disabled={!!editingReview}
               onClick={() =>
                 setTarget({ seasonNumber: null, episodeNumber: null })
               }
               className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
-                target.seasonNumber === null
-                  ? 'bg-indigo-600 text-white ring-indigo-500'
-                  : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                editingReview
+                  ? 'cursor-not-allowed opacity-50'
+                  : target.seasonNumber === null
+                    ? 'bg-indigo-600 text-white ring-indigo-500'
+                    : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
               }`}
             >
               {intl.formatMessage(messages.wholeseries)}
@@ -233,6 +301,7 @@ const MediaReviewBlock = ({
                 <button
                   key={`season-${s.seasonNumber}`}
                   type="button"
+                  disabled={!!editingReview}
                   onClick={() =>
                     setTarget({
                       seasonNumber: s.seasonNumber,
@@ -240,9 +309,11 @@ const MediaReviewBlock = ({
                     })
                   }
                   className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
-                    target.seasonNumber === s.seasonNumber
-                      ? 'bg-indigo-600 text-white ring-indigo-500'
-                      : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                    editingReview
+                      ? 'cursor-not-allowed opacity-50'
+                      : target.seasonNumber === s.seasonNumber
+                        ? 'bg-indigo-600 text-white ring-indigo-500'
+                        : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
                   }`}
                 >
                   {intl.formatMessage(messages.season, {
@@ -257,6 +328,7 @@ const MediaReviewBlock = ({
             <div className="hide-scrollbar flex items-center space-x-2 overflow-x-auto">
               <button
                 type="button"
+                disabled={!!editingReview}
                 onClick={() =>
                   setTarget({
                     seasonNumber: target.seasonNumber,
@@ -264,9 +336,11 @@ const MediaReviewBlock = ({
                   })
                 }
                 className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
-                  target.episodeNumber === null
-                    ? 'bg-indigo-600 text-white ring-indigo-500'
-                    : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                  editingReview
+                    ? 'cursor-not-allowed opacity-50'
+                    : target.episodeNumber === null
+                      ? 'bg-indigo-600 text-white ring-indigo-500'
+                      : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
                 }`}
               >
                 {intl.formatMessage(messages.wholeSeason)}
@@ -278,6 +352,7 @@ const MediaReviewBlock = ({
                 <button
                   key={`episode-${n}`}
                   type="button"
+                  disabled={!!editingReview}
                   onClick={() =>
                     setTarget({
                       seasonNumber: target.seasonNumber as number,
@@ -285,9 +360,11 @@ const MediaReviewBlock = ({
                     })
                   }
                   className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
-                    target.episodeNumber === n
-                      ? 'bg-indigo-600 text-white ring-indigo-500'
-                      : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                    editingReview
+                      ? 'cursor-not-allowed opacity-50'
+                      : target.episodeNumber === n
+                        ? 'bg-indigo-600 text-white ring-indigo-500'
+                        : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
                   }`}
                 >
                   {intl.formatMessage(messages.episode, { number: n })}
@@ -354,9 +431,22 @@ const MediaReviewBlock = ({
               rows={2}
               className="flex-1 rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
-            <Button buttonType="primary" type="submit" disabled={isSubmitting}>
-              {intl.formatMessage(messages.submitreview)}
-            </Button>
+            <div className="flex items-center space-x-2">
+              {editingReview && (
+                <Button buttonType="ghost" type="button" onClick={cancelEdit}>
+                  {intl.formatMessage(messages.canceledit)}
+                </Button>
+              )}
+              <Button
+                buttonType="primary"
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {editingReview
+                  ? intl.formatMessage(messages.updatereview)
+                  : intl.formatMessage(messages.submitreview)}
+              </Button>
+            </div>
           </div>
           {error && <div className="mt-2 text-sm text-red-500">{error}</div>}
         </form>
@@ -398,6 +488,23 @@ const MediaReviewBlock = ({
                   >
                     {review.user.displayName}
                   </Link>
+                  {/* 评论人观看进度徽标 */}
+                  {progressLabel(review) && (
+                    <span
+                      className={`flex items-center space-x-1 rounded px-1.5 py-0.5 text-xs ${
+                        review.progress?.status === 'completed'
+                          ? 'bg-green-500/15 text-green-400'
+                          : review.progress?.status === 'watching'
+                            ? 'bg-indigo-500/15 text-indigo-300'
+                            : 'bg-gray-700/50 text-gray-400'
+                      }`}
+                    >
+                      {review.progress?.status === 'completed' ? (
+                        <CheckCircleIcon className="h-3 w-3" />
+                      ) : null}
+                      <span>{progressLabel(review)}</span>
+                    </span>
+                  )}
                   <span className="flex">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <StarIcon
@@ -425,19 +532,48 @@ const MediaReviewBlock = ({
                       numeric="auto"
                     />
                   </span>
+                  {/* 已编辑标记：展示编辑时间 */}
+                  {review.edited && (
+                    <span
+                      className="text-xs text-gray-500"
+                      title={new Date(review.updatedAt).toLocaleString()}
+                    >
+                      {intl.formatMessage(messages.edited)}{' '}
+                      <FormattedRelativeTime
+                        value={Math.floor(
+                          (new Date(review.updatedAt).getTime() - Date.now()) /
+                            1000
+                        )}
+                        updateIntervalInSeconds={60}
+                        numeric="auto"
+                      />
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-gray-300">{review.message}</p>
               </div>
               {isReviewAuthor(review, user?.id) ||
               hasPermission(Permission.MANAGE_REQUESTS) ? (
-                <Tooltip content={intl.formatMessage(messages.deletereview)}>
-                  <button
-                    onClick={() => removeReview(review.id)}
-                    className="flex-shrink-0 text-gray-500 transition-colors hover:text-red-500"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </Tooltip>
+                <div className="flex flex-shrink-0 items-center space-x-2">
+                  {isReviewAuthor(review, user?.id) && (
+                    <Tooltip content={intl.formatMessage(messages.editreview)}>
+                      <button
+                        onClick={() => startEditReview(review)}
+                        className="text-gray-500 transition-colors hover:text-indigo-400"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
+                  )}
+                  <Tooltip content={intl.formatMessage(messages.deletereview)}>
+                    <button
+                      onClick={() => removeReview(review.id)}
+                      className="text-gray-500 transition-colors hover:text-red-500"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
+                </div>
               ) : null}
             </div>
           ))}

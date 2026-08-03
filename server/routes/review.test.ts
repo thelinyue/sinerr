@@ -4,6 +4,7 @@ import { before, describe, it } from 'node:test';
 import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
+import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
 import { Permission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
@@ -434,5 +435,141 @@ describe('TV reviews with season/episode targets', () => {
     });
 
     assert.strictEqual(res.status, 400);
+  });
+});
+
+describe('Review editing and playback progress', () => {
+  it('marks a review as edited after the content changes', async () => {
+    await seedMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    const create = await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'First take',
+    });
+    assert.strictEqual(create.status, 201);
+
+    const list1 = await agent.get('/review/24681/movie');
+    assert.strictEqual(list1.body.results[0].edited, false);
+
+    // sqlite 时间戳秒级精度：跨秒编辑才能区分 createdAt/updatedAt
+    await new Promise((r) => setTimeout(r, 1100));
+    await agent.post('/review/24681/movie').send({
+      rating: 5,
+      message: 'Second take',
+    });
+
+    const list2 = await agent.get('/review/24681/movie');
+    assert.strictEqual(list2.body.reviewCount, 1);
+    assert.strictEqual(list2.body.results[0].message, 'Second take');
+    assert.strictEqual(list2.body.results[0].edited, true);
+  });
+
+  it('does not mark as edited when the same content is resubmitted', async () => {
+    await seedMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'Same content',
+    });
+
+    // 跨秒后原样重发：内容未变不应触发保存，updatedAt 保持原值
+    await new Promise((r) => setTimeout(r, 1100));
+    await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'Same content',
+    });
+
+    const list = await agent.get('/review/24681/movie');
+    assert.strictEqual(list.body.results[0].edited, false);
+  });
+
+  it('includes author playback progress (movie completed)', async () => {
+    await seedMedia();
+    const userRepo = getRepository(User);
+    const playbackRepo = getRepository(PlaybackEvent);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+    await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'Nice movie',
+    });
+
+    await playbackRepo.save(
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: 24681,
+        mediaType: MediaType.MOVIE,
+        completed: true,
+      })
+    );
+
+    const list = await agent.get('/review/24681/movie');
+    const review = list.body.results[0];
+    assert.strictEqual(review.progress.status, 'completed');
+  });
+
+  it('includes author playback progress (tv watching episode)', async () => {
+    await seedTvMedia();
+    const userRepo = getRepository(User);
+    const playbackRepo = getRepository(PlaybackEvent);
+    const friend = await userRepo.findOneOrFail({
+      where: { email: 'friend@sinerr.dev' },
+    });
+
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+    await agent.post('/review/24682/tv').send({
+      rating: 4,
+      message: 'Great show',
+    });
+
+    await playbackRepo.save(
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: 24682,
+        mediaType: MediaType.TV,
+        completed: false,
+        seasonNumber: 2,
+        episodeNumber: 5,
+      })
+    );
+
+    const list = await agent.get('/review/24682/tv');
+    const review = list.body.results[0];
+    assert.strictEqual(review.progress.status, 'watching');
+    assert.strictEqual(review.progress.seasonNumber, 2);
+    assert.strictEqual(review.progress.episodeNumber, 5);
+  });
+
+  it('shows no progress when the author has no playback record', async () => {
+    await seedMedia();
+    const agent = await loginWithPermissions(
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+
+    await agent.post('/review/24681/movie').send({
+      rating: 4,
+      message: 'No playback',
+    });
+
+    const list = await agent.get('/review/24681/movie');
+    assert.strictEqual(list.body.results[0].progress, null);
   });
 });

@@ -22,7 +22,7 @@ import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import type { MessageDescriptor } from 'react-intl';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
@@ -346,13 +346,13 @@ const ActivityList = () => {
   };
 
   // 无限滚动：列表底部 sentinel 进入视口时加载更多
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const sentinelInView = useInView({
+  // useInView 返回 [ref, inView] 元组，inView 才是布尔值
+  const [sentinelRef, sentinelInView] = useInView({
     rootMargin: '200px',
     skip: !hasMore || !data?.results.length,
   });
   useEffect(() => {
-    if (sentinelInView[0] && !isValidating && data?.results.length) {
+    if (sentinelInView && !isValidating && data?.results.length) {
       setTake((t) => t + 20);
     }
   }, [sentinelInView, isValidating, data?.results.length]);

@@ -2,6 +2,8 @@ import { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import MediaReview from '@server/entity/MediaReview';
+import PlaybackEvent from '@server/entity/PlaybackEvent';
+import { User } from '@server/entity/User';
 import type {
   MediaReviewRequestBody,
   MediaReviewsResponse,
@@ -76,6 +78,98 @@ function parseTarget(
   return { seasonNumber, episodeNumber };
 }
 
+/**
+ * 为一批短评附带「评论人观看进度」与「已编辑」标记
+ *
+ * 进度数据源为本地 PlaybackEvent（webhook 写入，按 user+tmdbId 保存最新播放），
+ * 一次 IN 查询拿到全部评论人的播放记录，避免对 Jellyfin 逐用户请求。
+ *
+ * 可见性（隐私）：与动态播放记录一致，跟随 playbackVisible（默认公开）。
+ * 当前用户为管理员（MANAGE_USERS）时始终可见；普通用户看不到
+ * 已关闭 playbackVisible 的评论人进度。
+ *
+ * 返回带 extra 字段（edited/progress）的评论数组。
+ */
+async function attachReviewProgress(
+  reviews: MediaReview[],
+  viewer: User | undefined,
+  tmdbId: number,
+  mediaType: MediaType
+): Promise<MediaReviewsResponse['results']> {
+  if (reviews.length === 0) {
+    return [];
+  }
+
+  // 管理员可见所有进度；非管理员需排除关闭可见性的用户
+  const isAdmin = viewer?.hasPermission(Permission.MANAGE_USERS);
+  let hiddenUserIds: number[] = [];
+  if (!isAdmin) {
+    hiddenUserIds = (
+      await getRepository(User).find({
+        where: { settings: { playbackVisible: false } },
+        select: ['id'],
+      })
+    ).map((u) => u.id);
+  }
+
+  // 批量拉取这批评论人的最新播放记录（按 tmdbId + mediaType 过滤）
+  const userIds = [...new Set(reviews.map((r) => r.user.id))];
+  const events = await getRepository(PlaybackEvent)
+    .createQueryBuilder('event')
+    .leftJoinAndSelect('event.user', 'user')
+    .where('event.tmdbId = :tmdbId', { tmdbId })
+    .andWhere('event.mediaType = :mediaType', { mediaType })
+    .andWhere('user.id IN (:...userIds)', { userIds })
+    .getMany();
+
+  const eventByUser = new Map<number, PlaybackEvent>();
+  for (const event of events) {
+    eventByUser.set(event.user.id, event);
+  }
+
+  return reviews.map((review) => {
+    const event = eventByUser.get(review.user.id);
+    const progressVisible = isAdmin || !hiddenUserIds.includes(review.user.id);
+
+    // 进度只表达「最新看到哪集」：
+    // - 电影：已看完 / 未看（PlaybackEvent 无季集概念）
+    // - 剧集：已看完 / 最新看到 SxEy / 未看
+    let progress: MediaReviewsResponse['results'][number]['progress'] = null;
+    if (progressVisible && event) {
+      if (mediaType === MediaType.TV) {
+        if (event.completed) {
+          progress = { status: 'completed' };
+        } else if (
+          event.seasonNumber !== null &&
+          event.seasonNumber !== undefined &&
+          event.episodeNumber !== null &&
+          event.episodeNumber !== undefined
+        ) {
+          progress = {
+            status: 'watching',
+            seasonNumber: event.seasonNumber,
+            episodeNumber: event.episodeNumber,
+          };
+        } else {
+          progress = { status: 'unwatched' };
+        }
+      } else {
+        progress = {
+          status: event.completed ? 'completed' : 'unwatched',
+        };
+      }
+    }
+
+    return {
+      ...review,
+      edited:
+        new Date(review.updatedAt).getTime() >
+        new Date(review.createdAt).getTime(),
+      progress,
+    };
+  });
+}
+
 reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
   '/:tmdbId/:mediaType',
   isAuthenticated(),
@@ -137,10 +231,17 @@ reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
           ) / 10
         : 0;
 
+      const results = await attachReviewProgress(
+        reviews,
+        req.user,
+        media.tmdbId,
+        mediaType
+      );
+
       return res.status(200).json({
         averageRating,
         reviewCount: reviews.length,
-        results: reviews,
+        results,
       });
     } catch (e) {
       logger.error('Something went wrong retrieving media reviews.', {
@@ -221,9 +322,16 @@ reviewRoutes.post<
 
       let review: MediaReview;
       if (existing) {
-        existing.rating = rating;
-        existing.message = message;
-        review = await reviewRepository.save(existing);
+        // 内容无变化时不保存，避免误标「已编辑」（UpdateDateColumn 会在保存时刷新 updatedAt）
+        const unchanged =
+          existing.rating === rating && existing.message === message;
+        if (unchanged) {
+          review = existing;
+        } else {
+          existing.rating = rating;
+          existing.message = message;
+          review = await reviewRepository.save(existing);
+        }
       } else {
         review = await reviewRepository.save(
           new MediaReview({
