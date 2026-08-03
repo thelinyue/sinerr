@@ -134,12 +134,14 @@ async function attachReviewProgress(
     // 进度只表达「最新看到哪集」：
     // - 电影：已看完 / 未看（PlaybackEvent 无季集概念）
     // - 剧集：已看完 / 最新看到 SxEy / 未看
+    // 无播放记录时归为「未看」（unwatched）；仅隐私不可见时返回 null（前端不显示）
     let progress: MediaReviewsResponse['results'][number]['progress'] = null;
-    if (progressVisible && event) {
+    if (progressVisible) {
       if (mediaType === MediaType.TV) {
-        if (event.completed) {
+        if (event?.completed) {
           progress = { status: 'completed' };
         } else if (
+          event &&
           event.seasonNumber !== null &&
           event.seasonNumber !== undefined &&
           event.episodeNumber !== null &&
@@ -155,7 +157,7 @@ async function attachReviewProgress(
         }
       } else {
         progress = {
-          status: event.completed ? 'completed' : 'unwatched',
+          status: event?.completed ? 'completed' : 'unwatched',
         };
       }
     }

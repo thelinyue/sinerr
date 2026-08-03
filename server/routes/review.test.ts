@@ -557,7 +557,7 @@ describe('Review editing and playback progress', () => {
     assert.strictEqual(review.progress.episodeNumber, 5);
   });
 
-  it('shows no progress when the author has no playback record', async () => {
+  it('shows unwatched when the author has no playback record', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
       'friend@sinerr.dev',
@@ -570,6 +570,6 @@ describe('Review editing and playback progress', () => {
     });
 
     const list = await agent.get('/review/24681/movie');
-    assert.strictEqual(list.body.results[0].progress, null);
+    assert.strictEqual(list.body.results[0].progress.status, 'unwatched');
   });
 });
