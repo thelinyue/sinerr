@@ -1,9 +1,9 @@
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import {
+  ArrowDownTrayIcon,
   CheckBadgeIcon,
   HeartIcon,
-  SparklesIcon,
   StarIcon,
   TrophyIcon,
 } from '@heroicons/react/24/solid';
@@ -39,12 +39,12 @@ const badgeMeta: Record<
   requester10: {
     name: messages.requester10,
     description: messages.requester10Description,
-    icon: <SparklesIcon className="h-5 w-5 text-sky-400" />,
+    icon: <ArrowDownTrayIcon className="h-5 w-5 text-sky-400" />,
   },
   requester50: {
     name: messages.requester50,
     description: messages.requester50Description,
-    icon: <SparklesIcon className="h-5 w-5 text-sky-400" />,
+    icon: <ArrowDownTrayIcon className="h-5 w-5 text-sky-400" />,
   },
   requester100: {
     name: messages.requester100,
