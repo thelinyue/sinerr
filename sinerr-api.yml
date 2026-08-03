@@ -1220,27 +1220,18 @@ components:
           type: boolean
           description: Whether the review has been edited (updatedAt > createdAt).
         progress:
+          type: object
           nullable: true
-          oneOf:
-            - type: object
-              properties:
-                status:
-                  type: string
-                  enum: [completed]
-            - type: object
-              properties:
-                status:
-                  type: string
-                  enum: [watching]
-                seasonNumber:
-                  type: integer
-                episodeNumber:
-                  type: integer
-            - type: object
-              properties:
-                status:
-                  type: string
-                  enum: [unwatched]
+          properties:
+            status:
+              type: string
+              enum: [completed, watching, unwatched]
+            seasonNumber:
+              type: integer
+              description: Latest season reached (status=watching only).
+            episodeNumber:
+              type: integer
+              description: Latest episode reached (status=watching only).
           description: >-
             Viewer playback progress for the review author. `completed` = finished,
             `watching` = latest episode reached (series only), `unwatched` = played
