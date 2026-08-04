@@ -4,7 +4,7 @@ import { getSettings } from '@server/lib/settings';
 /**
  * MoviePilot API 客户端（原生 /api/v1/subscribe 接口）。
  *
- * 按 Mediary 的模式实现，作为 seerr 的后端下载服务接入 MoviePilot。
+ * 作为 seerr 的后端下载服务接入 MoviePilot。
  * MoviePilot 官方文档：https://wiki.movie-pilot.org/  API 文档：https://api.movie-pilot.org/
  *
  * 鉴权方式（本地实例实测确认）：
@@ -13,8 +13,7 @@ import { getSettings } from '@server/lib/settings';
  *   因此本客户端不使用 Header 方式。
  *
  * 已实测端点（本机 v2 实例，只读）：
- * - `GET /api/v1/subscribe/list`  → 返回订阅数组（可作连接测试，对应 Mediary 的
- *   `GET /api/subscriptions?limit=1`）。
+ * - `GET /api/v1/subscribe/list`  → 返回订阅数组。
  * - `GET /api/v1/download/`       → 返回下载任务数组。
  * - `GET /api/v1/system/ping`     → 服务存活检测。
  *
@@ -24,7 +23,7 @@ import { getSettings } from '@server/lib/settings';
  *   订阅的 username 取自 `request.requestedBy_username`（用于显示提交者），
  *   鉴权为 `Authorization: <API_TOKEN>` 请求头；异步创建（后台任务）。
  * - `DELETE /api/v1/subscribe/{subscribe_id}` 按订阅 ID 删除订阅。
- *   → 与 Mediary 相同，删除采用「先查列表 → 按 tmdbid/季过滤 → 逐个删除」的两步模式。
+ *   → 删除采用「先查列表 → 按 tmdbid/季过滤 → 逐个删除」的两步模式。
  *
  * 字段契约：
  * - 订阅对象（`GET /api/v1/subscribe/list` 返回数组）：`id`, `name`, `year`, `type`,

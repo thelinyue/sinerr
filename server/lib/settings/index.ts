@@ -77,19 +77,6 @@ export interface DVRSettings {
   tagRequests: boolean;
 }
 
-export interface MediaryServerSettings {
-  id: number;
-  name: string;
-  hostname: string;
-  port: number;
-  apiKey: string;
-  useSsl: boolean;
-  baseUrl?: string;
-  isDefault: boolean;
-  externalUrl?: string;
-  syncEnabled: boolean;
-}
-
 export interface MoviePilotServerSettings {
   id: number;
   name: string;
@@ -311,10 +298,6 @@ export interface NotificationAgentNtfy extends NotificationAgentConfig {
   };
 }
 
-export interface NotificationAgentMediary extends NotificationAgentConfig {
-  options: Record<string, unknown>;
-}
-
 /** 企业微信应用消息（Sinerr 2.0 模块 10） */
 export interface NotificationAgentWecom extends NotificationAgentConfig {
   options: {
@@ -329,7 +312,6 @@ export enum NotificationAgentKey {
   DISCORD = 'discord',
   EMAIL = 'email',
   GOTIFY = 'gotify',
-  MEDIARY = 'mediary',
   NTFY = 'ntfy',
   PUSHBULLET = 'pushbullet',
   PUSHOVER = 'pushover',
@@ -344,7 +326,6 @@ interface NotificationAgents {
   discord: NotificationAgentDiscord;
   email: NotificationAgentEmail;
   gotify: NotificationAgentGotify;
-  mediary: NotificationAgentMediary;
   ntfy: NotificationAgentNtfy;
   pushbullet: NotificationAgentPushbullet;
   pushover: NotificationAgentPushover;
@@ -380,7 +361,6 @@ export interface AllSettings {
   main: MainSettings;
   jellyfin: JellyfinSettings;
   tautulli: TautulliSettings;
-  mediary: MediaryServerSettings[];
   moviepilot: MoviePilotServerSettings[];
   public: PublicSettings;
   notifications: NotificationSettings;
@@ -454,7 +434,6 @@ class Settings {
         tv: MetadataProviderType.TMDB,
         anime: MetadataProviderType.TMDB,
       },
-      mediary: [],
       moviepilot: [],
       public: {
         initialized: false,
@@ -545,6 +524,7 @@ class Settings {
           wecom: {
             enabled: false,
             embedPoster: false,
+            types: 0,
             options: {
               corpid: '',
               corpsecret: '',
@@ -573,12 +553,6 @@ class Settings {
               priority: 3,
               locale: 'zh-CN',
             },
-          },
-          mediary: {
-            enabled: false,
-            embedPoster: false,
-            types: 0,
-            options: {},
           },
         },
       },
@@ -667,17 +641,6 @@ class Settings {
       this.data.metadataSettings,
       data
     );
-  }
-
-  get mediary(): MediaryServerSettings[] {
-    if (!this.data.mediary) {
-      this.data.mediary = [];
-    }
-    return this.data.mediary;
-  }
-
-  set mediary(data: MediaryServerSettings[]) {
-    this.data.mediary = data;
   }
 
   get moviepilot(): MoviePilotServerSettings[] {

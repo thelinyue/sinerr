@@ -465,46 +465,6 @@ components:
         externalUrl:
           type: string
           nullable: true
-    MediarySettings:
-      type: object
-      properties:
-        id:
-          type: number
-          example: 0
-          readOnly: true
-        name:
-          type: string
-          example: 'Mediary Main'
-        hostname:
-          type: string
-          example: '127.0.0.1'
-        port:
-          type: number
-          example: 8118
-        apiKey:
-          type: string
-          example: 'exampleapikey'
-        useSsl:
-          type: boolean
-          example: false
-        baseUrl:
-          type: string
-        isDefault:
-          type: boolean
-          example: false
-        externalUrl:
-          type: string
-          example: 'http://mediary.example.com'
-        syncEnabled:
-          type: boolean
-          example: false
-      required:
-        - name
-        - hostname
-        - port
-        - apiKey
-        - useSsl
-        - isDefault
     PublicSettings:
       type: object
       required:
@@ -2415,123 +2375,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TautulliSettings'
-  /settings/mediary:
-    get:
-      summary: Get Mediary settings
-      description: Returns all Mediary settings in a JSON array.
-      tags:
-        - settings
-      responses:
-        '200':
-          description: 'Values were returned'
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MediarySettings'
-    post:
-      summary: Create Mediary instance
-      description: Creates a new Mediary instance from the request body.
-      tags:
-        - settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MediarySettings'
-      responses:
-        '201':
-          description: 'New Mediary instance created'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediarySettings'
-  /settings/mediary/test:
-    post:
-      summary: Test Mediary configuration
-      description: Tests if the Mediary configuration is valid.
-      tags:
-        - settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                hostname:
-                  type: string
-                  example: '127.0.0.1'
-                port:
-                  type: number
-                  example: 8118
-                apiKey:
-                  type: string
-                  example: yourapikey
-                useSsl:
-                  type: boolean
-                  example: false
-                baseUrl:
-                  type: string
-              required:
-                - hostname
-                - port
-                - apiKey
-                - useSsl
-      responses:
-        '200':
-          description: Successfully connected to Mediary instance
-          content:
-            application/json:
-              schema:
-                type: object
-  /settings/mediary/{mediaryId}:
-    put:
-      summary: Update Mediary instance
-      description: Updates an existing Mediary instance with the provided values.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: mediaryId
-          required: true
-          schema:
-            type: integer
-          description: Mediary instance ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MediarySettings'
-      responses:
-        '200':
-          description: 'Mediary instance updated'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediarySettings'
-    delete:
-      summary: Delete Mediary instance
-      description: Deletes an existing Mediary instance based on the mediaryId parameter.
-      tags:
-        - settings
-      parameters:
-        - in: path
-          name: mediaryId
-          required: true
-          schema:
-            type: integer
-          description: Mediary instance ID
-      responses:
-        '200':
-          description: 'Mediary instance deleted'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediarySettings'
   /settings/moviepilot:
     get:
       summary: Get MoviePilot settings
@@ -7642,21 +7485,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Collection'
-  /service/mediary:
-    get:
-      summary: Get non-sensitive Mediary server list
-      description: Returns a list of Mediary server IDs and names in a JSON object.
-      tags:
-        - service
-      responses:
-        '200':
-          description: Request successful
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MediarySettings'
   /service/moviepilot:
     get:
       summary: Get non-sensitive MoviePilot server list
@@ -7672,40 +7500,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MoviePilotSettings'
-  /service/mediary/status:
-    get:
-      summary: Get Mediary subscription status
-      description: Returns the Mediary subscription status for a media item.
-      tags:
-        - service
-      parameters:
-        - in: query
-          name: tmdbId
-          required: true
-          schema:
-            type: number
-        - in: query
-          name: mediaType
-          required: true
-          schema:
-            type: string
-            enum: [movie, tv]
-      responses:
-        '200':
-          description: Subscription status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured:
-                    type: boolean
-                  status:
-                    type: object
-                  error:
-                    type: boolean
-        '400':
-          description: Missing tmdbId or mediaType
   /service/moviepilot/status:
     get:
       summary: Get MoviePilot subscription status

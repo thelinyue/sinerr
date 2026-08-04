@@ -5,7 +5,6 @@ import type { NotificationAgent } from '@server/lib/notifications/agents/agent';
 import DiscordAgent from '@server/lib/notifications/agents/discord';
 import EmailAgent from '@server/lib/notifications/agents/email';
 import GotifyAgent from '@server/lib/notifications/agents/gotify';
-import MediaryAgent from '@server/lib/notifications/agents/mediary';
 import NtfyAgent from '@server/lib/notifications/agents/ntfy';
 import PushbulletAgent from '@server/lib/notifications/agents/pushbullet';
 import PushoverAgent from '@server/lib/notifications/agents/pushover';
@@ -460,40 +459,6 @@ notificationRoutes.post('/ntfy/test', async (req, res, next) => {
     return next({
       status: 500,
       message: 'Failed to send ntfy notification.',
-    });
-  }
-});
-
-notificationRoutes.get('/mediary', (_req, res) => {
-  const settings = getSettings();
-
-  res.status(200).json(settings.notifications.agents.mediary);
-});
-
-notificationRoutes.post('/mediary', async (req, res) => {
-  const settings = getSettings();
-
-  settings.notifications.agents.mediary = req.body;
-  await settings.save();
-
-  res.status(200).json(settings.notifications.agents.mediary);
-});
-
-notificationRoutes.post('/mediary/test', async (req, res, next) => {
-  if (!req.user) {
-    return next({
-      status: 500,
-      message: 'User information is missing from the request.',
-    });
-  }
-
-  const mediaryAgent = new MediaryAgent(req.body);
-  if (await sendTestNotification(mediaryAgent, req.user)) {
-    return res.status(204).send();
-  } else {
-    return next({
-      status: 500,
-      message: 'Failed to send Mediary notification.',
     });
   }
 });

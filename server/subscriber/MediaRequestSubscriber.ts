@@ -1,4 +1,3 @@
-import MediaryAPI from '@server/api/mediary';
 import MoviePilotAPI, {
   type MoviePilotSeerrOptions,
   type MoviePilotSubscription,
@@ -162,173 +161,9 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
   }
 
-  public async sendToMediary(entity: MediaRequest): Promise<void> {
-    if (entity.status === MediaRequestStatus.APPROVED) {
-      try {
-        const settings = getSettings();
-        if (settings.mediary.length === 0) {
-          return;
-        }
-
-        const medSettings = settings.mediary.find((m) => m.isDefault);
-
-        if (!medSettings) {
-          return;
-        }
-
-        const tmdb = new TheMovieDb();
-        const mediary = new MediaryAPI({
-          url: MediaryAPI.buildUrl(medSettings),
-          apiKey: medSettings.apiKey,
-        });
-
-        let name: string;
-        let year: number | undefined;
-
-        if (entity.type === MediaType.MOVIE) {
-          const movie = await tmdb.getMovie({ movieId: entity.media.tmdbId });
-          name = movie.title;
-          year = movie.release_date
-            ? Number(movie.release_date.slice(0, 4))
-            : undefined;
-
-          await mediary.addSubscribe({
-            tmdbid: entity.media.tmdbId,
-            type: 'movie',
-            name,
-            year,
-          });
-        } else {
-          const tv = await tmdb.getTvShow({ tvId: entity.media.tmdbId });
-          name = tv.name;
-          year = tv.first_air_date
-            ? Number(tv.first_air_date.slice(0, 4))
-            : undefined;
-
-          const seasons = entity.seasons?.map((s) => s.seasonNumber) ?? [];
-
-          for (const season of seasons) {
-            try {
-              await mediary.addSubscribe({
-                tmdbid: entity.media.tmdbId,
-                type: 'tv',
-                name: name,
-                year,
-                seasons: String(season),
-              });
-
-              logger.info('Sent season request to Mediary', {
-                label: 'Media Request',
-                requestId: entity.id,
-                tmdbId: entity.media.tmdbId,
-                season,
-              });
-            } catch (e) {
-              logger.warn('Failed to send season to Mediary', {
-                label: 'Media Request',
-                requestId: entity.id,
-                tmdbId: entity.media.tmdbId,
-                season,
-                errorMessage: e.message,
-              });
-            }
-          }
-        }
-
-        logger.info('Sent request to Mediary', {
-          label: 'Media Request',
-          requestId: entity.id,
-          mediaId: entity.media.id,
-          tmdbId: entity.media.tmdbId,
-        });
-      } catch (e) {
-        logger.warn('Failed to send request to Mediary', {
-          label: 'Media Request',
-          requestId: entity.id,
-          mediaId: entity.media.id,
-          errorMessage: e.message,
-        });
-      }
-    }
-  }
-
-  public async removeFromMediary(entity: MediaRequest): Promise<void> {
-    try {
-      const settings = getSettings();
-      if (settings.mediary.length === 0) {
-        return;
-      }
-
-      const medSettings = settings.mediary.find((m) => m.isDefault);
-      if (!medSettings) {
-        return;
-      }
-
-      const mediary = new MediaryAPI({
-        url: MediaryAPI.buildUrl(medSettings),
-        apiKey: medSettings.apiKey,
-      });
-
-      if (
-        entity.type === MediaType.TV &&
-        entity.seasons &&
-        entity.seasons.length > 0
-      ) {
-        for (const season of entity.seasons) {
-          try {
-            await mediary.deleteSubscribe(
-              entity.media.tmdbId,
-              season.seasonNumber
-            );
-            logger.info('Removed season subscription from Mediary', {
-              label: 'Media Request',
-              requestId: entity.id,
-              mediaId: entity.media.id,
-              tmdbId: entity.media.tmdbId,
-              season: season.seasonNumber,
-            });
-          } catch (e) {
-            logger.warn('Failed to remove season subscription from Mediary', {
-              label: 'Media Request',
-              requestId: entity.id,
-              tmdbId: entity.media.tmdbId,
-              season: season.seasonNumber,
-              errorMessage: e.message,
-            });
-          }
-        }
-      } else {
-        try {
-          await mediary.deleteSubscribe(entity.media.tmdbId);
-          logger.info('Removed subscription from Mediary', {
-            label: 'Media Request',
-            requestId: entity.id,
-            mediaId: entity.media.id,
-            tmdbId: entity.media.tmdbId,
-          });
-        } catch (e) {
-          logger.warn('Failed to remove subscription from Mediary', {
-            label: 'Media Request',
-            requestId: entity.id,
-            tmdbId: entity.media.tmdbId,
-            errorMessage: e.message,
-          });
-        }
-      }
-    } catch (e) {
-      logger.error('Unexpected error in removeFromMediary', {
-        label: 'Media Request',
-        requestId: entity.id,
-        mediaId: entity.media.id,
-        tmdbId: entity.media.tmdbId,
-        errorMessage: e instanceof Error ? e.message : String(e),
-      });
-    }
-  }
-
   /**
    * 选择 MoviePilot 服务器：优先使用请求级覆盖的服务器（entity.serverId），
-   * 否则回退到默认服务器。与 Mediary 的默认服务器选择行为保持一致。
+   * 否则回退到默认服务器。
    */
   private getMoviePilotServer(
     entity: MediaRequest
@@ -742,16 +577,6 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
 
     try {
-      await this.sendToMediary(event.entity as MediaRequest);
-    } catch (e) {
-      logger.error('Error while sending to Mediary in afterUpdate subscriber', {
-        label: 'Media Request',
-        requestId: (event.entity as MediaRequest).id,
-        errorMessage: e instanceof Error ? e.message : String(e),
-      });
-    }
-
-    try {
       await this.sendToMoviePilot(event.entity as MediaRequest);
     } catch (e) {
       logger.error(
@@ -793,16 +618,6 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
     }
 
     try {
-      await this.sendToMediary(event.entity as MediaRequest);
-    } catch (e) {
-      logger.error('Error while sending to Mediary in afterInsert subscriber', {
-        label: 'Media Request',
-        requestId: (event.entity as MediaRequest).id,
-        errorMessage: e instanceof Error ? e.message : String(e),
-      });
-    }
-
-    try {
       await this.sendToMoviePilot(event.entity as MediaRequest);
     } catch (e) {
       logger.error(
@@ -838,8 +653,6 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
       event.manager as EntityManager,
       event.entity as MediaRequest
     );
-
-    await this.removeFromMediary(event.entity as MediaRequest);
 
     await this.removeFromMoviePilot(event.entity as MediaRequest);
   }

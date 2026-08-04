@@ -4,7 +4,6 @@ import Button from '@app/components/Common/Button';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
-import MediaryModal from '@app/components/Settings/MediaryModal';
 import MoviePilotModal from '@app/components/Settings/MoviePilotModal';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
@@ -15,10 +14,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
-import type {
-  MediaryServerSettings,
-  MoviePilotServerSettings,
-} from '@server/lib/settings';
+import type { MoviePilotServerSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -26,21 +22,13 @@ import useSWR, { mutate } from 'swr';
 
 const messages = defineMessages('components.Settings', {
   services: 'Services',
-
-  mediarysettings: 'Mediary Settings',
   moviepilotsettings: 'MoviePilot Settings',
-  serviceSettingsDescription:
-    'Configure your {serverType} server(s) below. You can connect multiple {serverType} servers, but only one of them can be marked as the default. Administrators are able to override the server used to process new requests prior to approval.',
-
-  mediarySettingsDescription: 'Configure Mediary connection settings',
   moviepilotSettingsDescription: 'Configure MoviePilot connection settings',
   deleteserverconfirm: 'Are you sure you want to delete this server?',
   ssl: 'SSL',
   default: 'Default',
   address: 'Address',
   activeProfile: 'Active Profile',
-
-  addmediary: 'Add Mediary Server',
   addmoviepilot: 'Add MoviePilot Server',
   noDefaultServer:
     'At least one {serverType} server must be marked as default in order for {mediaType} requests to be processed.',
@@ -57,8 +45,6 @@ interface ServerInstanceProps {
   isSSL?: boolean;
   externalUrl?: string;
   profileName?: string;
-  isMediary?: boolean;
-  isMoviePilot?: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -86,8 +72,6 @@ const ServerInstance = ({
   profileName,
   isDefault = false,
   isSSL = false,
-  isMediary = false,
-  isMoviePilot = false,
   externalUrl,
   onEdit,
   onDelete,
@@ -148,9 +132,7 @@ const ServerInstance = ({
           rel="noopener noreferrer"
           className="opacity-50 hover:opacity-100"
         >
-          {(isMediary || isMoviePilot) && (
-            <CloudIcon className="h-10 w-10 flex-shrink-0 text-indigo-500" />
-          )}
+          <CloudIcon className="h-10 w-10 flex-shrink-0 text-indigo-500" />
         </a>
       </div>
       <div className="border-t border-gray-500">
@@ -179,113 +161,13 @@ const ServerInstance = ({
   );
 };
 
-type ServerType = 'mediary' | 'moviepilot';
-
-const serverTypeLabel = (type: ServerType): string =>
-  type === 'mediary' ? 'Mediary' : 'MoviePilot';
-
-interface ServerSectionProps {
-  type: ServerType;
-  title: string;
-  description: string;
-  data: (MediaryServerSettings | MoviePilotServerSettings)[];
-  isLoading: boolean;
-  hasError: boolean;
-  addLabel: string;
-  onEdit: (server: MediaryServerSettings | MoviePilotServerSettings) => void;
-  onDelete: (serverId: number) => void;
-  onAdd: () => void;
-}
-
-const ServerSection = ({
-  type,
-  title,
-  description,
-  data,
-  isLoading,
-  hasError,
-  addLabel,
-  onEdit,
-  onDelete,
-  onAdd,
-}: ServerSectionProps) => {
-  const intl = useIntl();
-
-  return (
-    <>
-      <div className="mb-6 mt-10">
-        <h3 className="heading">{title}</h3>
-        <p className="description">{description}</p>
-      </div>
-      <div className="section">
-        {isLoading && <LoadingSpinner />}
-        {hasError && (
-          <Alert
-            title={`Failed to load ${serverTypeLabel(type)} settings`}
-            type="error"
-          />
-        )}
-        {!isLoading && !hasError && (
-          <>
-            {data.length > 0 && !data.some((m) => m.isDefault) && (
-              <Alert
-                title={intl.formatMessage(messages.noDefaultServer, {
-                  serverType: serverTypeLabel(type),
-                  mediaType: intl.formatMessage(messages.mediaTypeMovie),
-                })}
-              />
-            )}
-            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {data.map((m) => (
-                <ServerInstance
-                  key={`${type}-config-${m.id}`}
-                  name={m.name}
-                  hostname={m.hostname}
-                  port={m.port}
-                  isSSL={m.useSsl}
-                  isDefault={m.isDefault}
-                  isMediary={type === 'mediary'}
-                  isMoviePilot={type === 'moviepilot'}
-                  externalUrl={m.externalUrl}
-                  onEdit={() => onEdit(m)}
-                  onDelete={() => onDelete(m.id)}
-                />
-              ))}
-              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
-                <div className="flex h-full w-full items-center justify-center">
-                  <Button buttonType="ghost" onClick={onAdd}>
-                    <PlusIcon />
-                    <span>{addLabel}</span>
-                  </Button>
-                </div>
-              </li>
-            </ul>
-          </>
-        )}
-      </div>
-    </>
-  );
-};
-
 const SettingsServices = () => {
   const intl = useIntl();
-  const {
-    data: mediaryData,
-    error: mediaryError,
-    mutate: revalidateMediary,
-  } = useSWR<MediaryServerSettings[]>('/api/v1/settings/mediary');
   const {
     data: moviepilotData,
     error: moviepilotError,
     mutate: revalidateMoviePilot,
   } = useSWR<MoviePilotServerSettings[]>('/api/v1/settings/moviepilot');
-  const [editMediaryModal, setEditMediaryModal] = useState<{
-    open: boolean;
-    mediary: MediaryServerSettings | null;
-  }>({
-    open: false,
-    mediary: null,
-  });
   const [editMoviePilotModal, setEditMoviePilotModal] = useState<{
     open: boolean;
     moviepilot: MoviePilotServerSettings | null;
@@ -295,25 +177,18 @@ const SettingsServices = () => {
   });
   const [deleteServerModal, setDeleteServerModal] = useState<{
     open: boolean;
-    type: ServerType;
     serverId: number | null;
   }>({
     open: false,
-    type: 'mediary',
     serverId: null,
   });
 
   const deleteServer = async () => {
     await axios.delete(
-      `/api/v1/settings/${deleteServerModal.type}/${deleteServerModal.serverId}`
+      `/api/v1/settings/moviepilot/${deleteServerModal.serverId}`
     );
-    const { type } = deleteServerModal;
-    setDeleteServerModal({ open: false, serverId: null, type: 'mediary' });
-    if (type === 'mediary') {
-      revalidateMediary();
-    } else {
-      revalidateMoviePilot();
-    }
+    setDeleteServerModal({ open: false, serverId: null });
+    revalidateMoviePilot();
     mutate('/api/v1/settings/public');
   };
 
@@ -325,19 +200,6 @@ const SettingsServices = () => {
           intl.formatMessage(globalMessages.settings),
         ]}
       />
-      {editMediaryModal.open && (
-        <MediaryModal
-          mediary={editMediaryModal.mediary}
-          onClose={() => {
-            setEditMediaryModal({ open: false, mediary: null });
-          }}
-          onSave={() => {
-            revalidateMediary();
-            mutate('/api/v1/settings/public');
-            setEditMediaryModal({ open: false, mediary: null });
-          }}
-        />
-      )}
       {editMoviePilotModal.open && (
         <MoviePilotModal
           moviepilot={editMoviePilotModal.moviepilot}
@@ -365,58 +227,73 @@ const SettingsServices = () => {
           okText={intl.formatMessage(globalMessages.delete)}
           okButtonType="danger"
           onOk={() => deleteServer()}
-          onCancel={() =>
-            setDeleteServerModal({
-              open: false,
-              serverId: null,
-              type: 'mediary',
-            })
-          }
+          onCancel={() => setDeleteServerModal({ open: false, serverId: null })}
           title={intl.formatMessage(messages.deleteServer, {
-            serverType: serverTypeLabel(deleteServerModal.type),
+            serverType: 'MoviePilot',
           })}
         >
           {intl.formatMessage(messages.deleteserverconfirm)}
         </Modal>
       </Transition>
-      <ServerSection
-        type="mediary"
-        title={intl.formatMessage(messages.mediarysettings)}
-        description={intl.formatMessage(messages.mediarySettingsDescription)}
-        data={mediaryData ?? []}
-        isLoading={!mediaryData && !mediaryError}
-        hasError={!!mediaryError}
-        addLabel={intl.formatMessage(messages.addmediary)}
-        onEdit={(m) =>
-          setEditMediaryModal({
-            open: true,
-            mediary: m as MediaryServerSettings,
-          })
-        }
-        onDelete={(id) =>
-          setDeleteServerModal({ open: true, serverId: id, type: 'mediary' })
-        }
-        onAdd={() => setEditMediaryModal({ open: true, mediary: null })}
-      />
-      <ServerSection
-        type="moviepilot"
-        title={intl.formatMessage(messages.moviepilotsettings)}
-        description={intl.formatMessage(messages.moviepilotSettingsDescription)}
-        data={moviepilotData ?? []}
-        isLoading={!moviepilotData && !moviepilotError}
-        hasError={!!moviepilotError}
-        addLabel={intl.formatMessage(messages.addmoviepilot)}
-        onEdit={(m) =>
-          setEditMoviePilotModal({
-            open: true,
-            moviepilot: m as MoviePilotServerSettings,
-          })
-        }
-        onDelete={(id) =>
-          setDeleteServerModal({ open: true, serverId: id, type: 'moviepilot' })
-        }
-        onAdd={() => setEditMoviePilotModal({ open: true, moviepilot: null })}
-      />
+      <div className="mb-6 mt-10">
+        <h3 className="heading">
+          {intl.formatMessage(messages.moviepilotsettings)}
+        </h3>
+        <p className="description">
+          {intl.formatMessage(messages.moviepilotSettingsDescription)}
+        </p>
+      </div>
+      <div className="section">
+        {!moviepilotData && !moviepilotError && <LoadingSpinner />}
+        {moviepilotError && (
+          <Alert title="Failed to load MoviePilot settings" type="error" />
+        )}
+        {moviepilotData && !moviepilotError && (
+          <>
+            {moviepilotData.length > 0 &&
+              !moviepilotData.some((m) => m.isDefault) && (
+                <Alert
+                  title={intl.formatMessage(messages.noDefaultServer, {
+                    serverType: 'MoviePilot',
+                    mediaType: intl.formatMessage(messages.mediaTypeMovie),
+                  })}
+                />
+              )}
+            <ul className="grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {moviepilotData.map((m) => (
+                <ServerInstance
+                  key={`moviepilot-config-${m.id}`}
+                  name={m.name}
+                  hostname={m.hostname}
+                  port={m.port}
+                  isSSL={m.useSsl}
+                  isDefault={m.isDefault}
+                  externalUrl={m.externalUrl}
+                  onEdit={() =>
+                    setEditMoviePilotModal({ open: true, moviepilot: m })
+                  }
+                  onDelete={() =>
+                    setDeleteServerModal({ open: true, serverId: m.id })
+                  }
+                />
+              ))}
+              <li className="col-span-1 h-32 rounded-lg border-2 border-dashed border-gray-400 shadow sm:h-44">
+                <div className="flex h-full w-full items-center justify-center">
+                  <Button
+                    buttonType="ghost"
+                    onClick={() =>
+                      setEditMoviePilotModal({ open: true, moviepilot: null })
+                    }
+                  >
+                    <PlusIcon />
+                    <span>{intl.formatMessage(messages.addmoviepilot)}</span>
+                  </Button>
+                </div>
+              </li>
+            </ul>
+          </>
+        )}
+      </div>
     </>
   );
 };

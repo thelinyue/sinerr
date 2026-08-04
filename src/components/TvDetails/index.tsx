@@ -20,7 +20,6 @@ import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
 import MediaReviewBlock from '@app/components/MediaReviewBlock';
 import MediaSlider from '@app/components/MediaSlider';
-import MediaryStatus from '@app/components/MediaryStatus';
 import MoviePilotStatus from '@app/components/MoviePilotStatus';
 import PersonCard from '@app/components/PersonCard';
 import RequestButton from '@app/components/RequestButton';
@@ -437,7 +436,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
             {data.mediaInfo?.tmdbId && (
-              <MediaryStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />
+              <MoviePilotStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />
             )}
             {data.mediaInfo?.tmdbId && (
               <MoviePilotStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />

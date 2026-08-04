@@ -15,7 +15,6 @@ import {
   ChatBubbleLeftRightIcon,
   CloudIcon,
   EnvelopeIcon,
-  SignalIcon,
 } from '@heroicons/react/24/solid';
 import { useIntl } from 'react-intl';
 
@@ -27,7 +26,6 @@ const messages = defineMessages('components.Settings', {
   email: 'Email',
   webhook: 'Webhook',
   webpush: 'Web Push',
-  mediary: 'Mediary',
 });
 
 type SettingsNotificationsProps = {
@@ -147,17 +145,6 @@ const SettingsNotifications = ({ children }: SettingsNotificationsProps) => {
       ),
       route: '/settings/notifications/webhook',
       regex: /^\/settings\/notifications\/webhook/,
-    },
-    {
-      text: intl.formatMessage(messages.mediary),
-      content: (
-        <span className="flex items-center">
-          <SignalIcon className="mr-2 h-4" />
-          {intl.formatMessage(messages.mediary)}
-        </span>
-      ),
-      route: '/settings/notifications/mediary',
-      regex: /^\/settings\/notifications\/mediary/,
     },
     {
       text: 'WeCom',
