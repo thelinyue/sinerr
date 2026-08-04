@@ -15,26 +15,6 @@ RUN apk update && \
 COPY . ./app
 WORKDIR /app
 
-FROM base AS prod-deps
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --frozen-lockfile
-
-# Remove large native modules for linux-x64-gnu platform (we use alpine which is musl-based)
-# not supported in pnpm for now due to this bug: https://github.com/pnpm/pnpm/issues/9654
-RUN du -shL ./node_modules/.pnpm/* | grep '[0-9]M.*' | grep 'linux-x64-gnu@' | awk '{print $2}' | xargs rm -rf
-# Remove large module files not needed for production
-RUN if [ -d node_modules/.pnpm ]; then \
-  find node_modules/.pnpm -type d \( \
-  -path "*ace-builds/src-noconflict" -o \
-  -path "*ace-builds/src" -o \
-  -path "*ace-builds/src-min" -o \
-  -path "*country-flag-icons/react" -o \
-  -path "*country-flag-icons/string" -o \
-  -path "*country-flag-icons/1x1" -o \
-  -path "*@heroicons/react/16" \
-  \) -exec rm -rf {} + || true; \
-  fi
-
 FROM base AS build
 
 ARG COMMIT_TAG
@@ -46,6 +26,11 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store CYPRESS_INSTALL_BINARY=0 pnpm 
 RUN pnpm build
 
 RUN rm -rf .next/cache
+
+# 镜像瘦身（方案 2）：@vercel/nft 追踪服务端依赖，组装运行时子集（.runtime-stage/）
+# 只保留 dist/index.js 实际依赖的文件 + 原生模块 + fs 读取文件，削减 node_modules
+RUN node scripts/trace-server.mjs && \
+  echo "trace-server done"
 
 FROM node:22.22.2-alpine3.23@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f
 ARG SOURCE_DATE_EPOCH
@@ -60,14 +45,14 @@ USER node:node
 
 WORKDIR /app
 
-COPY --chown=node:node . .
-COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
-COPY --chown=node:node --from=build /app/.next ./.next
-COPY --chown=node:node --from=build /app/dist ./dist
+# 运行时只拷追踪出的依赖子集 + Next 产物 + 静态资源
+COPY --chown=node:node --from=build /app/.runtime-stage/ /app/
+COPY --chown=node:node --from=build /app/.next /app/.next
+COPY --chown=node:node --from=build /app/public /app/public
 
 RUN touch config/DOCKER && \
   echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > committag.json
 
 EXPOSE 5055
 
-CMD [ "npm", "start" ]
+CMD [ "node", "dist/index.js" ]
