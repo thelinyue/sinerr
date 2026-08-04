@@ -55,6 +55,9 @@ config/anime-list.xml
 # dist files
 dist
 
+# nft trace runtime stage (build artifact)
+.runtime-stage
+
 # sqlite journal
 config/db/db.sqlite3-journal
 

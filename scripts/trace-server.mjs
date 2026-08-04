@@ -98,7 +98,24 @@ for (const pkg of ['sqlite3', 'sharp', 'bcrypt', 'pg-native', 'pg']) {
   copied++;
 }
 
-// 4. fs 读取的手动文件（nft 不追踪 fs.readFile）
+// 4. Next.js 动态 require 白名单
+// Next 运行时通过 require-hook 代理加载 next/dist/compiled/*（webpack/swc/babel 等打包依赖），
+// nft 静态分析无法追踪（Docker 冒烟实测：Cannot find module 'next/dist/compiled/webpack/webpack-lib'）。
+// 整目录纳入最稳妥。
+for (const sub of ['next/dist/compiled']) {
+  let realDir;
+  try {
+    realDir = fs.realpathSync(path.join(base, 'node_modules', sub));
+  } catch {
+    continue; // 未安装（如未使用 Next）
+  }
+  const destDir = path.join(stage, path.relative(base, realDir));
+  fs.mkdirSync(path.dirname(destDir), { recursive: true });
+  fs.cpSync(realDir, destDir, { recursive: true });
+  copied++;
+}
+
+// 5. fs 读取的手动文件（nft 不追踪 fs.readFile）
 for (const rel of [
   'dist',
   'package.json',
@@ -111,7 +128,7 @@ for (const rel of [
   }
 }
 
-// 5. config 目录占位（运行时创建）
+// 6. config 目录占位（运行时创建）
 fs.mkdirSync(path.join(stage, 'config'), { recursive: true });
 
 function dirSize(dir) {
