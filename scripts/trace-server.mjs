@@ -83,19 +83,49 @@ walkSymlinks(path.join(base, 'node_modules'));
 // 顶层 node_modules/<pkg> 是 pnpm symlink，必须 realpath 解析到 .pnpm 真实路径后复制；
 // 直接对 symlink 用 fs.cpSync 会把真实目录写入已存在的 symlink，触发
 // ERR_FS_CP_DIR_TO_NON_DIR（Docker 构建实测报错）。
-for (const pkg of ['sqlite3', 'sharp', 'bcrypt', 'pg-native', 'pg']) {
+// @next/swc-*：Next 运行时按 `${platform}-${arch}` 动态 require，nft 无法静态追踪，
+// 且平台可选依赖没有顶层 symlink（只在 .pnpm），顶层找不到时需搜索 .pnpm。
+for (const pkg of [
+  'sqlite3',
+  'sharp',
+  'bcrypt',
+  'pg-native',
+  'pg',
+  '@next/swc-linux-x64-gnu',
+  '@next/swc-linux-x64-musl',
+  '@next/swc-darwin-arm64',
+  '@next/swc-darwin-x64',
+  '@next/swc-win32-x64-msvc',
+]) {
   const link = path.join(base, 'node_modules', pkg);
   let real;
+  let dests = [];
   try {
     real = fs.realpathSync(link);
+    dests.push([real, path.join(stage, path.relative(base, real))]);
   } catch {
-    continue; // 未安装
+    // 平台可选依赖：顶层无 symlink，搜索 .pnpm/*/node_modules/<pkg>
+    const pnpmDir = path.join(base, 'node_modules', '.pnpm');
+    if (fs.existsSync(pnpmDir)) {
+      for (const entry of fs.readdirSync(pnpmDir)) {
+        const cand = path.join(pnpmDir, entry, 'node_modules', pkg);
+        if (!fs.existsSync(cand)) continue;
+        if (fs.lstatSync(cand).isSymbolicLink()) continue; // 跳过 next@... 内部的 symlink
+        dests.push([cand, path.join(stage, path.relative(base, cand))]);
+      }
+    }
+    if (dests.length === 0) {
+      console.warn(`[trace] allowlist skip (not installed): ${pkg}`);
+      continue;
+    }
   }
-  const destReal = path.join(stage, path.relative(base, real));
-  fs.mkdirSync(path.dirname(destReal), { recursive: true });
-  // 与第 1 步已追踪复制的部分文件合并（force 默认 true），补齐 .node 原生绑定等
-  fs.cpSync(real, destReal, { recursive: true });
-  copied++;
+  for (const [src, dest] of dests) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    // 与第 1 步已追踪复制的部分文件合并（force 默认 true），补齐 .node 原生绑定等
+    fs.cpSync(src, dest, { recursive: true });
+    console.log(`[trace] allowlist copied: ${pkg}`);
+    copied++;
+  }
 }
 
 // 4. Next.js 动态 require 白名单
@@ -115,7 +145,64 @@ for (const sub of ['next/dist/compiled']) {
   copied++;
 }
 
-// 5. fs 读取的手动文件（nft 不追踪 fs.readFile）
+// 5. Turbopack SSR externals
+// Next 16 构建时把客户端包（react-intl/swr/formik/lodash 等）在 .next/node_modules 下
+// 生成为「哈希名 symlink」（如 react-intl-eb77eec6fecfa1b3 → ../../node_modules/.pnpm/...）。
+// 运行时 SSR 按哈希名 require，nft 无法追踪这些目标，必须按 symlink 解析并递归复制真实包及其依赖。
+const nextExternalsDir = path.join(base, '.next', 'node_modules');
+const extVisited = new Set();
+function findPkgNodeModules(p) {
+  let d = path.dirname(p);
+  while (path.basename(d) !== 'node_modules' && d !== base && path.dirname(d) !== d) {
+    d = path.dirname(d);
+  }
+  return path.basename(d) === 'node_modules' ? d : null;
+}
+function copyExtRealDir(real) {
+  try {
+    real = fs.realpathSync(real);
+  } catch {
+    return;
+  }
+  if (extVisited.has(real)) return;
+  extVisited.add(real);
+  const rel = path.relative(base, real);
+  if (rel.startsWith('..') || !rel.startsWith('node_modules')) return;
+  const dest = path.join(stage, rel);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  // 始终合并复制：nft 可能部分追踪了该包（如 axios 缺 index.js），跳过会保留残缺目录
+  fs.cpSync(real, dest, { recursive: true });
+  console.log(`[trace] next-external copied: ${rel}`);
+  copied++;
+  // 该包在 .pnpm 下的依赖 symlink（兄弟节点），递归解析真实目标
+  const nm = findPkgNodeModules(real);
+  if (!nm || !fs.existsSync(nm)) return;
+  for (const entry of fs.readdirSync(nm, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      copyExtRealDir(path.join(nm, entry.name));
+    } else if (entry.isDirectory()) {
+      // scoped 目录：继续下钻找 symlink
+      for (const e2 of fs.readdirSync(path.join(nm, entry.name), { withFileTypes: true })) {
+        if (e2.isSymbolicLink()) copyExtRealDir(path.join(nm, entry.name, e2.name));
+      }
+    }
+  }
+}
+if (fs.existsSync(nextExternalsDir)) {
+  for (const entry of fs.readdirSync(nextExternalsDir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) {
+      copyExtRealDir(path.join(nextExternalsDir, entry.name));
+    } else if (entry.isDirectory()) {
+      // scoped 目录（@scope/pkg-hash symlink 在内，如 @tanem/react-nprogress-*）
+      const scopeDir = path.join(nextExternalsDir, entry.name);
+      for (const e2 of fs.readdirSync(scopeDir, { withFileTypes: true })) {
+        if (e2.isSymbolicLink()) copyExtRealDir(path.join(scopeDir, e2.name));
+      }
+    }
+  }
+}
+
+// 6. fs 读取的手动文件（nft 不追踪 fs.readFile）
 for (const rel of [
   'dist',
   'package.json',
@@ -128,7 +215,7 @@ for (const rel of [
   }
 }
 
-// 6. config 目录占位（运行时创建）
+// 7. config 目录占位（运行时创建）
 fs.mkdirSync(path.join(stage, 'config'), { recursive: true });
 
 function dirSize(dir) {
