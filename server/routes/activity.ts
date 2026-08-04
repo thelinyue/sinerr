@@ -376,10 +376,7 @@ activityRoutes.get('/watched', isAuthenticated(), async (req, res, next) => {
       .addSelect('COUNT(DISTINCT event.userId)', 'watchers')
       .addSelect('SUM(event.durationSeconds)', 'durationSeconds')
       .groupBy('event.tmdbId')
-      .addGroupBy('event.mediaType')
-      .orderBy('watchers', 'DESC')
-      .addOrderBy('watchCount', 'DESC')
-      .limit(take);
+      .addGroupBy('event.mediaType');
 
     if (mediaType) {
       qb.andWhere('event.mediaType = :mediaType', { mediaType });
@@ -393,10 +390,18 @@ activityRoutes.get('/watched', isAuthenticated(), async (req, res, next) => {
       );
     }
 
-    const rows = await qb.getRawMany();
+    // 不在 SQL 里 ORDER BY 别名：PostgreSQL 对未加引号的别名会折叠成小写，
+    // 与 SELECT 的驼峰别名不匹配而报错（SQLite 大小写不敏感故本地未暴露）。
+    // 改为取回后按 观看人数/次数 在 JS 中排序，跨库行为一致。
+    const rows = (await qb.getRawMany()).sort(
+      (a, b) =>
+        Number(b.watchers) - Number(a.watchers) ||
+        Number(b.watchCount) - Number(a.watchCount)
+    );
+    const topRows = rows.slice(0, take);
 
     // 每个媒体的观看者（distinct 用户）：id / displayName / avatar，供头像簇展示
-    const tmdbIds = rows.map((row) => Number(row.tmdbId));
+    const tmdbIds = topRows.map((row) => Number(row.tmdbId));
     let usersByTmdb = new Map<
       number,
       { id: number; displayName: string; avatar: string }[]
@@ -436,7 +441,7 @@ activityRoutes.get('/watched', isAuthenticated(), async (req, res, next) => {
     }
 
     return res.status(200).json({
-      results: rows.map((row) => {
+      results: topRows.map((row) => {
         const tmdbId = Number(row.tmdbId);
         return {
           tmdbId,
