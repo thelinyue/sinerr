@@ -125,14 +125,16 @@ const ActivityFeedItem = ({
         : `E${item.payload.episodeNumber}`
       : null;
 
-  // 播放时长（秒 → 分钟），不足 1 分钟不显示
+  // 播放时长：始终显示，不足 1 分钟按秒显示，否则按分钟
   const playbackDuration =
-    item.type === 'playback' &&
-    item.payload.durationSeconds != null &&
-    item.payload.durationSeconds >= 60
-      ? `${Math.round(item.payload.durationSeconds / 60)}${
-          intl.locale.startsWith('zh') ? ' 分钟' : ' min'
-        }`
+    item.type === 'playback' && item.payload.durationSeconds != null
+      ? item.payload.durationSeconds < 60
+        ? `${Math.round(item.payload.durationSeconds)}${
+            intl.locale.startsWith('zh') ? ' 秒' : 's'
+          }`
+        : `${Math.round(item.payload.durationSeconds / 60)}${
+            intl.locale.startsWith('zh') ? ' 分钟' : ' min'
+          }`
       : null;
 
   // 短评星级（1-5）
