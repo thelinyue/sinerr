@@ -8,7 +8,11 @@ import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
 import { Permission } from '@server/lib/permissions';
 import { setupTestDb } from '@server/test/db';
-import { createTestApp, loginAs } from '@server/test/helpers';
+import {
+  createTestApp,
+  loginAs,
+  loginWithPermissions,
+} from '@server/test/helpers';
 import type { Express } from 'express';
 import reviewRoutes from './review';
 
@@ -19,14 +23,6 @@ before(async () => {
 });
 
 setupTestDb();
-
-async function loginWithPermissions(email: string, permissions: number) {
-  const userRepository = getRepository(User);
-  const user = await userRepository.findOneOrFail({ where: { email } });
-  user.permissions = permissions;
-  await userRepository.save(user);
-  return loginAs(app, email, 'test1234');
-}
 
 async function seedMedia() {
   const mediaRepo = getRepository(Media);
@@ -65,10 +61,12 @@ describe('GET /review/:tmdbId/:mediaType', () => {
     assert.deepStrictEqual(res.body.results, []);
   });
 
-  it('returns 404 for media that does not exist', async () => {
+  it('returns an empty review list for media without a Media record (no 404)', async () => {
     const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/review/99999999/movie');
-    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.reviewCount, 0);
+    assert.deepStrictEqual(res.body.results, []);
   });
 
   it('rejects an invalid media type', async () => {
@@ -82,6 +80,7 @@ describe('POST /review/:tmdbId/:mediaType', () => {
   it('creates a review and reflects it in the list', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -99,9 +98,37 @@ describe('POST /review/:tmdbId/:mediaType', () => {
     assert.strictEqual(list.body.results[0].user.displayName, 'friend');
   });
 
+  it('auto-creates a Media record when posting a review for unrequested media', async () => {
+    const mediaRepo = getRepository(Media);
+    const before = await mediaRepo.findOne({
+      where: { tmdbId: 99998888, mediaType: MediaType.MOVIE },
+    });
+    assert.strictEqual(before, null);
+
+    const agent = await loginWithPermissions(
+      app,
+      'friend@sinerr.dev',
+      Permission.REQUEST
+    );
+    const create = await agent.post('/review/99998888/movie').send({
+      rating: 5,
+      message: 'Works without a prior request',
+    });
+    assert.strictEqual(create.status, 201);
+
+    const after = await mediaRepo.findOneOrFail({
+      where: { tmdbId: 99998888, mediaType: MediaType.MOVIE },
+    });
+    assert.ok(after.id > 0);
+
+    const list = await agent.get('/review/99998888/movie');
+    assert.strictEqual(list.body.reviewCount, 1);
+  });
+
   it('rejects an out-of-range rating', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -117,6 +144,7 @@ describe('POST /review/:tmdbId/:mediaType', () => {
   it('rejects an empty message', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -131,7 +159,7 @@ describe('POST /review/:tmdbId/:mediaType', () => {
 
   it('rejects posting without the REQUEST permission', async () => {
     await seedMedia();
-    const agent = await loginWithPermissions('friend@sinerr.dev', 0);
+    const agent = await loginWithPermissions(app, 'friend@sinerr.dev', 0);
 
     const res = await agent.post('/review/24681/movie').send({
       rating: 4,
@@ -144,6 +172,7 @@ describe('POST /review/:tmdbId/:mediaType', () => {
   it('upserts when the same user posts twice', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -170,6 +199,7 @@ describe('DELETE /review/:reviewId', () => {
   it('allows the author to delete their own review', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -190,6 +220,7 @@ describe('DELETE /review/:reviewId', () => {
   it('forbids deleting another user review without MANAGE_REQUESTS', async () => {
     await seedMedia();
     const authorAgent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -200,6 +231,7 @@ describe('DELETE /review/:reviewId', () => {
     const reviewId = create.body.id;
 
     const otherAgent = await loginWithPermissions(
+      app,
       'admin@sinerr.dev',
       Permission.REQUEST
     );
@@ -210,6 +242,7 @@ describe('DELETE /review/:reviewId', () => {
   it('allows a user with MANAGE_REQUESTS to delete any review', async () => {
     await seedMedia();
     const authorAgent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -235,6 +268,7 @@ describe('TV reviews with season/episode targets', () => {
   it('allows a whole-series review and separates it from season reviews', async () => {
     await seedTvMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -278,6 +312,7 @@ describe('TV reviews with season/episode targets', () => {
   it('separates episode reviews from the season reviews', async () => {
     await seedTvMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -311,6 +346,7 @@ describe('TV reviews with season/episode targets', () => {
   it('upserts within the same target but keeps different targets separate', async () => {
     await seedTvMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -343,6 +379,7 @@ describe('TV reviews with season/episode targets', () => {
   it('rejects an episode review without a season number', async () => {
     await seedTvMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -359,6 +396,7 @@ describe('TV reviews with season/episode targets', () => {
   it('rejects season targets on movie reviews', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -375,6 +413,7 @@ describe('TV reviews with season/episode targets', () => {
   it('rejects a negative or zero season number', async () => {
     await seedTvMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -393,6 +432,7 @@ describe('Review editing and playback progress', () => {
   it('marks a review as edited after the content changes', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -422,6 +462,7 @@ describe('Review editing and playback progress', () => {
   it('does not mark as edited when the same content is resubmitted', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -451,6 +492,7 @@ describe('Review editing and playback progress', () => {
     });
 
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -482,6 +524,7 @@ describe('Review editing and playback progress', () => {
     });
 
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -511,6 +554,7 @@ describe('Review editing and playback progress', () => {
   it('shows unwatched when the author has no playback record', async () => {
     await seedMedia();
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );

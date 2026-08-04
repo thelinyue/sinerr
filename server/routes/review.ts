@@ -1,4 +1,4 @@
-import { MediaType } from '@server/constants/media';
+import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import MediaReview from '@server/entity/MediaReview';
@@ -195,8 +195,13 @@ reviewRoutes.get<{ tmdbId: string; mediaType: string }, MediaReviewsResponse>(
     try {
       const media = await findMedia(tmdbId, mediaType);
 
+      // 未入库媒体（未被请求/扫描）：无评论，返回空列表而非 404，保证短评块正常展示
       if (!media) {
-        return next({ status: 404, message: 'Media does not exist.' });
+        return res.status(200).json({
+          averageRating: 0,
+          reviewCount: 0,
+          results: [] as MediaReviewsResponse['results'],
+        });
       }
 
       const reviewRepository = getRepository(MediaReview);
@@ -304,10 +309,17 @@ reviewRoutes.post<
         });
       }
 
-      const media = await findMedia(tmdbId, mediaType);
+      let media = await findMedia(tmdbId, mediaType);
 
+      // 未入库媒体：自动创建 Media 记录，允许对任意影视发表短评（无需先请求）
       if (!media) {
-        return next({ status: 404, message: 'Media does not exist.' });
+        media = await getRepository(Media).save(
+          new Media({
+            tmdbId,
+            mediaType,
+            status: MediaStatus.UNKNOWN,
+          })
+        );
       }
 
       const reviewRepository = getRepository(MediaReview);
