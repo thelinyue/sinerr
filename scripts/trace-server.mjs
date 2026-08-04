@@ -80,10 +80,21 @@ function walkSymlinks(dir) {
 walkSymlinks(path.join(base, 'node_modules'));
 
 // 3. 原生模块 allowlist（nft 对 .node/bindings 动态加载可能漏）：整目录纳入
+// 顶层 node_modules/<pkg> 是 pnpm symlink，必须 realpath 解析到 .pnpm 真实路径后复制；
+// 直接对 symlink 用 fs.cpSync 会把真实目录写入已存在的 symlink，触发
+// ERR_FS_CP_DIR_TO_NON_DIR（Docker 构建实测报错）。
 for (const pkg of ['sqlite3', 'sharp', 'bcrypt', 'pg-native', 'pg']) {
-  const dir = path.join(base, 'node_modules', pkg);
-  if (!fs.existsSync(dir)) continue;
-  fs.cpSync(dir, path.join(stage, 'node_modules', pkg), { recursive: true });
+  const link = path.join(base, 'node_modules', pkg);
+  let real;
+  try {
+    real = fs.realpathSync(link);
+  } catch {
+    continue; // 未安装
+  }
+  const destReal = path.join(stage, path.relative(base, real));
+  fs.mkdirSync(path.dirname(destReal), { recursive: true });
+  // 与第 1 步已追踪复制的部分文件合并（force 默认 true），补齐 .node 原生绑定等
+  fs.cpSync(real, destReal, { recursive: true });
   copied++;
 }
 
