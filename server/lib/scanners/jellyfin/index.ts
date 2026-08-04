@@ -40,6 +40,9 @@ class JellyfinScanner
   private currentLibrary: Library;
   private isRecentOnly = false;
   private processedAnidbSeason: Map<number, Map<number, number>>;
+  /** 精准刷新待处理队列（webhook 爆发时批量收敛） */
+  private pendingMediaItems = new Set<string>();
+  private draining = false;
 
   constructor({ isRecentOnly }: { isRecentOnly?: boolean } = {}) {
     super('Jellyfin Sync');
@@ -477,37 +480,41 @@ class JellyfinScanner
   /**
    * 精准刷新单个媒体（webhook library.new / item.updated 触发）
    *
-   * 按 ItemId 反查该媒体，只处理这一部剧/电影（剧集/季自动解析到整部剧），
-   * 复用 processShow 的 Episode 表同步逻辑，避免每次新入库都触发全库最近扫描。
-   * 返回 false 表示已有扫描在运行、配置缺失或媒体不存在（不做全库回退，交给定时扫描兜底）。
+   * 并发/爆发场景：入队到 pendingMediaItems，由 drainQueue 串行批量处理。
+   * 批量内先解析根（剧集/季/单集 → SeriesId 整部剧；电影 → 自身）再按根去重，
+   * 保证「同一部剧被 N 条 episode webhook 覆盖只刷新一次」，
+   * 且不同剧同时推送不会互相丢弃。
    */
-  public async processMediaItem(itemId: string): Promise<boolean> {
-    const settings = getSettings();
-
-    if (
-      settings.main.mediaServerType != MediaServerType.JELLYFIN &&
-      settings.main.mediaServerType != MediaServerType.EMBY
-    ) {
-      return false;
+  public async processMediaItem(itemId: string): Promise<void> {
+    this.pendingMediaItems.add(itemId);
+    if (!this.draining && !this.running) {
+      await this.drainQueue();
     }
+  }
 
-    if (this.running) {
-      return false;
-    }
-
+  private async drainQueue(): Promise<void> {
+    if (this.draining) return;
+    this.draining = true;
     const sessionId = this.startRun();
 
     try {
+      const settings = getSettings();
+      if (
+        settings.main.mediaServerType != MediaServerType.JELLYFIN &&
+        settings.main.mediaServerType != MediaServerType.EMBY
+      ) {
+        return;
+      }
+
       const userRepository = getRepository(User);
       const admin = await userRepository.findOne({
         where: { id: 1 },
         select: ['id', 'jellyfinUserId', 'jellyfinDeviceId'],
         order: { id: 'ASC' },
       });
-
       if (!admin) {
         this.log('No admin configured. Jellyfin sync skipped.', 'warn');
-        return false;
+        return;
       }
 
       this.jfClient = new JellyfinAPI(
@@ -522,45 +529,52 @@ class JellyfinScanner
       );
       this.processedAnidbSeason = new Map();
 
-      const item = await this.jfClient.getItemData(itemId);
-      if (!item?.Id) {
-        this.log(
-          `No item found for Id: ${itemId}. Skipping targeted refresh`,
-          'warn'
-        );
-        return false;
+      // 逐批处理：运行期间新入队的项会在下一轮 while 被消化
+      while (this.pendingMediaItems.size > 0) {
+        const batch = [...this.pendingMediaItems];
+        this.pendingMediaItems.clear();
+
+        // 解析根并去重：同一部剧的多条 episode 只保留一个根
+        const roots = new Set<string>();
+        for (const itemId of batch) {
+          try {
+            const item = await this.jfClient.getItemData(itemId);
+            if (!item?.Id) continue;
+            const rootId =
+              item.Type === 'Movie' ? item.Id : (item.SeriesId ?? item.Id);
+            roots.add(rootId);
+          } catch {
+            // 单条解析失败跳过，不阻塞整批
+          }
+        }
+
+        for (const rootId of roots) {
+          const item = await this.jfClient.getItemData(rootId);
+          this.log(
+            `Precisely refreshing media item: ${item?.Name ?? rootId} (${item?.Type ?? '?'})`,
+            'info'
+          );
+          if (item?.Type === 'Movie') {
+            await this.processJellyfinMovie(item);
+          } else if (
+            item?.Type === 'Series' ||
+            item?.Type === 'Season' ||
+            item?.Type === 'Episode'
+          ) {
+            // 剧集/季/单集统一走剧集处理（内部按 SeriesId 解析到整部剧）
+            await this.processJellyfinShow(item);
+          }
+        }
       }
 
-      this.log(
-        `Precisely refreshing media item: ${item.Name ?? itemId} (${item.Type})`,
-        'info'
-      );
-
-      if (item.Type === 'Movie') {
-        await this.processJellyfinMovie(item);
-      } else if (
-        item.Type === 'Series' ||
-        item.Type === 'Season' ||
-        item.Type === 'Episode'
-      ) {
-        // 剧集/季/单集统一走剧集处理（内部按 SeriesId 解析到整部剧）
-        await this.processJellyfinShow(item);
-      } else {
-        this.log(
-          `Unsupported item type for targeted refresh: ${item.Type}`,
-          'debug'
-        );
-      }
-
-      this.log('Targeted media refresh complete', 'info');
-      return true;
+      this.log('Targeted media refresh queue drained', 'info');
     } catch (e) {
       this.log('Targeted media refresh failed', 'error', {
         errorMessage: e instanceof Error ? e.message : 'Unknown error',
       });
-      return false;
     } finally {
       this.endRun(sessionId);
+      this.draining = false;
     }
   }
 

@@ -379,20 +379,14 @@ webhookRoutes.post('/emby', async (req, res) => {
         itemName,
       });
     } else {
-      logger.info('Precisely refreshing media item due to webhook', {
+      logger.info('Queueing targeted media refresh due to webhook', {
         label: 'Webhook',
         event,
         itemName,
         itemId,
       });
-      const refreshed = await jellyfinRecentScanner.processMediaItem(itemId);
-      if (!refreshed) {
-        logger.info('Skipped targeted media refresh', {
-          label: 'Webhook',
-          event,
-          itemId,
-        });
-      }
+      // 入队即可：并发爆发时由扫描器队列串行批量处理并按剧去重
+      await jellyfinRecentScanner.processMediaItem(itemId);
     }
   }
 
