@@ -225,6 +225,10 @@ app
       OpenApiValidator.middleware({
         apiSpec: API_SPEC_PATH,
         validateRequests: true,
+        // 鉴权全部由应用中间件/路由处理（checkUser/isAuthenticated/MCP 路由自带 Bearer 校验），
+        // 关闭 spec 级 security 校验：全局 cookieAuth/apiKey 会让无 cookie 的 Bearer 端点（如 /mcp）
+        // 与未登录的 /auth/me 被 validator 提前 401（"cookie 'connect.sid' required"）。
+        validateSecurity: false,
       })
     );
     server.use('/api/v1', routes);
