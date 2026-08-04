@@ -18,11 +18,12 @@ import {
 } from '@heroicons/react/24/solid';
 import { MediaRequestStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
+import type { RequestVotesResponse } from '@server/interfaces/api/voteInterfaces';
 import axios from 'axios';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import { mutate } from 'swr';
+import useSWR, { mutate } from 'swr';
 
 const messages = defineMessages('components.RequestBlock', {
   seasons: '{seasonCount, plural, one {Season} other {Seasons}}',
@@ -51,6 +52,9 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const { profile, rootFolder, server, languageProfile } = useRequestOverride();
+  const { data: votesData } = useSWR<RequestVotesResponse>(
+    `/api/v1/request/${request.id}/votes`
+  );
 
   const updateRequest = async (type: 'approve' | 'decline'): Promise<void> => {
     setIsUpdating(true);
@@ -152,6 +156,26 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
               </div>
             )}
           </div>
+          {!!votesData?.results?.length && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-gray-400">
+                {votesData.voteCount} 人想看
+              </span>
+              <div className="flex">
+                {votesData.results.slice(0, 5).map((voter) => (
+                  <CachedImage
+                    key={voter.id}
+                    type="avatar"
+                    src={voter.avatar ?? ''}
+                    alt=""
+                    className="-ml-1 h-6 w-6 rounded-full object-cover ring-2 ring-gray-800"
+                    width={24}
+                    height={24}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           <div className="ml-2 flex flex-shrink-0 flex-wrap">
             {request.status === MediaRequestStatus.PENDING && (
               <>

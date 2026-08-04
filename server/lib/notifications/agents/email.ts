@@ -115,6 +115,35 @@ class EmailAgent
         ? intl.formatMessage(globalMessages.movie)
         : intl.formatMessage(globalMessages.series)
       : undefined;
+    // 追更通知（模块 4-F1）：媒体级，无 request/issue
+    if (type === Notification.EPISODE_UPDATED) {
+      return {
+        template: path.join(
+          __dirname,
+          '../../../templates/email/media-request'
+        ),
+        message: {
+          to: recipientEmail,
+        },
+        locals: {
+          event: payload.event,
+          body: payload.message ?? '',
+          mediaName: payload.subject,
+          mediaExtra: payload.extra ?? [],
+          imageUrl: embedPoster ? payload.image : undefined,
+          timestamp: new Date().toTimeString(),
+          requestedBy: '',
+          actionUrl: applicationUrl
+            ? `${applicationUrl}/${payload.media?.mediaType}/${payload.media?.tmdbId}`
+            : undefined,
+          applicationUrl,
+          applicationTitle,
+          logoUrl,
+          recipientName,
+          recipientEmail,
+        },
+      };
+    }
     if (payload.request) {
       let body = '';
 

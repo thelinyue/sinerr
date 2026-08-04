@@ -17,6 +17,7 @@ import SlackAgent from '@server/lib/notifications/agents/slack';
 import TelegramAgent from '@server/lib/notifications/agents/telegram';
 import WebhookAgent from '@server/lib/notifications/agents/webhook';
 import WebPushAgent from '@server/lib/notifications/agents/webpush';
+import WecomAgent from '@server/lib/notifications/agents/wecom';
 import checkOverseerrMerge from '@server/lib/overseerrMerge';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
@@ -116,6 +117,7 @@ app
       new PushoverAgent(),
       new SlackAgent(),
       new TelegramAgent(),
+      new WecomAgent(),
       new WebhookAgent(),
       new WebPushAgent(),
     ]);

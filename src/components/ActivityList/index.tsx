@@ -9,9 +9,11 @@ import defineMessages from '@app/utils/defineMessages';
 import {
   ExclamationTriangleIcon,
   HeartIcon,
+  ListBulletIcon,
   PlayIcon,
   StarIcon,
   TicketIcon,
+  UserIcon,
   XMarkIcon,
 } from '@heroicons/react/24/solid';
 import type {
@@ -22,6 +24,7 @@ import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
 import type { MessageDescriptor } from 'react-intl';
@@ -283,6 +286,16 @@ const typeTabs: { key: ActivityType | 'all'; label: MessageDescriptor }[] = [
   { key: 'review', label: messages.filterReview },
 ];
 
+// 类型过滤图标（方案 C：图标行）
+const filterIcons: Record<ActivityType | 'all', ReactNode> = {
+  all: <ListBulletIcon className="h-5 w-5" />,
+  request: <TicketIcon className="h-5 w-5" />,
+  vote: <HeartIcon className="h-5 w-5" />,
+  issue: <ExclamationTriangleIcon className="h-5 w-5" />,
+  playback: <PlayIcon className="h-5 w-5" />,
+  review: <StarIcon className="h-5 w-5" />,
+};
+
 /** 判断某天相对今天：0=今天, 1=昨天, >1=更早 */
 const dayDiff = (date: Date): number => {
   const now = new Date();
@@ -297,7 +310,20 @@ const dayDiff = (date: Date): number => {
 
 const PAGE_SIZE = 20;
 
-const ActivityList = () => {
+interface ActivityListProps {
+  /** 过滤跳转的基准路径（嵌入 Discover 动态 Tab 时传 '/discover'） */
+  basePath?: string;
+  /** 是否渲染页面标题（嵌入时隐藏） */
+  showPageTitle?: boolean;
+  /** 嵌入模式：去掉页面级内边距（由外层容器负责留白） */
+  embedded?: boolean;
+}
+
+const ActivityList = ({
+  basePath = '/activity',
+  showPageTitle = true,
+  embedded = false,
+}: ActivityListProps) => {
   const intl = useIntl();
   const { user } = useUser();
   const router = useRouter();
@@ -351,20 +377,39 @@ const ActivityList = () => {
     setSize(1);
   }, [activeType, filterUserId, setSize]);
 
+  // 进入动态流即标记已读（模块 1：写入 localStorage，下次轮询清空未读红点）
+  useEffect(() => {
+    try {
+      localStorage.setItem('activity-last-seen', new Date().toISOString());
+    } catch {
+      // localStorage may not be available
+    }
+  }, []);
+
   const setFilter = (updates: {
     type?: ActivityType | 'all';
     userId?: number | null;
   }) => {
+    // 保留现有 query（如嵌入时的 tab=activity、搜索 query 等），仅更新 type/userId
     const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(router.query)) {
+      if (typeof value === 'string') {
+        params.set(key, value);
+      }
+    }
     const type = updates.type ?? activeType;
     if (type !== 'all') {
       params.set('type', type);
+    } else {
+      params.delete('type');
     }
     if (updates.userId) {
       params.set('userId', String(updates.userId));
+    } else {
+      params.delete('userId');
     }
     const qs = params.toString();
-    router.push({ pathname: '/activity', query: qs || undefined });
+    router.push({ pathname: basePath, query: qs || undefined });
   };
 
   // 无限滚动：列表底部 sentinel 进入视口时加载下一页
@@ -395,8 +440,10 @@ const ActivityList = () => {
 
   if (!data && !error) {
     return (
-      <div className="mb-8 px-4 sm:px-8">
-        <PageTitle title={intl.formatMessage(messages.activity)} />
+      <div className={embedded ? 'mb-0 px-0' : 'mb-8 px-4 sm:px-8'}>
+        {showPageTitle && (
+          <PageTitle title={intl.formatMessage(messages.activity)} />
+        )}
         <div className="mb-6 flex items-center space-x-2 overflow-x-auto">
           {typeTabs.map((tab) => (
             <div
@@ -439,25 +486,32 @@ const ActivityList = () => {
 
   return (
     <>
-      <PageTitle title={intl.formatMessage(messages.activity)} />
-      <div className="mb-8 px-4 sm:px-8">
-        {/* 类型过滤 tabs */}
-        <div className="hide-scrollbar mb-6 flex items-center space-x-2 overflow-x-auto">
-          {typeTabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter({ type: tab.key })}
-              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium ring-1 transition ${
-                activeType === tab.key
-                  ? 'bg-indigo-600 text-white ring-indigo-500'
-                  : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
-              }`}
-            >
-              {intl.formatMessage(tab.label)}
-            </button>
-          ))}
-          {/* 只看我的 */}
+      {showPageTitle && (
+        <PageTitle title={intl.formatMessage(messages.activity)} />
+      )}
+      <div className={embedded ? 'mb-0 px-0' : 'mb-8 px-4 sm:px-8'}>
+        {/* 类型过滤（方案 C：图标行 + 只看我开关） */}
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="hide-scrollbar flex flex-1 items-center gap-1 overflow-x-auto">
+            {typeTabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilter({ type: tab.key })}
+                className={`flex flex-shrink-0 flex-col items-center gap-1 rounded-lg px-3 py-1.5 transition ${
+                  activeType === tab.key
+                    ? 'text-indigo-300'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {filterIcons[tab.key]}
+                <span className="text-[10px] font-medium">
+                  {intl.formatMessage(tab.label)}
+                </span>
+              </button>
+            ))}
+          </div>
+          {/* 只看我 */}
           <button
             type="button"
             onClick={() =>
@@ -465,12 +519,13 @@ const ActivityList = () => {
                 userId: filterUserId === user?.id ? null : user?.id,
               })
             }
-            className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium ring-1 transition ${
+            className={`flex flex-shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition ${
               filterUserId === user?.id
-                ? 'bg-indigo-600 text-white ring-indigo-500'
-                : 'bg-gray-800/60 text-gray-300 ring-gray-700 hover:bg-gray-700'
+                ? 'bg-indigo-600/15 text-indigo-300 ring-indigo-500/40'
+                : 'bg-gray-800/60 text-gray-400 ring-gray-700 hover:text-gray-200'
             }`}
           >
+            <UserIcon className="h-3.5 w-3.5" />
             {intl.formatMessage(messages.filterMine)}
           </button>
         </div>

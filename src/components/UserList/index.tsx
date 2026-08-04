@@ -83,7 +83,8 @@ const messages = defineMessages('components.UserList', {
   passwordinfodescription:
     'Configure an application URL and enable email notifications to allow automatic password generation.',
   autogeneratepassword: 'Automatically Generate Password',
-  autogeneratepasswordTip: 'Email a server-generated password to the user',
+  autogeneratepasswordTip:
+    'Generate a random password and display it after creation (no email required)',
   createEmbyAccount: 'Also create Emby account',
   createEmbyAccountTip:
     'A matching account will be created on the {mediaServerName} server with the same username and password. Template user permissions will be applied if configured.',
@@ -566,8 +567,10 @@ const UserList = () => {
                         )}
                     </div>
                   </div>
-                  {settings.currentSettings.mediaServerType ===
-                    MediaServerType.EMBY && (
+                  {(settings.currentSettings.mediaServerType ===
+                    MediaServerType.EMBY ||
+                    settings.currentSettings.mediaServerType ===
+                      MediaServerType.JELLYFIN) && (
                     <div className="form-row">
                       <label
                         htmlFor="createEmbyAccount"

@@ -1,11 +1,14 @@
 import JellyfinAPI from '@server/api/jellyfin';
+import { MediaRequestStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
 import dataSource, { getRepository } from '@server/datasource';
+import Episode from '@server/entity/Episode';
 import Issue from '@server/entity/Issue';
 import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
+import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
 import { UserPushSubscription } from '@server/entity/UserPushSubscription';
 import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
@@ -19,15 +22,20 @@ import type {
   UserWatchTimeResponse,
 } from '@server/interfaces/api/userInterfaces';
 import { Permission, hasPermission } from '@server/lib/permissions';
+import { getRecentlyAdded } from '@server/lib/recentlyAdded';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
 import { DEFAULT_AVATAR_URL } from '@server/routes/avatarproxy';
+import { appDataPath } from '@server/utils/appDataVolume';
 import { getHostname } from '@server/utils/getHostname';
 import { normalizeJellyfinGuid } from '@server/utils/jellyfin';
 import { isOwnProfileOrAdmin } from '@server/utils/profileMiddleware';
 import { Router } from 'express';
+import { promises as fs } from 'fs';
+import multer from 'multer';
 import { nanoid } from 'nanoid';
+import { join } from 'path';
 
 import type { EntityManager } from 'typeorm';
 import { In, Not } from 'typeorm';
@@ -251,6 +259,12 @@ router.post(
             Name: username,
             Password: embyPassword ?? nanoid(16),
           });
+
+          // 模块 8：POST /Users/New 忽略 Password，必须显式设置密码，否则无法登录
+          await jellyfinClient.updateUserPassword(
+            account.Id,
+            embyPassword ?? nanoid(16)
+          );
 
           user.jellyfinUserId = account.Id;
           user.jellyfinUsername = account.Name;
@@ -974,6 +988,195 @@ router.get<{ id: string }, UserAchievementsResponse>(
 );
 
 /**
+ * 追更中（Sinerr 2.0 模块 4-F2）
+ *
+ * 返回我请求或声援过的剧的最新更新状态（复用 recentlyadded 聚合服务，限定 mediaIds）。
+ * 可见范围：本人 + 管理员 + REQUEST_VIEW（与请求可见范围一致）。
+ */
+router.get<{ id: string }>(
+  '/:id/following-updates',
+  isAuthenticated(),
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.REQUEST_VIEW],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const requestRepo = getRepository(MediaRequest);
+      const voteRepo = getRepository(RequestVote);
+      const [requests, votes] = await Promise.all([
+        requestRepo.find({
+          where: {
+            requestedBy: { id: userId },
+            status: Not(MediaRequestStatus.DECLINED),
+          },
+          relations: { media: true },
+        }),
+        voteRepo.find({
+          where: { user: { id: userId } },
+          relations: { request: { media: true } },
+        }),
+      ]);
+
+      const mediaIds = [
+        ...new Set(
+          [
+            ...requests.map((r) => r.media?.id),
+            ...votes.map((v) => v.request?.media?.id),
+          ].filter((id): id is number => !!id)
+        ),
+      ];
+
+      if (mediaIds.length === 0) {
+        return res.status(200).json({
+          results: [],
+          pageInfo: { pages: 0, pageSize: 0, results: 0, page: 0 },
+        });
+      }
+
+      const days = req.query.days ? Number(req.query.days) : 7;
+      const take = req.query.take ? Number(req.query.take) : 20;
+      const skip = req.query.skip ? Number(req.query.skip) : 0;
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      const { results, total } = await getRecentlyAdded(since, take, skip, {
+        mediaIds,
+      });
+      return res.status(200).json({
+        results,
+        pageInfo: {
+          pages: Math.ceil(total / take),
+          pageSize: take,
+          results: total,
+          page: Math.floor(skip / take) + 1,
+        },
+      });
+    } catch (e) {
+      next({ status: 500, message: e.message });
+    }
+  }
+);
+
+/**
+ * 头像上传（Sinerr 2.0 模块 7）
+ *
+ * multipart 单文件 avatar，MIME 白名单（png/jpg/webp）≤ 2MB，
+ * 存 `<appDataPath>/avatars/<userId>.<ext>`，更新 user.avatar。
+ * 权限：本人或 MANAGE_USERS。
+ */
+
+const AVATAR_MIME_WHITELIST = ['image/png', 'image/jpeg', 'image/webp'];
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (AVATAR_MIME_WHITELIST.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+    }
+  },
+});
+
+async function removeUploadedAvatar(userId: number): Promise<void> {
+  const dir = join(appDataPath(), 'avatars');
+  const files = await fs.readdir(dir).catch(() => []);
+  for (const file of files) {
+    if (file.startsWith(`${userId}.`)) {
+      await fs.unlink(join(dir, file)).catch(() => {});
+    }
+  }
+}
+
+router.post(
+  '/:id/avatar',
+  isAuthenticated(),
+  avatarUpload.single('avatar'),
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission([Permission.MANAGE_USERS], { type: 'or' })
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to update this user.',
+        });
+      }
+      if (!req.file) {
+        return next({
+          status: 400,
+          message: 'No valid image file provided.',
+        });
+      }
+
+      const ext =
+        req.file.mimetype === 'image/png'
+          ? 'png'
+          : req.file.mimetype === 'image/webp'
+            ? 'webp'
+            : 'jpg';
+      const dir = join(appDataPath(), 'avatars');
+      await fs.mkdir(dir, { recursive: true });
+      await removeUploadedAvatar(userId);
+      await fs.writeFile(join(dir, `${userId}.${ext}`), req.file.buffer);
+
+      const user = await getRepository(User).findOneOrFail({
+        where: { id: userId },
+      });
+      user.avatar = `/avatarproxy/upload/${userId}`;
+      await getRepository(User).save(user);
+
+      return res.status(200).json({ avatar: user.avatar });
+    } catch (e) {
+      next({ status: 500, message: e.message });
+    }
+  }
+);
+
+router.delete('/:id/avatar', isAuthenticated(), async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id);
+    if (
+      userId !== req.user?.id &&
+      !req.user?.hasPermission([Permission.MANAGE_USERS], { type: 'or' })
+    ) {
+      return next({
+        status: 403,
+        message: 'You do not have permission to update this user.',
+      });
+    }
+
+    await removeUploadedAvatar(userId);
+
+    const user = await getRepository(User).findOneOrFail({
+      where: { id: userId },
+    });
+    user.avatar = user.jellyfinUserId
+      ? `/avatarproxy/${user.jellyfinUserId}`
+      : DEFAULT_AVATAR_URL;
+    await getRepository(User).save(user);
+
+    return res.status(200).json({ avatar: user.avatar });
+  } catch (e) {
+    next({ status: 500, message: e.message });
+  }
+});
+
+/**
  * 用户最近观看记录
  *
  * 数据源为本地 PlaybackEvent（webhook 写入，按 user+tmdbId 保存最新播放），
@@ -1193,26 +1396,34 @@ router.get<
       });
     }
 
-    // 剧集：遍历所有季的所有集，收集 Episode ItemId
+    // 剧集：本地季集结构（Episode 表）替代「getSeasons + N 次 getEpisodes」遍历
     const seriesId = media.jellyfinMediaId;
-    const seasons = await jellyfinClient.getSeasons(seriesId);
-    const episodeIds: string[] = [];
+    const episodeRepository = getRepository(Episode);
+    const localEpisodes = await episodeRepository.find({
+      where: { media: { id: media.id } },
+    });
 
-    for (const season of seasons) {
-      try {
-        const episodes = await jellyfinClient.getEpisodes(seriesId, season.Id);
-        episodeIds.push(...episodes.map((episode) => episode.Id));
-      } catch (e) {
-        logger.debug('Failed to fetch season episodes for playback stats', {
-          label: 'API',
-          seriesId,
-          seasonId: season.Id,
-          errorMessage: e.message,
-        });
+    // 按季分组：episodeIds（Jellyfin 单集 ID）+ 总集数
+    const seasonsOfEpisodes = new Map<
+      number,
+      { episodeIds: string[]; total: number }
+    >();
+    for (const episode of localEpisodes) {
+      if (!episode.jellyfinEpisodeId) {
+        continue;
       }
+      const season = seasonsOfEpisodes.get(episode.seasonNumber) ?? {
+        episodeIds: [],
+        total: 0,
+      };
+      season.episodeIds.push(episode.jellyfinEpisodeId);
+      season.total += 1;
+      seasonsOfEpisodes.set(episode.seasonNumber, season);
     }
 
-    if (episodeIds.length === 0) {
+    const seasonNumbers = [...seasonsOfEpisodes.keys()].sort((a, b) => a - b);
+
+    if (seasonNumbers.length === 0) {
       return res.status(200).json({
         played: false,
         playCount: 0,
@@ -1220,26 +1431,80 @@ router.get<
       });
     }
 
-    const watchedEpisodes = await jellyfinClient.getUserPlaybackActivity(
+    // 优先插件聚合 API（一次查询、total 实时）；404 回退 Episode 表 + getUserPlaybackActivity
+    const pluginProgress = await jellyfinClient.getSeriesProgress(
       targetUser.jellyfinUserId,
-      'Episode',
-      episodeIds
+      seriesId
     );
 
-    const watchedCount = watchedEpisodes.length;
-    const totalEpisodes = episodeIds.length;
-    const watchedPercent = Math.round((watchedCount / totalEpisodes) * 100);
+    let seasons: {
+      seasonNumber: number;
+      watchedEpisodes: number;
+      totalEpisodes: number;
+    }[];
+    let watchedSet: Set<string>;
+
+    if (pluginProgress !== null) {
+      seasons = seasonNumbers.map((seasonNumber) => {
+        const pluginSeason = pluginProgress.find(
+          (p) => p.seasonNumber === seasonNumber
+        );
+        return {
+          seasonNumber,
+          watchedEpisodes: pluginSeason?.watched ?? 0,
+          totalEpisodes: seasonsOfEpisodes.get(seasonNumber)?.total ?? 0,
+        };
+      });
+      watchedSet = new Set<string>();
+      for (const season of seasons) {
+        for (let i = 0; i < season.watchedEpisodes; i++) {
+          watchedSet.add(`${season.seasonNumber}-${i}`);
+        }
+      }
+    } else {
+      const allEpisodeIds = seasonNumbers.flatMap(
+        (sn) => seasonsOfEpisodes.get(sn)?.episodeIds ?? []
+      );
+      const watchedEpisodes = await jellyfinClient.getUserPlaybackActivity(
+        targetUser.jellyfinUserId,
+        'Episode',
+        allEpisodeIds
+      );
+      watchedSet = new Set(watchedEpisodes.map((item) => item.ItemId));
+
+      seasons = seasonNumbers.map((seasonNumber) => {
+        const seasonData = seasonsOfEpisodes.get(seasonNumber);
+        const watchedCount = (seasonData?.episodeIds ?? []).filter((id) =>
+          watchedSet.has(id)
+        ).length;
+        return {
+          seasonNumber,
+          watchedEpisodes: watchedCount,
+          totalEpisodes: seasonData?.total ?? 0,
+        };
+      });
+    }
+
+    const watchedCount = seasons.reduce(
+      (sum, season) => sum + season.watchedEpisodes,
+      0
+    );
+    const totalEpisodes = seasons.reduce(
+      (sum, season) => sum + season.totalEpisodes,
+      0
+    );
+    const watchedPercent = totalEpisodes
+      ? Math.round((watchedCount / totalEpisodes) * 100)
+      : 0;
 
     return res.status(200).json({
       played: watchedCount > 0,
-      playCount: watchedEpisodes.reduce((sum, item) => sum + item.PlayCount, 0),
-      playDurationSeconds: watchedEpisodes.reduce(
-        (sum, item) => sum + item.PlayDurationSeconds,
-        0
-      ),
+      playCount: watchedCount,
+      playDurationSeconds: 0,
       watchedEpisodes: watchedCount,
       totalEpisodes,
       watchedPercent,
+      seasons,
     });
   } catch (e) {
     next({ status: 404, message: e.message });

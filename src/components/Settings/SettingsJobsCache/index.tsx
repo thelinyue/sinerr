@@ -77,8 +77,8 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     ipv4Fallbacks: 'IPv4 Fallbacks',
     hitRate: 'Hit Rate',
     unknownJob: 'Unknown Job',
-    'jellyfin-full-scan': 'Jellyfin Full Library Scan',
-    'jellyfin-recently-added-scan': 'Jellyfin Recently Added Scan',
+    'jellyfin-full-scan': 'Full Library Scan',
+    'jellyfin-recently-added-scan': 'Recently Added Scan',
     'availability-sync': 'Media Availability Sync',
     'download-sync': 'Download Sync',
     'download-sync-reset': 'Download Sync Reset',
@@ -201,19 +201,21 @@ const SettingsJobs = () => {
   const [isSaving, setIsSaving] = useState(false);
   const settings = useSettings();
 
-  if (settings.currentSettings.mediaServerType === MediaServerType.EMBY) {
-    messages['jellyfin-recently-added-scan'] = {
-      id: 'jellyfin-recently-added-scan',
-      defaultMessage: 'Emby Recently Added Scan',
-    };
-  }
-
-  if (settings.currentSettings.mediaServerType === MediaServerType.EMBY) {
-    messages['jellyfin-full-scan'] = {
-      id: 'jellyfin-full-scan',
-      defaultMessage: 'Emby Full Library Scan',
-    };
-  }
+  // 媒体库扫描类任务显示「服务器名 + 基准名」（Emby/Jellyfin 通用，i18n 用基准名可译）
+  const getJobName = (job: Job) => {
+    const base = intl.formatMessage(messages[job.id] ?? messages.unknownJob);
+    if (
+      job.id === 'jellyfin-full-scan' ||
+      job.id === 'jellyfin-recently-added-scan'
+    ) {
+      const serverName =
+        settings.currentSettings.mediaServerType === MediaServerType.EMBY
+          ? 'Emby'
+          : 'Jellyfin';
+      return `${serverName} ${base}`;
+    }
+    return base;
+  };
 
   if (!data && !error) {
     return <LoadingSpinner />;
@@ -223,7 +225,7 @@ const SettingsJobs = () => {
     await axios.post(`/api/v1/settings/jobs/${job.id}/run`);
     addToast(
       intl.formatMessage(messages.jobstarted, {
-        jobname: intl.formatMessage(messages[job.id] ?? messages.unknownJob),
+        jobname: getJobName(job),
       }),
       {
         appearance: 'success',
@@ -237,7 +239,7 @@ const SettingsJobs = () => {
     await axios.post(`/api/v1/settings/jobs/${job.id}/cancel`);
     addToast(
       intl.formatMessage(messages.jobcancelled, {
-        jobname: intl.formatMessage(messages[job.id] ?? messages.unknownJob),
+        jobname: getJobName(job),
       }),
       {
         appearance: 'error',
@@ -495,11 +497,7 @@ const SettingsJobs = () => {
               <tr key={`job-list-${job.id}`}>
                 <Table.TD>
                   <div className="flex items-center text-sm leading-5 text-white">
-                    <span>
-                      {intl.formatMessage(
-                        messages[job.id] ?? messages.unknownJob
-                      )}
-                    </span>
+                    <span>{getJobName(job)}</span>
                     {job.running && <Spinner className="ml-2 h-5 w-5" />}
                   </div>
                 </Table.TD>

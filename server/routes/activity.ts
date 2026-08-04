@@ -14,6 +14,7 @@ import type {
 import { Permission } from '@server/lib/permissions';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
+import { MoreThan } from 'typeorm';
 
 const activityRoutes = Router();
 
@@ -305,5 +306,43 @@ activityRoutes.get<Record<string, string>, ActivityResponse>(
     }
   }
 );
+
+/**
+ * 未读动态计数（模块 1）
+ *
+ * 无状态固定窗口：前端传 since（localStorage activity-last-seen），
+ * 返回五表 createdAt > since 的计数之和。服务端不存 lastSeen。
+ */
+activityRoutes.get('/count', isAuthenticated(), async (req, res, next) => {
+  try {
+    const since = req.query.since
+      ? new Date(String(req.query.since))
+      : new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [requests, votes, issues, playbacks, reviews] = await Promise.all([
+      getRepository(MediaRequest).count({
+        where: { createdAt: MoreThan(since) },
+      }),
+      getRepository(RequestVote).count({
+        where: { createdAt: MoreThan(since) },
+      }),
+      getRepository(Issue).count({
+        where: { createdAt: MoreThan(since) },
+      }),
+      getRepository(PlaybackEvent).count({
+        where: { createdAt: MoreThan(since) },
+      }),
+      getRepository(MediaReview).count({
+        where: { createdAt: MoreThan(since) },
+      }),
+    ]);
+
+    return res
+      .status(200)
+      .json({ count: requests + votes + issues + playbacks + reviews });
+  } catch (e) {
+    next({ status: 500, message: e.message });
+  }
+});
 
 export default activityRoutes;

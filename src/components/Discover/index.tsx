@@ -1,3 +1,4 @@
+import ActivityList from '@app/components/ActivityList';
 import Button from '@app/components/Common/Button';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
@@ -6,37 +7,35 @@ import Tooltip from '@app/components/Common/Tooltip';
 import MovieGenreSlider from '@app/components/Discover/MovieGenreSlider';
 import NetworkSlider from '@app/components/Discover/NetworkSlider';
 import RecentRequestsSlider from '@app/components/Discover/RecentRequestsSlider';
-import RecentlyAddedSlider from '@app/components/Discover/RecentlyAddedSlider';
+import RecentlyAddedHero from '@app/components/Discover/RecentlyAddedHero';
 import StudioSlider from '@app/components/Discover/StudioSlider';
 import TvGenreSlider from '@app/components/Discover/TvGenreSlider';
 import { sliderTitles } from '@app/components/Discover/constants';
 import MediaSlider from '@app/components/MediaSlider';
+import { useActivityUnreadCount } from '@app/hooks/useActivityUnreadCount';
 import { encodeURIExtraParams } from '@app/hooks/useDiscover';
-import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import {
   ArrowDownOnSquareIcon,
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  ListBulletIcon,
   PencilIcon,
   PlusIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/solid';
 import { DiscoverSliderType } from '@server/constants/discover';
 import type DiscoverSlider from '@server/entity/DiscoverSlider';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
-import type { ImageLoader } from 'next/image';
-import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
-
-const imageLoader: ImageLoader = ({ src }) => src;
 
 const CreateSlider = dynamic(
   () => import('@app/components/Discover/CreateSlider'),
@@ -49,6 +48,8 @@ const DiscoverSliderEdit = dynamic(
 
 const messages = defineMessages('components.Discover', {
   discover: 'Discover',
+  tabDiscover: '发现',
+  tabActivity: '动态',
   resettodefault: 'Reset to Default',
   resetwarning:
     'Reset all sliders to default. This will also delete any custom sliders!',
@@ -61,33 +62,16 @@ const messages = defineMessages('components.Discover', {
   customizediscover: 'Customize Discover',
   stopediting: 'Stop Editing',
   createnewslider: 'Create New Slider',
-  guideTitle: 'How to start watching?',
-  guideExpand: 'Expand',
-  guideCollapse: 'Collapse',
-  guideDownloadClient: 'Download Client',
-  guideDownload: 'Download',
-  guideServerAddress: 'Server Address',
-  guideCopy: 'Copy',
-  guidePortWarning:
-    '⚠ The default port is {port}. If the connection fails, check the port setting.',
-  guideLogin: 'Sign in to {appName}',
-  guideLoginHint:
-    'Sign in with the account {username} and your password. On first sign-in, we recommend checking "Remember me".',
-  guideViewExample: 'View connection example',
-  guideHideExample: 'Hide example',
-  guideDemoTitle: '{appName} Client — Connect to Server',
-  guideDemoHost: 'Host',
-  guideDemoPort: 'Port',
-  guideDemoUsername: 'Username',
-  guideDemoPassword: 'Password',
-  guideRememberMe: 'Remember me',
-  guideSignIn: 'Sign In',
 });
 
 const Discover = () => {
   const intl = useIntl();
+  const router = useRouter();
   const { hasPermission } = useUser();
   const { addToast } = useToasts();
+  const { count: activityUnreadCount } = useActivityUnreadCount();
+  const activeTab: 'discover' | 'activity' =
+    router.query.tab === 'activity' ? 'activity' : 'discover';
   const {
     data: discoverData,
     error: discoverError,
@@ -95,6 +79,50 @@ const Discover = () => {
   } = useSWR<DiscoverSlider[]>('/api/v1/settings/discover');
   const [sliders, setSliders] = useState<Partial<DiscoverSlider>[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+
+  const setTab = (tab: 'discover' | 'activity') => {
+    router.push({
+      pathname: '/',
+      query: tab === 'activity' ? { tab: 'activity' } : undefined,
+    });
+  };
+
+  // 吸顶 发现/动态 segmented Tab 栏（两 Tab 共用）
+  const tabBar = (
+    <div className="sticky top-16 z-10 -mx-4 mb-4 bg-gray-900/95 px-4 py-3 backdrop-blur">
+      <div className="flex w-full max-w-xs rounded-xl bg-gray-800 p-1 ring-1 ring-gray-700">
+        <button
+          type="button"
+          onClick={() => setTab('discover')}
+          data-testid="discover-tab-discover"
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition ${
+            activeTab === 'discover'
+              ? 'bg-indigo-600 text-white'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <SparklesIcon className="h-4 w-4" />
+          {intl.formatMessage(messages.tabDiscover)}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('activity')}
+          data-testid="discover-tab-activity"
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition ${
+            activeTab === 'activity'
+              ? 'bg-indigo-600 text-white'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <ListBulletIcon className="h-4 w-4" />
+          {intl.formatMessage(messages.tabActivity)}
+          {activeTab !== 'activity' && activityUnreadCount > 0 && (
+            <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-pink-500" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 
   // We need to sync the state here so that we can modify the changes locally without commiting
   // anything to the server until the user decides to save the changes
@@ -149,6 +177,17 @@ const Discover = () => {
     .toISOString()
     .split('T')[0];
 
+  // 动态 Tab：完整活动流（嵌入模式），不依赖滑块配置，无 ConnectionGuide/编辑按钮
+  if (activeTab === 'activity') {
+    return (
+      <>
+        <PageTitle title={intl.formatMessage(messages.tabActivity)} />
+        {tabBar}
+        <ActivityList basePath="/" embedded />
+      </>
+    );
+  }
+
   if (!discoverData && !discoverError) {
     return <LoadingSpinner />;
   }
@@ -156,6 +195,8 @@ const Discover = () => {
   return (
     <>
       <PageTitle title={intl.formatMessage(messages.discover)} />
+      {tabBar}
+      <RecentlyAddedHero />
       {hasPermission(Permission.ADMIN) && (
         <>
           {isEditing && (
@@ -240,14 +281,9 @@ const Discover = () => {
         </>
       )}
 
-      <ConnectionGuide />
-
       {(isEditing ? sliders : discoverData)?.map((slider, index) => {
         let sliderComponent: React.ReactNode;
         switch (slider.type) {
-          case DiscoverSliderType.RECENTLY_ADDED:
-            sliderComponent = <RecentlyAddedSlider />;
-            break;
           case DiscoverSliderType.RECENT_REQUESTS:
             sliderComponent = <RecentRequestsSlider />;
             break;
@@ -505,269 +541,6 @@ const Discover = () => {
         );
       })}
     </>
-  );
-};
-
-const ConnectionGuide = () => {
-  const settings = useSettings();
-  const intl = useIntl();
-  const { user } = useUser();
-  const [dismissed, setDismissed] = useState(true);
-  const [showDemo, setShowDemo] = useState(false);
-
-  useEffect(() => {
-    try {
-      setDismissed(
-        localStorage.getItem('connection-guide-dismissed') === 'true'
-      );
-    } catch {
-      setDismissed(true);
-    }
-  }, []);
-
-  const serverUrl =
-    settings.currentSettings.serverConnectionUrl ||
-    settings.currentSettings.jellyfinExternalHost ||
-    settings.currentSettings.jellyfinHost;
-
-  const downloads = settings.currentSettings.clientDownloadUrls || [];
-
-  if (!serverUrl && downloads.length === 0) {
-    return null;
-  }
-
-  const dismiss = () => {
-    try {
-      localStorage.setItem('connection-guide-dismissed', 'true');
-    } catch {
-      // localStorage may not be available
-    }
-    setDismissed(true);
-  };
-
-  const showGuide = () => {
-    try {
-      localStorage.removeItem('connection-guide-dismissed');
-    } catch {
-      // localStorage may not be available
-    }
-    setDismissed(false);
-  };
-
-  return (
-    <div className="mx-4 mb-6 overflow-hidden rounded-lg border border-indigo-500/30 bg-gradient-to-r from-indigo-600/30 to-purple-600/30">
-      <div
-        className={`flex items-center justify-between border-b border-indigo-500/20 p-4 ${dismissed ? '' : 'pb-3'}`}
-      >
-        <h2 className="text-base font-bold text-white">
-          <span className="mr-2">📺</span>
-          {intl.formatMessage(messages.guideTitle)}
-        </h2>
-        {dismissed ? (
-          <button
-            onClick={showGuide}
-            className="flex-shrink-0 text-sm text-indigo-400 transition-colors hover:text-indigo-300"
-            aria-label={intl.formatMessage(messages.guideExpand)}
-          >
-            {intl.formatMessage(messages.guideExpand)}
-          </button>
-        ) : (
-          <button
-            onClick={dismiss}
-            className="flex-shrink-0 text-sm text-gray-400 transition-colors hover:text-white"
-            aria-label={intl.formatMessage(messages.guideCollapse)}
-          >
-            {intl.formatMessage(messages.guideCollapse)}
-          </button>
-        )}
-      </div>
-      {!dismissed && (
-        <div className="space-y-4 p-5 pt-0">
-          {downloads.length > 0 && (
-            <div className="flex items-start gap-3 pt-4">
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-                1
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="mb-2 text-sm font-medium text-white">
-                  {intl.formatMessage(messages.guideDownloadClient)}
-                </p>
-                <div className="flex flex-col gap-3">
-                  {downloads.map((d, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 rounded-lg bg-gray-700/50 p-3"
-                    >
-                      <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg p-1">
-                        {/^https?:\/\//.test(d.icon) ? (
-                          <Image
-                            unoptimized
-                            loader={imageLoader}
-                            src={d.icon}
-                            alt={d.name}
-                            width={80}
-                            height={56}
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        ) : (
-                          <span className="text-2xl">{d.icon || '📱'}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white">
-                          {d.name}
-                        </p>
-                      </div>
-                      <a
-                        href={d.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0"
-                      >
-                        <Button buttonType="primary" buttonSize="sm">
-                          <ArrowDownTrayIcon className="mr-1 h-4 w-4" />
-                          {intl.formatMessage(messages.guideDownload)}
-                        </Button>
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {serverUrl && (
-            <div className="flex items-start gap-3">
-              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-sm font-bold text-white">
-                {downloads.length > 0 ? '2' : '1'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="mb-1 text-sm font-medium text-white">
-                  {intl.formatMessage(messages.guideServerAddress)}
-                </p>
-                <div className="mb-2 flex items-center gap-2">
-                  <code className="flex-1 break-all rounded bg-gray-800/80 px-3 py-1.5 font-mono text-xs text-gray-300">
-                    {serverUrl}
-                  </code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(serverUrl).catch(() => {
-                        // clipboard permission denied
-                      });
-                    }}
-                    className="flex-shrink-0 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-500"
-                  >
-                    {intl.formatMessage(messages.guideCopy)}
-                  </button>
-                </div>
-                <p className="text-xs text-yellow-400/90">
-                  {intl.formatMessage(messages.guidePortWarning, { port: 443 })}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-start gap-3">
-            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-              {downloads.length > 0 ? '3' : '2'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="mb-1 text-sm font-medium text-white">
-                {intl.formatMessage(messages.guideLogin, {
-                  appName: settings.currentSettings.applicationTitle,
-                })}
-              </p>
-              <p className="mb-2 text-xs text-gray-300">
-                {intl.formatMessage(messages.guideLoginHint, {
-                  username: user?.displayName || user?.username || 'Username',
-                })}
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={() => setShowDemo(!showDemo)}
-                  className="inline-flex items-center text-xs text-indigo-400 transition-colors hover:text-indigo-300"
-                >
-                  {showDemo
-                    ? intl.formatMessage(messages.guideHideExample)
-                    : intl.formatMessage(messages.guideViewExample)}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {showDemo && (
-            <div className="overflow-hidden rounded-lg border border-gray-600 bg-gray-800/80">
-              <div className="flex items-center gap-2 bg-gray-700 px-4 py-2">
-                <div className="flex gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <div className="h-3 w-3 rounded-full bg-green-500" />
-                </div>
-                <span className="ml-2 text-xs text-gray-400">
-                  {intl.formatMessage(messages.guideDemoTitle, {
-                    appName: settings.currentSettings.applicationTitle,
-                  })}
-                </span>
-              </div>
-              <div className="space-y-3 p-4">
-                <div className="flex gap-3">
-                  <div className="flex-[2]">
-                    <span className="mb-1 block text-xs text-gray-500">
-                      {intl.formatMessage(messages.guideDemoHost)}
-                    </span>
-                    <div className="truncate rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-green-400">
-                      {serverUrl
-                        ? serverUrl.replace(/:\d+$/, '').replace(/\/$/, '')
-                        : 'your-server.com'}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <span className="mb-1 block text-xs text-gray-500">
-                      {intl.formatMessage(messages.guideDemoPort)}
-                    </span>
-                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
-                      {serverUrl
-                        ? serverUrl.match(/:(\d+)/)?.[1] || '443'
-                        : '443'}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <span className="mb-1 block text-xs text-gray-500">
-                      {intl.formatMessage(messages.guideDemoUsername)}
-                    </span>
-                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
-                      {user?.displayName || user?.username || 'username'}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <span className="mb-1 block text-xs text-gray-500">
-                      {intl.formatMessage(messages.guideDemoPassword)}
-                    </span>
-                    <div className="rounded border border-gray-700 bg-gray-900/80 px-3 py-2 font-mono text-xs text-white">
-                      ••••••••
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    readOnly
-                    className="rounded border-gray-600"
-                  />
-                  {intl.formatMessage(messages.guideRememberMe)}
-                </div>
-                <div className="rounded bg-indigo-600 py-2 text-center text-sm font-medium text-white">
-                  {intl.formatMessage(messages.guideSignIn)}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   );
 };
 

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { before, beforeEach, describe, it, mock } from 'node:test';
 
-import type { JellyfinLibraryItem } from '@server/api/jellyfin';
 import JellyfinAPI from '@server/api/jellyfin';
 import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
+import Episode from '@server/entity/Episode';
 import Media from '@server/entity/Media';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
@@ -66,29 +66,22 @@ const getUserWatchTimeMock = mock.method(
   'getUserWatchTime',
   async () => ({ todaySeconds: 0, totalSeconds: 0 })
 ).mock;
-const getSeasonsMock = mock.method(
+const getSeriesProgressMock = mock.method(
   JellyfinAPI.prototype,
-  'getSeasons',
-  async () => []
-).mock;
-const getEpisodesMock = mock.method(
-  JellyfinAPI.prototype,
-  'getEpisodes',
-  async () => []
+  'getSeriesProgress',
+  async () => null
 ).mock;
 
 beforeEach(() => {
   getUserPlaybackActivityMock.resetCalls();
   getUserWatchTimeMock.resetCalls();
-  getSeasonsMock.resetCalls();
-  getEpisodesMock.resetCalls();
+  getSeriesProgressMock.resetCalls();
   getUserPlaybackActivityMock.mockImplementation(async () => []);
   getUserWatchTimeMock.mockImplementation(async () => ({
     todaySeconds: 0,
     totalSeconds: 0,
   }));
-  getSeasonsMock.mockImplementation(async () => []);
-  getEpisodesMock.mockImplementation(async () => []);
+  getSeriesProgressMock.mockImplementation(async () => null);
 });
 
 async function loginAs(email: string, password: string) {
@@ -175,26 +168,51 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
     assert.strictEqual(res.body.playDurationSeconds, 7200);
   });
 
-  it('computes watched episodes and percentage for a series', async () => {
+  it('computes watched episodes and percentage for a series (fallback path)', async () => {
     const { friend, tv } = await seedUserAndMedia();
-    const season1 = { Id: 'season-1' } as unknown as JellyfinLibraryItem;
-    const season2 = { Id: 'season-2' } as unknown as JellyfinLibraryItem;
-    const ep1 = { Id: 'ep-1' } as unknown as JellyfinLibraryItem;
-    const ep2 = { Id: 'ep-2' } as unknown as JellyfinLibraryItem;
-    const ep3 = { Id: 'ep-3' } as unknown as JellyfinLibraryItem;
-    const ep4 = { Id: 'ep-4' } as unknown as JellyfinLibraryItem;
-    const ep5 = { Id: 'ep-5' } as unknown as JellyfinLibraryItem;
+    const episodeRepo = getRepository(Episode);
 
-    getSeasonsMock.mockImplementation(async () => [season1, season2]);
-    getEpisodesMock.mockImplementation((async (
-      _seriesId: string,
-      seasonId: string
-    ) => {
-      if (seasonId === 'season-1') {
-        return [ep1, ep2, ep3];
-      }
-      return [ep4, ep5];
-    }) as typeof JellyfinAPI.prototype.getEpisodes);
+    // 本地 Episode 表结构：S1 三集 + S2 两集
+    await episodeRepo.save([
+      new Episode({
+        media: tv,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        jellyfinEpisodeId: 'ep-1',
+        addedAt: new Date(),
+      }),
+      new Episode({
+        media: tv,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        jellyfinEpisodeId: 'ep-2',
+        addedAt: new Date(),
+      }),
+      new Episode({
+        media: tv,
+        seasonNumber: 1,
+        episodeNumber: 3,
+        jellyfinEpisodeId: 'ep-3',
+        addedAt: new Date(),
+      }),
+      new Episode({
+        media: tv,
+        seasonNumber: 2,
+        episodeNumber: 1,
+        jellyfinEpisodeId: 'ep-4',
+        addedAt: new Date(),
+      }),
+      new Episode({
+        media: tv,
+        seasonNumber: 2,
+        episodeNumber: 2,
+        jellyfinEpisodeId: 'ep-5',
+        addedAt: new Date(),
+      }),
+    ]);
+
+    // 插件 API 不可用（404 → null），回退 getUserPlaybackActivity
+    getSeriesProgressMock.mockImplementation(async () => null);
     // 用户看过 ep-1、ep-2、ep-4（共 3 集 / 5 集 = 60%）
     getUserPlaybackActivityMock.mockImplementation(async () => [
       {
@@ -230,7 +248,53 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
     assert.strictEqual(res.body.watchedEpisodes, 3);
     assert.strictEqual(res.body.totalEpisodes, 5);
     assert.strictEqual(res.body.watchedPercent, 60);
-    assert.strictEqual(res.body.playCount, 3);
+    // seasons[] 按季聚合
+    assert.strictEqual(res.body.seasons.length, 2);
+    assert.strictEqual(res.body.seasons[0].seasonNumber, 1);
+    assert.strictEqual(res.body.seasons[0].watchedEpisodes, 2);
+    assert.strictEqual(res.body.seasons[0].totalEpisodes, 3);
+    assert.strictEqual(res.body.seasons[1].seasonNumber, 2);
+    assert.strictEqual(res.body.seasons[1].watchedEpisodes, 1);
+  });
+
+  it('prefers plugin series_progress when available', async () => {
+    const { friend, tv } = await seedUserAndMedia();
+    const episodeRepo = getRepository(Episode);
+
+    await episodeRepo.save([
+      new Episode({
+        media: tv,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        jellyfinEpisodeId: 'ep-1',
+        addedAt: new Date(),
+      }),
+      new Episode({
+        media: tv,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        jellyfinEpisodeId: 'ep-2',
+        addedAt: new Date(),
+      }),
+    ]);
+
+    // 插件一次聚合返回
+    getSeriesProgressMock.mockImplementation(async () => [
+      { seasonNumber: 1, total: 2, watched: 1 },
+    ]);
+    // 不应触发 getUserPlaybackActivity
+    getUserPlaybackActivityMock.mockImplementation(async () => []);
+
+    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const res = await agent.get(
+      `/user/${friend.id}/media/${tv.tmdbId}/tv/playback`
+    );
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.watchedEpisodes, 1);
+    assert.strictEqual(res.body.totalEpisodes, 2);
+    assert.strictEqual(res.body.seasons[0].watchedEpisodes, 1);
+    assert.strictEqual(getUserPlaybackActivityMock.callCount(), 0);
   });
 
   it('returns unwatched for a user without jellyfin account', async () => {

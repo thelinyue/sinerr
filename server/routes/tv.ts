@@ -4,11 +4,14 @@ import TheMovieDb from '@server/api/themoviedb';
 import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import type { TmdbKeyword } from '@server/api/themoviedb/interfaces';
 import { MediaType } from '@server/constants/media';
+import { getRepository } from '@server/datasource';
+import Episode from '@server/entity/Episode';
 import Media from '@server/entity/Media';
 import logger from '@server/logger';
 import { mapTvResult } from '@server/models/Search';
 import { mapSeasonWithEpisodes, mapTvDetails } from '@server/models/Tv';
 import { Router } from 'express';
+import { MoreThanOrEqual } from 'typeorm';
 
 const tvRoutes = Router();
 
@@ -29,6 +32,21 @@ tvRoutes.get('/:id', async (req, res, next) => {
       language: (req.query.language as string) ?? req.locale,
     });
     const media = await Media.getMedia(tv.id, MediaType.TV);
+
+    // F3：最近入库单集（详情页季行「最近新增」chip），近 7 天
+    if (media) {
+      const episodeRepo = getRepository(Episode);
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const episodes = await episodeRepo.find({
+        where: { media: { id: media.id }, addedAt: MoreThanOrEqual(since) },
+        order: { seasonNumber: 'ASC', episodeNumber: 'ASC' },
+      });
+      media.recentEpisodes = episodes.map((e) => ({
+        seasonNumber: e.seasonNumber,
+        episodeNumber: e.episodeNumber,
+        addedAt: e.addedAt,
+      }));
+    }
 
     const data = mapTvDetails(tv, media);
 

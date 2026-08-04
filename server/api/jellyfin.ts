@@ -529,7 +529,10 @@ class JellyfinAPI extends ExternalAPI {
         {
           params: {
             seasonId: seasonID,
-            ...(options?.includeMediaInfo && { fields: 'MediaSources' }),
+            // DateCreated：单集入库时间，供 Episode 表（最近添加 / 更新集数）使用
+            fields: options?.includeMediaInfo
+              ? 'MediaSources,DateCreated'
+              : 'DateCreated',
           },
         }
       );
@@ -582,6 +585,29 @@ class JellyfinAPI extends ExternalAPI {
     } catch (e) {
       logger.error(
         `Something went wrong while initiating forgot password on the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
+    }
+  }
+
+  /**
+   * 设置用户密码（Sinerr 2.0 模块 8）
+   *
+   * `POST /Users/New` 在较新 Jellyfin/Emby 上忽略 Password 字段，只建账号不设密码；
+   * 必须用 `POST /Users/{id}/Password` 显式设置，否则无法登录。
+   */
+  public async updateUserPassword(
+    userId: string,
+    newPassword: string
+  ): Promise<void> {
+    try {
+      await this.post(`/Users/${userId}/Password`, {
+        NewPassword: newPassword,
+      });
+    } catch (e) {
+      logger.error(
+        `Something went wrong while setting password for user on the Jellyfin/Emby server: ${e.message}`,
         { label: 'Jellyfin API', error: e.response?.status }
       );
       throw new ApiError(e.response?.status, ApiErrorCode.Unknown);
@@ -811,6 +837,45 @@ class JellyfinAPI extends ExternalAPI {
         { label: 'Jellyfin API', error: e.response?.status }
       );
       return [];
+    }
+  }
+
+  /**
+   * 按季聚合的剧集播放进度（模块 3）
+   *
+   * 调用 Playback Reporting 插件的 series_progress 聚合接口，一次返回每季
+   * { seasonNumber, total, watched }。total 由插件在 Emby 进程内本地计算（实时），
+   * watched 按新增的 ParentIndexNumber 列分组。
+   *
+   * 插件未升级（接口 404）时返回 null，由调用方回退到 Episode 表本地聚合。
+   */
+  public async getSeriesProgress(
+    userId: string,
+    seriesId: string
+  ): Promise<
+    { seasonNumber: number; total: number; watched: number }[] | null
+  > {
+    try {
+      const response = await this.get<{
+        seriesId: string;
+        seasons: { seasonNumber: number; total: number; watched: number }[];
+      }>(`/user_usage_stats/series_progress/${seriesId}`, {
+        params: { userId },
+      });
+      return response.seasons ?? [];
+    } catch (e) {
+      if (e?.response?.status === 404) {
+        logger.debug('Series progress API not available, falling back', {
+          label: 'Jellyfin API',
+          seriesId,
+        });
+        return null;
+      }
+      logger.error(
+        `Something went wrong while getting series progress from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return null;
     }
   }
 

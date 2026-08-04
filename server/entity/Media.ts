@@ -18,6 +18,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import Episode from './Episode';
 import Issue from './Issue';
 import { MediaRequest } from './MediaRequest';
 import MediaReview from './MediaReview';
@@ -131,6 +132,11 @@ class Media {
   })
   public mediaReviews: MediaReview[];
 
+  @OneToMany(() => Episode, (episode) => episode.media, {
+    cascade: ['insert', 'remove'],
+  })
+  public episodes: Episode[];
+
   @OneToOne(() => Blocklist, (blocklist) => blocklist.media)
   public blocklist: Promise<Blocklist>;
 
@@ -178,6 +184,13 @@ class Media {
   public downloadStatus?: DownloadingItem[] = [];
 
   public mediaUrl?: string;
+
+  /** 最近入库单集（F3：详情页季行「最近新增」chip，非 DB 字段） */
+  public recentEpisodes?: {
+    seasonNumber: number;
+    episodeNumber: number;
+    addedAt: Date;
+  }[];
 
   public tautulliUrl?: string;
 

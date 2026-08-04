@@ -132,6 +132,8 @@ export interface ProxySettings {
 
 export interface MainSettings {
   apiKey: string;
+  /** TMDB API Key（设置页可配置，优先于内置公开 key，低于环境变量） */
+  tmdbkey: string;
   applicationTitle: string;
   applicationUrl: string;
   cacheImages: boolean;
@@ -157,6 +159,8 @@ export interface MainSettings {
   locale: string;
   clientDownloadUrls: { name: string; url: string; icon: string }[];
   serverConnectionUrl: string;
+  /** MCP 服务（模块 9）：启用开关；令牌复用「应用程序密钥」apiKey */
+  mcpEnabled: boolean;
 }
 
 export interface DnsCacheSettings {
@@ -311,6 +315,16 @@ export interface NotificationAgentMediary extends NotificationAgentConfig {
   options: Record<string, unknown>;
 }
 
+/** 企业微信应用消息（Sinerr 2.0 模块 10） */
+export interface NotificationAgentWecom extends NotificationAgentConfig {
+  options: {
+    corpid: string;
+    corpsecret: string;
+    agentid: string;
+    touser: string;
+  };
+}
+
 export enum NotificationAgentKey {
   DISCORD = 'discord',
   EMAIL = 'email',
@@ -323,6 +337,7 @@ export enum NotificationAgentKey {
   TELEGRAM = 'telegram',
   WEBHOOK = 'webhook',
   WEBPUSH = 'webpush',
+  WECOM = 'wecom',
 }
 
 interface NotificationAgents {
@@ -337,6 +352,7 @@ interface NotificationAgents {
   telegram: NotificationAgentTelegram;
   webhook: NotificationAgentWebhook;
   webpush: NotificationAgentConfig;
+  wecom: NotificationAgentWecom;
 }
 
 interface NotificationSettings {
@@ -390,10 +406,12 @@ class Settings {
       vapidPublic: '',
       main: {
         apiKey: '',
+        tmdbkey: '',
         applicationTitle: 'Sinerr',
         applicationUrl: '',
         cacheImages: false,
-        defaultPermissions: Permission.REQUEST | Permission.VOTE,
+        defaultPermissions:
+          Permission.REQUEST | Permission.VOTE | Permission.RECENT_VIEW,
         defaultQuotas: {
           movie: {},
           tv: {},
@@ -415,6 +433,7 @@ class Settings {
         locale: 'zh-CN',
         clientDownloadUrls: [],
         serverConnectionUrl: '',
+        mcpEnabled: false,
       },
       jellyfin: {
         name: '',
@@ -522,6 +541,16 @@ class Settings {
             enabled: false,
             embedPoster: true,
             options: {},
+          },
+          wecom: {
+            enabled: false,
+            embedPoster: false,
+            options: {
+              corpid: '',
+              corpsecret: '',
+              agentid: '',
+              touser: '',
+            },
           },
           gotify: {
             enabled: false,

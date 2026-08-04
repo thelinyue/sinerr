@@ -45,6 +45,10 @@ interface MenuLink {
   svgIconSelected: JSX.Element;
   content: React.ReactNode;
   activeRegExp: RegExp;
+  /** 命中 asPath（含 query）即高亮（用于 ?tab=activity 场景） */
+  activeAsPathRegExp?: RegExp;
+  /** activeRegExp 命中但 asPath 命中此规则时不高亮（互斥） */
+  activeExcludeAsPathRegExp?: RegExp;
   as?: string;
   requiredPermission?: Permission | Permission[];
   permissionType?: 'and' | 'or';
@@ -79,6 +83,7 @@ const MobileMenu = ({
       svgIcon: <SparklesIcon className="h-6 w-6" />,
       svgIconSelected: <FilledSparklesIcon className="h-6 w-6" />,
       activeRegExp: /^\/(discover\/?)?$/,
+      activeExcludeAsPathRegExp: /\?tab=activity/,
     },
     {
       href: '/discover/movies',
@@ -102,11 +107,12 @@ const MobileMenu = ({
       activeRegExp: /^\/requests/,
     },
     {
-      href: '/activity',
+      href: '/?tab=activity',
       content: intl.formatMessage(menuMessages.activity),
       svgIcon: <ListBulletIcon className="h-6 w-6" />,
       svgIconSelected: <FilledListBulletIcon className="h-6 w-6" />,
       activeRegExp: /^\/activity/,
+      activeAsPathRegExp: /\?tab=activity/,
     },
     {
       href: '/blocklist',
@@ -161,6 +167,20 @@ const MobileMenu = ({
       })
   );
 
+  // 链接高亮判定：优先 asPath 命中（?tab=activity），其次 pathname，最后排除规则互斥
+  const isLinkActive = (link: MenuLink): boolean => {
+    if (link.activeAsPathRegExp?.test(router.asPath)) {
+      return true;
+    }
+    if (!router.pathname.match(link.activeRegExp)) {
+      return false;
+    }
+    if (link.activeExcludeAsPathRegExp?.test(router.asPath)) {
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     if (openIssuesCount) {
       revalidateIssueCount();
@@ -191,7 +211,7 @@ const MobileMenu = ({
         className="absolute left-0 right-0 top-0 flex w-full -translate-y-full flex-col space-y-6 border-t border-gray-600 bg-gray-900/90 px-6 py-6 font-semibold text-gray-100 backdrop-blur"
       >
         {filteredLinks.map((link) => {
-          const isActive = router.pathname.match(link.activeRegExp);
+          const isActive = isLinkActive(link);
           return (
             <Link
               key={`mobile-menu-link-${link.href}`}
@@ -239,8 +259,7 @@ const MobileMenu = ({
           {filteredLinks
             .slice(0, filteredLinks.length === 5 ? 5 : 4)
             .map((link) => {
-              const isActive =
-                router.pathname.match(link.activeRegExp) && !isOpen;
+              const isActive = isLinkActive(link) && !isOpen;
               return (
                 <Link
                   key={`mobile-menu-link-${link.href}`}
@@ -261,7 +280,7 @@ const MobileMenu = ({
                       <div className="absolute bottom-3 left-3">
                         <Badge
                           className={`bg-gradient-to-br ${
-                            router.pathname.match(link.activeRegExp)
+                            isLinkActive(link)
                               ? 'border-indigo-600 from-indigo-700 to-purple-700'
                               : 'border-indigo-500 from-indigo-600 to-purple-600'
                           } flex ${

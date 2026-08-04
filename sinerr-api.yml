@@ -1205,6 +1205,23 @@ components:
           description: List of users who voted. Only returned to the request owner or users with the `REQUEST_VIEW` permission.
           items:
             $ref: '#/components/schemas/User'
+    MediaVoteResponse:
+      type: object
+      description: 媒体级声援状态（2.0）。基于该媒体「当前请求」聚合声援数。
+      properties:
+        voteCount:
+          type: number
+          example: 3
+          description: Total number of votes on the media's active request.
+        userVoted:
+          type: boolean
+          example: true
+          description: Whether the current user has voted on the media's active request.
+        activeRequestId:
+          type: number
+          nullable: true
+          example: 42
+          description: The media's active request id, or null when no active request exists.
     MediaReviews:
       type: object
       properties:
@@ -1414,6 +1431,26 @@ components:
               type: string
             enableMentions:
               type: boolean
+    WecomSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: false
+        types:
+          type: number
+          example: 2
+        options:
+          type: object
+          properties:
+            corpid:
+              type: string
+            corpsecret:
+              type: string
+            agentid:
+              type: string
+            touser:
+              type: string
     SlackSettings:
       type: object
       properties:
@@ -4009,6 +4046,46 @@ paths:
                 - p256dh
       responses:
         '204':
+          description: Success
+  /settings/notifications/wecom:
+    get:
+      summary: Get WeCom notification settings
+      tags: [settings]
+      responses:
+        '200':
+          description: Returned WeCom settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WecomSettings'
+    post:
+      summary: Update WeCom notification settings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: '#/components/schemas/WecomSettings'
+      responses:
+        '200':
+          description: Values were successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WecomSettings'
+  /settings/notifications/wecom/test:
+    post:
+      summary: Test WeCom settings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: '#/components/schemas/WecomSettings'
+      responses:
+        '204':
           description: Successfully registered push subscription
   /user/{userId}/pushSubscriptions:
     get:
@@ -4390,6 +4467,135 @@ paths:
                 $ref: '#/components/schemas/UserAchievements'
         '403':
           description: Not permitted to view this user's achievements
+  /user/{userId}/following-updates:
+    get:
+      summary: Following updates
+      description: |
+        Returns recently added media (new episodes / newly added titles) for the media
+        the given user has requested or voted on, within the last `days`.
+        Visible to the user themselves or users with `MANAGE_USERS` / `REQUEST_VIEW`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: days
+          schema:
+            type: number
+          example: 7
+        - in: query
+          name: take
+          schema:
+            type: number
+          example: 20
+        - in: query
+          name: skip
+          schema:
+            type: number
+          example: 0
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        media:
+                          type: object
+                          properties:
+                            id:
+                              type: number
+                            tmdbId:
+                              type: number
+                            mediaType:
+                              type: string
+                        episodeCount:
+                          type: number
+                        newEpisodes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              seasonNumber:
+                                type: number
+                              episodeNumber:
+                                type: number
+                              addedAt:
+                                type: string
+                                format: date-time
+                        latestEventAt:
+                          type: string
+                          format: date-time
+  /user/{userId}/avatar:
+    post:
+      summary: Upload user avatar
+      description: |
+        Uploads an avatar image (multipart field `avatar`, png/jpg/webp, max 2MB) for the user.
+        Requires `MANAGE_USERS` or the user themselves. Returns the new avatar URL.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Updated avatar URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar:
+                    type: string
+                    example: '/avatarproxy/upload/2'
+    delete:
+      summary: Delete user avatar
+      description: |
+        Removes the uploaded avatar and falls back to the media server avatar / default.
+        Requires `MANAGE_USERS` or the user themselves.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Updated avatar URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar:
+                    type: string
+                    example: '/avatarproxy/default'
   /activity:
     get:
       summary: Get activity feed
@@ -4437,6 +4643,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ActivityFeed'
+  /activity/count:
+    get:
+      summary: Unread activity count
+      description: |
+        Returns the number of activity events (requests, votes, issues, playback records, reviews) created after the given `since` timestamp.
+        Stateless fixed-window count: the client passes `since` (from localStorage `activity-last-seen`); the server does not persist any last-seen state.
+      tags:
+        - activity
+      parameters:
+        - in: query
+          name: since
+          description: ISO timestamp; count events created after this time
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: number
+                    example: 3
+  /mcp:
+    get:
+      summary: MCP Streamable HTTP endpoint (SSE)
+      description: |
+        Model Context Protocol endpoint for AI agents (e.g. openclaw).
+        Requires Authorization: Bearer <mcpToken> and mcpEnabled.
+      tags:
+        - mcp
+      responses:
+        '200':
+          description: SSE stream
+        '401':
+          description: Unauthorized
+    post:
+      summary: MCP Streamable HTTP endpoint (JSON-RPC)
+      description: |
+        Handles JSON-RPC requests (initialize / tools/list / tools/call).
+        Requires Authorization: Bearer <mcpToken> and mcpEnabled.
+      tags:
+        - mcp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: JSON-RPC response
+        '401':
+          description: Unauthorized
   /blocklist:
     get:
       summary: Returns blocklisted items
@@ -5472,6 +5735,81 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/MovieResult'
+  /discover/recentlyadded:
+    get:
+      summary: Recently added (recent events)
+      description: Returns newly added media and series with recently added episodes, ordered by latest event time. Requires the RECENT_VIEW permission.
+      tags:
+        - discover
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: number
+            example: 7
+            default: 7
+        - in: query
+          name: take
+          schema:
+            type: number
+            example: 20
+            default: 20
+        - in: query
+          name: skip
+          schema:
+            type: number
+            example: 0
+            default: 0
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageInfo:
+                    type: object
+                    properties:
+                      pages:
+                        type: number
+                      pageSize:
+                        type: number
+                      results:
+                        type: number
+                      page:
+                        type: number
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        media:
+                          type: object
+                          properties:
+                            id:
+                              type: number
+                            tmdbId:
+                              type: number
+                            mediaType:
+                              type: string
+                        episodeCount:
+                          type: number
+                        newEpisodes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              seasonNumber:
+                                type: number
+                              episodeNumber:
+                                type: number
+                              addedAt:
+                                type: string
+                                format: date-time
+                        latestEventAt:
+                          type: string
+                          format: date-time
   /discover/tv:
     get:
       summary: Discover TV shows
@@ -7194,6 +7532,91 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/User'
+  /media/{tmdbId}/{mediaType}/vote:
+    get:
+      summary: Get media vote state
+      description: Returns the vote count and whether the current user voted for the media's active request.
+      tags:
+        - media
+      parameters:
+        - in: path
+          name: tmdbId
+          description: TMDb ID of the media
+          required: true
+          example: 615
+          schema:
+            type: number
+        - in: path
+          name: mediaType
+          description: Media type
+          required: true
+          example: tv
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Vote state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaVoteResponse'
+    post:
+      summary: Vote for media
+      description: Votes for the media's active request. Requires the `VOTE` permission. Returns the updated vote state.
+      tags:
+        - media
+      parameters:
+        - in: path
+          name: tmdbId
+          description: TMDb ID of the media
+          required: true
+          example: 615
+          schema:
+            type: number
+        - in: path
+          name: mediaType
+          description: Media type
+          required: true
+          example: tv
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Vote state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaVoteResponse'
+    delete:
+      summary: Remove vote for media
+      description: Removes the current user's vote from the media's active request. Requires the `VOTE` permission. Returns the updated vote state.
+      tags:
+        - media
+      parameters:
+        - in: path
+          name: tmdbId
+          description: TMDb ID of the media
+          required: true
+          example: 615
+          schema:
+            type: number
+        - in: path
+          name: mediaType
+          description: Media type
+          required: true
+          example: tv
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Vote state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaVoteResponse'
   /collection/{collectionId}:
     get:
       summary: Get collection details

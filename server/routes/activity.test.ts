@@ -388,3 +388,37 @@ describe('GET /activity review records', () => {
     );
   });
 });
+
+describe('GET /activity/count', () => {
+  it('counts events created after the since timestamp', async () => {
+    await seedRequestAndVote();
+
+    // 一个较早的时间点，seed 事件都晚于它
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get(
+      `/activity/count?since=${encodeURIComponent(since)}`
+    );
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(typeof res.body.count, 'number');
+    // seedRequestAndVote 产生 1 个请求 + 1 个声援 = 至少 2
+    assert.ok(res.body.count >= 2);
+  });
+
+  it('returns zero when since is in the future', async () => {
+    const since = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get(
+      `/activity/count?since=${encodeURIComponent(since)}`
+    );
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.count, 0);
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/activity/count');
+    assert.strictEqual(res.status, 403);
+  });
+});

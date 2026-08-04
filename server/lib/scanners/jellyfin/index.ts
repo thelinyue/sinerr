@@ -15,6 +15,7 @@ import { MediaServerType } from '@server/constants/server';
 import { getRepository } from '@server/datasource';
 import { User } from '@server/entity/User';
 import type {
+  ProcessableEpisode,
   ProcessableSeason,
   RunnableScanner,
   StatusBase,
@@ -282,6 +283,7 @@ class JellyfinScanner
               matchedJellyfinSeason.Id
             );
             let totalStandard = 0;
+            const seasonDetails: ProcessableEpisode[] = [];
 
             for (const episode of episodes) {
               let episodeCount = 1;
@@ -294,6 +296,20 @@ class JellyfinScanner
               }
 
               totalStandard += episodeCount;
+
+              // 多集合并文件只记起始集号
+              if (episode.IndexNumber !== undefined) {
+                seasonDetails.push({
+                  episodeNumber: episode.IndexNumber,
+                  jellyfinEpisodeId: episode.Id,
+                  addedAt: (episode as JellyfinLibraryItemExtended).DateCreated
+                    ? new Date(
+                        (episode as JellyfinLibraryItemExtended)
+                          .DateCreated as string
+                      )
+                    : undefined,
+                });
+              }
             }
 
             // With AniDB we can have multiple shows for one season, so we need to save
@@ -316,6 +332,7 @@ class JellyfinScanner
               seasonNumber: season.season_number,
               totalEpisodes: season.episode_count,
               episodes: totalStandard,
+              episodeDetails: seasonDetails,
             });
           } else {
             processableSeasons.push({
@@ -361,6 +378,10 @@ class JellyfinScanner
     if (item.Type === 'Movie') {
       await this.processJellyfinMovie(item);
     } else if (item.Type === 'Series') {
+      await this.processJellyfinShow(item);
+    } else if (item.Type === 'Episode') {
+      // recent scan 的 /Items/Latest 可能以单集为代表项，按 SeriesId 走剧集处理，
+      // 确保「仅新增单集」也能触发 processShow（Episode 表同步到秒级~分钟级）
       await this.processJellyfinShow(item);
     }
   }

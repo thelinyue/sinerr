@@ -14,6 +14,7 @@ import PlayButton from '@app/components/Common/PlayButton';
 import StatusBadgeMini from '@app/components/Common/StatusBadgeMini';
 import Tag from '@app/components/Common/Tag';
 import Tooltip from '@app/components/Common/Tooltip';
+import VoteButton from '@app/components/Common/VoteButton';
 import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
 import ManageSlideOver from '@app/components/ManageSlideOver';
@@ -51,6 +52,7 @@ import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
+import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
 import type { TvDetails as TvDetailsType } from '@server/models/Tv';
 import type { Crew } from '@server/models/common';
 import axios from 'axios';
@@ -88,6 +90,9 @@ const messages = defineMessages('components.TvDetails', {
   seasonstitle: 'Seasons',
   episodeCount: '{episodeCount, plural, one {# Episode} other {# Episodes}}',
   seasonnumber: 'Season {seasonNumber}',
+  seasonWatched: '已看 {watched}/{total}',
+  seasonComplete: '已看完',
+  seasonRecentAdded: '最近新增 {episodes}',
   rtcriticsscore: 'Rotten Tomatoes Tomatometer',
   rtaudiencescore: 'Rotten Tomatoes Audience Score',
   tmdbuserscore: 'TMDB User Score',
@@ -127,6 +132,13 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
 
   const { data: ratingData } = useSWR<RTRating>(
     `/api/v1/tv/${router.query.tvId}/ratings`
+  );
+
+  // 模块 3：当前用户按季播放进度（seasons[]），详情页季行展示
+  const { data: playbackData } = useSWR<PlaybackProgressResponse>(
+    user
+      ? `/api/v1/user/${user.id}/media/${router.query.tvId}/tv/playback`
+      : null
   );
 
   const sortedCrew = useMemo(
@@ -483,6 +495,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
             media={data?.mediaInfo}
             isShowComplete={isComplete}
           />
+          <VoteButton tmdbId={Number(data?.id)} mediaType="tv" />
           {(data.mediaInfo?.status === MediaStatus.AVAILABLE ||
             data.mediaInfo?.status === MediaStatus.PARTIALLY_AVAILABLE) &&
             hasPermission(
@@ -646,6 +659,69 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                                 episodeCount: season.episodeCount,
                               })}
                             </Badge>
+                            {(() => {
+                              const progress = playbackData?.seasons?.find(
+                                (s) => s.seasonNumber === season.seasonNumber
+                              );
+                              if (
+                                !progress ||
+                                progress.totalEpisodes <= 0 ||
+                                progress.watchedEpisodes <= 0
+                              ) {
+                                return null;
+                              }
+                              return progress.watchedEpisodes >=
+                                progress.totalEpisodes ? (
+                                <Badge badgeType="success">
+                                  {intl.formatMessage(messages.seasonComplete)}
+                                </Badge>
+                              ) : (
+                                <Badge badgeType="warning">
+                                  {intl.formatMessage(messages.seasonWatched, {
+                                    watched: progress.watchedEpisodes,
+                                    total: progress.totalEpisodes,
+                                  })}
+                                </Badge>
+                              );
+                            })()}
+                            {(() => {
+                              // F3：最近新增 chip（近 7 天入库单集，连续集折叠区间）
+                              const recent = (
+                                data.mediaInfo?.recentEpisodes ?? []
+                              )
+                                .filter(
+                                  (e) => e.seasonNumber === season.seasonNumber
+                                )
+                                .map((e) => e.episodeNumber)
+                                .sort((a, b) => a - b);
+                              if (recent.length === 0) {
+                                return null;
+                              }
+                              const ranges: [number, number][] = [];
+                              for (const ep of recent) {
+                                const last = ranges[ranges.length - 1];
+                                if (last && ep === last[1] + 1) {
+                                  last[1] = ep;
+                                } else {
+                                  ranges.push([ep, ep]);
+                                }
+                              }
+                              const label = ranges
+                                .map(([start, end]) =>
+                                  start === end
+                                    ? `E${start}`
+                                    : `E${start}–E${end}`
+                                )
+                                .join(' · ');
+                              return (
+                                <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-300 ring-1 ring-emerald-500/30">
+                                  {intl.formatMessage(
+                                    messages.seasonRecentAdded,
+                                    { episodes: label }
+                                  )}
+                                </span>
+                              );
+                            })()}
                           </div>
                           {((!mSeason &&
                             request?.status === MediaRequestStatus.APPROVED) ||

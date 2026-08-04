@@ -38,6 +38,9 @@ const messages = defineMessages('components.UserProfile', {
   watchtimeTotal: 'Total Watch Time',
   recentlyWatched: 'Recently Watched',
   noRecentlyWatched: 'No playback records yet.',
+  followingTitle: '追更中',
+  followingUpdatedTo: '已更新至 第{season}季 第{episode}集',
+  followingFinished: '已完结 · 全{seasons}季 · {episodes}集',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -98,6 +101,103 @@ const RecentlyWatchedCard = ({ item }: { item: RecentlyWatchedItem }) => {
   );
 };
 
+/** 追更中单条：懒加载标题 + 更新状态行（已更新至 / 已完结） */
+const FollowingUpdateRow = ({
+  item,
+}: {
+  item: {
+    media: { id: number; tmdbId: number; mediaType: 'movie' | 'tv' };
+    episodeCount: number;
+    newEpisodes: {
+      seasonNumber: number;
+      episodeNumber: number;
+      addedAt: string;
+    }[];
+  };
+}) => {
+  const intl = useIntl();
+  const url =
+    item.media.mediaType === 'movie'
+      ? `/api/v1/movie/${item.media.tmdbId}`
+      : `/api/v1/tv/${item.media.tmdbId}`;
+  const { data } = useSWR<MovieDetails | TvDetails>(url);
+  const href =
+    item.media.mediaType === 'movie'
+      ? `/movie/${item.media.tmdbId}`
+      : `/tv/${item.media.tmdbId}`;
+  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
+    (m as MovieDetails).title !== undefined;
+  const title = data ? (isMovie(data) ? data.title : data.name) : null;
+
+  const latest = item.newEpisodes.reduce(
+    (best, ep) =>
+      !best ||
+      ep.seasonNumber > best.seasonNumber ||
+      (ep.seasonNumber === best.seasonNumber &&
+        ep.episodeNumber > best.episodeNumber)
+        ? ep
+        : best,
+    null as { seasonNumber: number; episodeNumber: number } | null
+  );
+  const isEnded =
+    item.media.mediaType === 'tv' &&
+    !!data &&
+    !isMovie(data) &&
+    (data.status === 'Ended' || data.status === 'Canceled');
+
+  let state: React.ReactNode = null;
+  if (item.media.mediaType === 'tv' && data && !isMovie(data) && isEnded) {
+    state = (
+      <span className="text-xs text-gray-300">
+        {intl.formatMessage(messages.followingFinished, {
+          seasons: data.numberOfSeasons,
+          episodes: data.numberOfEpisodes,
+        })}
+      </span>
+    );
+  } else if (latest) {
+    state = (
+      <span className="text-xs text-emerald-300">
+        {intl.formatMessage(messages.followingUpdatedTo, {
+          season: latest.seasonNumber,
+          episode: latest.episodeNumber,
+        })}
+        {item.episodeCount > 0 && (
+          <span className="ml-1.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px]">
+            ＋{item.episodeCount} 集
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-800/60 p-3 transition hover:bg-gray-700/50"
+    >
+      <CachedImage
+        type="tmdb"
+        src={
+          data?.posterPath
+            ? `https://image.tmdb.org/t/p/w154${data.posterPath}`
+            : '/images/sinerr_poster_not_found.png'
+        }
+        alt=""
+        className="h-14 w-10 flex-shrink-0 rounded-md object-cover"
+        width={64}
+        height={96}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-white">
+          {title ?? '\u00A0'}
+        </div>
+        <div className="mt-0.5">{state}</div>
+      </div>
+    </Link>
+  );
+};
+
 const UserProfile = () => {
   const intl = useIntl();
   const router = useRouter();
@@ -148,6 +248,28 @@ const UserProfile = () => {
           { type: 'or' }
         ))
       ? `/api/v1/user/${user.id}/recently-watched`
+      : null
+  );
+
+  // 追更中（模块 4-F2）：本人 + REQUEST_VIEW 可见
+  const { data: followingUpdates } = useSWR<{
+    results: {
+      media: { id: number; tmdbId: number; mediaType: 'movie' | 'tv' };
+      episodeCount: number;
+      newEpisodes: {
+        seasonNumber: number;
+        episodeNumber: number;
+        addedAt: string;
+      }[];
+    }[];
+  }>(
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.REQUEST_VIEW],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user.id}/following-updates?days=7&take=20`
       : null
   );
 
@@ -421,6 +543,24 @@ const UserProfile = () => {
               <div className="h-40 w-28 animate-pulse rounded-lg bg-gray-800 sm:h-48 sm:w-32" />
             }
           />
+        </div>
+      )}
+
+      {followingUpdates && !!followingUpdates.results.length && (
+        <div className="relative z-40 mt-8">
+          <div className="slider-header">
+            <div className="slider-title">
+              <span>{intl.formatMessage(messages.followingTitle)}</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {followingUpdates.results.map((item) => (
+              <FollowingUpdateRow
+                key={`following-${item.media.tmdbId}`}
+                item={item}
+              />
+            ))}
+          </div>
         </div>
       )}
     </>

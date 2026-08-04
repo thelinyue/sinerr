@@ -18,6 +18,8 @@ export enum Notification {
   ISSUE_REOPENED = 2048,
   MEDIA_AUTO_REQUESTED = 4096,
   REQUEST_VOTED = 8192,
+  /** 追更通知：我请求/声援的剧更新了新集（Sinerr 2.0 模块 4-F1） */
+  EPISODE_UPDATED = 16384,
 }
 
 export const hasNotificationType = (

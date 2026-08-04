@@ -1,5 +1,6 @@
 import Badge from '@app/components/Common/Badge';
 import VersionStatus from '@app/components/Layout/VersionStatus';
+import { useActivityUnreadCount } from '@app/hooks/useActivityUnreadCount';
 import useClickOutside from '@app/hooks/useClickOutside';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
@@ -48,6 +49,10 @@ interface SidebarLinkProps {
   svgIcon: React.ReactNode;
   messagesKey: keyof typeof menuMessages;
   activeRegExp: RegExp;
+  /** 命中 asPath（含 query）即高亮，优先于 activeRegExp（用于 ?tab=activity 场景） */
+  activeAsPathRegExp?: RegExp;
+  /** 即使 activeRegExp 命中，但 asPath 命中此规则时不高亮（互斥用） */
+  activeExcludeAsPathRegExp?: RegExp;
   as?: string;
   requiredPermission?: Permission | Permission[];
   permissionType?: 'and' | 'or';
@@ -60,6 +65,7 @@ const SidebarLinks: SidebarLinkProps[] = [
     messagesKey: 'dashboard',
     svgIcon: <SparklesIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/(discover\/?)?$/,
+    activeExcludeAsPathRegExp: /\?tab=activity/,
   },
   {
     href: '/discover/movies',
@@ -80,10 +86,11 @@ const SidebarLinks: SidebarLinkProps[] = [
     activeRegExp: /^\/requests/,
   },
   {
-    href: '/activity',
+    href: '/?tab=activity',
     messagesKey: 'activity',
     svgIcon: <ListBulletIcon className="mr-3 h-6 w-6" />,
     activeRegExp: /^\/activity/,
+    activeAsPathRegExp: /\?tab=activity/,
   },
   {
     href: '/blocklist',
@@ -138,7 +145,22 @@ const Sidebar = ({
   const router = useRouter();
   const intl = useIntl();
   const { hasPermission } = useUser();
+  const { count: activityUnreadCount } = useActivityUnreadCount();
   useClickOutside(navRef, () => setClosed());
+
+  // 链接高亮判定：优先 asPath 命中（?tab=activity），其次 pathname，最后排除规则互斥
+  const isLinkActive = (link: SidebarLinkProps): boolean => {
+    if (link.activeAsPathRegExp?.test(router.asPath)) {
+      return true;
+    }
+    if (!router.pathname.match(link.activeRegExp)) {
+      return false;
+    }
+    if (link.activeExcludeAsPathRegExp?.test(router.asPath)) {
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (openIssuesCount) {
@@ -226,7 +248,7 @@ const Sidebar = ({
                             role="button"
                             tabIndex={0}
                             className={`flex items-center rounded-md px-2 py-2 text-base font-medium leading-6 text-white transition duration-150 ease-in-out focus:outline-none ${
-                              router.pathname.match(sidebarLink.activeRegExp)
+                              isLinkActive(sidebarLink)
                                 ? 'bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
                                 : 'hover:bg-gray-700 focus:bg-gray-700'
                             } `}
@@ -286,7 +308,7 @@ const Sidebar = ({
                       href={sidebarLink.href}
                       as={sidebarLink.as}
                       className={`group flex items-center rounded-md px-2 py-2 text-lg font-medium leading-6 text-white transition duration-150 ease-in-out focus:outline-none ${
-                        router.pathname.match(sidebarLink.activeRegExp)
+                        isLinkActive(sidebarLink)
                           ? 'bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
                           : 'hover:bg-gray-700 focus:bg-gray-700'
                       } `}
@@ -302,7 +324,7 @@ const Sidebar = ({
                           <div className="ml-auto flex">
                             <Badge
                               className={`rounded-md bg-gradient-to-br ${
-                                router.pathname.match(sidebarLink.activeRegExp)
+                                isLinkActive(sidebarLink)
                                   ? 'border-indigo-600 from-indigo-700 to-purple-700'
                                   : 'border-indigo-500 from-indigo-600 to-purple-600'
                               }`}
@@ -317,12 +339,20 @@ const Sidebar = ({
                           <div className="ml-auto flex">
                             <Badge
                               className={`rounded-md bg-gradient-to-br ${
-                                router.pathname.match(sidebarLink.activeRegExp)
+                                isLinkActive(sidebarLink)
                                   ? 'border-indigo-600 from-indigo-700 to-purple-700'
                                   : 'border-indigo-500 from-indigo-600 to-purple-600'
                               }`}
                             >
                               {openIssuesCount}
+                            </Badge>
+                          </div>
+                        )}
+                      {sidebarLink.messagesKey === 'activity' &&
+                        activityUnreadCount > 0 && (
+                          <div className="ml-auto flex">
+                            <Badge className="rounded-md bg-pink-600 text-white">
+                              {activityUnreadCount}
                             </Badge>
                           </div>
                         )}

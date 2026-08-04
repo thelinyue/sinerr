@@ -5,9 +5,11 @@ import {
   MediaType,
 } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
+import Episode from '@server/entity/Episode';
 import Media from '@server/entity/Media';
 import MediaRequest from '@server/entity/MediaRequest';
 import Season from '@server/entity/Season';
+import { notifyEpisodeUpdated } from '@server/lib/episodeNotification';
 import logger from '@server/logger';
 import AsyncLock from '@server/utils/asyncLock';
 import { randomUUID } from 'crypto';
@@ -44,11 +46,20 @@ interface ProcessOptions {
   hasFile?: boolean;
 }
 
+/** 单集明细（供 Episode 表 upsert） */
+export interface ProcessableEpisode {
+  episodeNumber: number;
+  jellyfinEpisodeId?: string;
+  addedAt?: Date;
+}
+
 export interface ProcessableSeason {
   seasonNumber: number;
   totalEpisodes: number;
   episodes: number;
   processing?: boolean;
+  /** 该季单集明细（最近添加 / 更新集数用） */
+  episodeDetails?: ProcessableEpisode[];
 }
 
 class BaseScanner<T> {
@@ -211,6 +222,64 @@ class BaseScanner<T> {
     });
   }
 
+  /**
+   * 批量 upsert 单集（Episode 表）
+   *
+   * 只插不更（orIgnore → sqlite INSERT OR IGNORE / pg ON CONFLICT DO NOTHING），
+   * 按 jellyfinEpisodeId 去重；季内已存集数与待插一致时跳过，稳态零写放大。
+   */
+  protected async upsertEpisodes(
+    media: Media,
+    seasonNumber: number,
+    episodeDetails?: ProcessableEpisode[]
+  ): Promise<void> {
+    if (!episodeDetails || episodeDetails.length === 0) {
+      return;
+    }
+    const episodeRepository = getRepository(Episode);
+
+    const existingCount = await episodeRepository.count({
+      where: { media: { id: media.id }, seasonNumber },
+    });
+    if (existingCount === episodeDetails.length) {
+      return;
+    }
+
+    const result = await episodeRepository
+      .createQueryBuilder()
+      .insert()
+      .into(Episode)
+      .values(
+        episodeDetails.map((detail) => ({
+          media,
+          seasonNumber,
+          episodeNumber: detail.episodeNumber,
+          jellyfinEpisodeId: detail.jellyfinEpisodeId,
+          addedAt: detail.addedAt ?? new Date(),
+        }))
+      )
+      .orIgnore()
+      .execute();
+    void result;
+
+    // F1 追更通知：仅在确实新增了集（orIgnore 后计数增加）时触发
+    const newCount = await episodeRepository.count({
+      where: { media: { id: media.id }, seasonNumber },
+    });
+    if (newCount > existingCount) {
+      await notifyEpisodeUpdated({
+        mediaId: media.id,
+        tmdbId: media.tmdbId,
+        mediaType: media.mediaType,
+        newEpisodes: episodeDetails.map((detail) => ({
+          seasonNumber,
+          episodeNumber: detail.episodeNumber,
+          addedAt: detail.addedAt ?? new Date(),
+        })),
+      });
+    }
+  }
+
   protected async processShow(
     tmdbId: number,
     tvdbId: number | undefined,
@@ -361,6 +430,13 @@ class BaseScanner<T> {
               : media.status === MediaStatus.DELETED
                 ? MediaStatus.DELETED
                 : MediaStatus.UNKNOWN;
+        for (const season of seasons) {
+          await this.upsertEpisodes(
+            media,
+            season.seasonNumber,
+            season.episodeDetails
+          );
+        }
         await mediaRepository.save(media);
         this.log(`Updating existing title`);
       } else {
@@ -408,6 +484,13 @@ class BaseScanner<T> {
                 : MediaStatus.UNKNOWN,
         });
         await mediaRepository.save(newMedia);
+        for (const season of seasons) {
+          await this.upsertEpisodes(
+            newMedia,
+            season.seasonNumber,
+            season.episodeDetails
+          );
+        }
         this.log(`Saved new series`);
       }
     });

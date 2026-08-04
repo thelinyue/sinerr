@@ -1,5 +1,6 @@
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
+import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import LanguageSelector from '@app/components/LanguageSelector';
@@ -60,6 +61,15 @@ const messages = defineMessages(
     playbackVisible: 'Show My Watch History',
     playbackVisibleTip:
       'Show my playback records in the activity feed. Administrators always see them.',
+    avatarTitle: '头像',
+    avatarChoose: '选择图片',
+    avatarRemove: '移除头像',
+    avatarHint: '支持 JPG / PNG / WebP，≤ 2MB',
+    avatarUploading: '上传中…',
+    avatarUploaded: '头像已更新',
+    avatarRemoved: '头像已移除',
+    avatarUploadFailed: '头像上传失败',
+    avatarRemoveFailed: '头像移除失败',
     movierequestlimit: 'Movie Request Limit',
     seriesrequestlimit: 'Series Request Limit',
     enableOverride: 'Override Global Limit',
@@ -76,6 +86,7 @@ const UserGeneralSettings = () => {
   const { locale, setLocale } = useLocale();
   const [movieQuotaEnabled, setMovieQuotaEnabled] = useState(false);
   const [tvQuotaEnabled, setTvQuotaEnabled] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const router = useRouter();
   const {
     user,
@@ -111,6 +122,45 @@ const UserGeneralSettings = () => {
     );
   }, [data]);
 
+  // 头像上传 / 移除（模块 7）
+  const onAvatarUpload = async (file: File) => {
+    setAvatarUploading(true);
+    try {
+      const form = new FormData();
+      form.append('avatar', file);
+      await axios.post(`/api/v1/user/${user?.id}/avatar`, form);
+      addToast(intl.formatMessage(messages.avatarUploaded), {
+        appearance: 'success',
+        autoDismiss: true,
+      });
+    } catch {
+      addToast(intl.formatMessage(messages.avatarUploadFailed), {
+        appearance: 'error',
+        autoDismiss: true,
+      });
+    } finally {
+      setAvatarUploading(false);
+      revalidateUser();
+    }
+  };
+
+  const onAvatarRemove = async () => {
+    try {
+      await axios.delete(`/api/v1/user/${user?.id}/avatar`);
+      addToast(intl.formatMessage(messages.avatarRemoved), {
+        appearance: 'success',
+        autoDismiss: true,
+      });
+    } catch {
+      addToast(intl.formatMessage(messages.avatarRemoveFailed), {
+        appearance: 'error',
+        autoDismiss: true,
+      });
+    } finally {
+      revalidateUser();
+    }
+  };
+
   if (!data && !error) {
     return <LoadingSpinner />;
   }
@@ -131,6 +181,58 @@ const UserGeneralSettings = () => {
         <h3 className="heading">
           {intl.formatMessage(messages.generalsettings)}
         </h3>
+      </div>
+      {/* 头像区块（模块 7） */}
+      <div className="section mb-6">
+        <div className="form-row">
+          <label className="text-label">
+            {intl.formatMessage(messages.avatarTitle)}
+          </label>
+          <div className="form-input-area">
+            <div className="flex flex-wrap items-center gap-5">
+              <CachedImage
+                type="avatar"
+                src={user?.avatar ?? ''}
+                alt=""
+                className="h-20 w-20 rounded-full object-cover ring-2 ring-indigo-400"
+                width={80}
+                height={80}
+              />
+              <div className="flex flex-col gap-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={avatarUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void onAvatarUpload(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <span className="inline-flex cursor-pointer items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white">
+                    {avatarUploading
+                      ? intl.formatMessage(messages.avatarUploading)
+                      : intl.formatMessage(messages.avatarChoose)}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void onAvatarRemove()}
+                  className="rounded-lg bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                >
+                  {intl.formatMessage(messages.avatarRemove)}
+                </button>
+                <p className="text-[11px] text-gray-500">
+                  {intl.formatMessage(messages.avatarHint)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <Formik
         initialValues={{

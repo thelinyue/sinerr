@@ -17,4 +17,10 @@ export interface PlaybackProgressResponse {
   totalEpisodes?: number;
   /** 已看集数百分比 0-100（仅剧集返回） */
   watchedPercent?: number;
+  /** 按季进度（仅剧集返回，模块 3：插件 API 或 Episode 表本地聚合） */
+  seasons?: {
+    seasonNumber: number;
+    watchedEpisodes: number;
+    totalEpisodes: number;
+  }[];
 }

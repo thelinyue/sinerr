@@ -11,8 +11,11 @@ import {
   type RankingPeriod,
 } from '@server/job/refreshMostPlayedCache';
 import cacheManager from '@server/lib/cache';
+import { Permission } from '@server/lib/permissions';
+import { getRecentlyAdded } from '@server/lib/recentlyAdded';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
+import { isAuthenticated } from '@server/middleware/auth';
 import { mapProductionCompany } from '@server/models/Movie';
 import {
   mapCollectionResult,
@@ -1077,5 +1080,38 @@ discoverRoutes.get('/mostplayed', async (req, res, next) => {
     });
   }
 });
+
+/**
+ * 最近添加（最近事件）
+ *
+ * 统一「新入库影视 + 老剧新增单集」，按最新事件时间排序。
+ * 门控：RECENT_VIEW 权限（模块 6）。
+ */
+discoverRoutes.get(
+  '/recentlyadded',
+  isAuthenticated(Permission.RECENT_VIEW),
+  async (req, res, next) => {
+    const days = req.query.days ? Number(req.query.days) : 7;
+    const take = req.query.take ? Number(req.query.take) : 20;
+    const skip = req.query.skip ? Number(req.query.skip) : 0;
+
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    try {
+      const { results, total } = await getRecentlyAdded(since, take, skip);
+      return res.status(200).json({
+        results,
+        pageInfo: {
+          pages: Math.ceil(total / take),
+          pageSize: take,
+          results: total,
+          page: Math.floor(skip / take) + 1,
+        },
+      });
+    } catch (e) {
+      return next({ status: 500, message: e.message });
+    }
+  }
+);
 
 export default discoverRoutes;

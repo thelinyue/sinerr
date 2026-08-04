@@ -2,7 +2,7 @@ import ExternalAPI from '@server/api/externalapi';
 import type { TvShowProvider } from '@server/api/provider';
 import cacheManager from '@server/lib/cache';
 import { getSettings } from '@server/lib/settings';
-import { TMDB_API_KEY } from '@server/utils/apiKeys';
+import { getTMDBKey } from '@server/utils/apiKeys';
 import { sortBy } from 'lodash';
 import type {
   TmdbCollection,
@@ -125,6 +125,9 @@ interface DiscoverTvOptions {
   certificationCountry?: string;
 }
 
+/** 请求级 TMDB key 注入拦截器只挂一次（axios 客户端按 baseUrl 全局共享） */
+let tmdbApiKeyInterceptorAttached = false;
+
 class TheMovieDb extends ExternalAPI implements TvShowProvider {
   private locale: string;
   private discoverRegion?: string;
@@ -136,7 +139,7 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
     super(
       'https://api.themoviedb.org/3',
       {
-        api_key: TMDB_API_KEY,
+        api_key: getTMDBKey(),
       },
       {
         nodeCache: cacheManager.getCache('tmdb').data,
@@ -147,6 +150,15 @@ class TheMovieDb extends ExternalAPI implements TvShowProvider {
         timeout: getSettings().network.apiRequestTimeout,
       }
     );
+    // axios 客户端按 baseUrl 全局共享，key 固化在默认 params 里；
+    // 附加请求拦截器在每次请求时用最新 key 覆盖，设置页改 key 无需重启（模块 5）
+    if (!tmdbApiKeyInterceptorAttached) {
+      this.axios.interceptors.request.use((config) => {
+        config.params = { ...config.params, api_key: getTMDBKey() };
+        return config;
+      });
+      tmdbApiKeyInterceptorAttached = true;
+    }
     this.locale = getSettings().main?.locale || 'en';
     this.discoverRegion = discoverRegion;
     this.originalLanguage = originalLanguage;

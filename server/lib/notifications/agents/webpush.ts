@@ -170,6 +170,9 @@ class WebPushAgent
           userName: payload.votedBy?.displayName,
         });
         break;
+      case Notification.EPISODE_UPDATED:
+        message = payload.message ?? payload.subject;
+        break;
       default:
         return {
           notificationType: Notification[type],

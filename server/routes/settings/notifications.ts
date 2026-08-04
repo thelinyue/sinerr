@@ -13,6 +13,7 @@ import SlackAgent from '@server/lib/notifications/agents/slack';
 import TelegramAgent from '@server/lib/notifications/agents/telegram';
 import WebhookAgent from '@server/lib/notifications/agents/webhook';
 import WebPushAgent from '@server/lib/notifications/agents/webpush';
+import WecomAgent from '@server/lib/notifications/agents/wecom';
 import { getSettings } from '@server/lib/settings';
 import type { AvailableLocale } from '@server/types/languages';
 import { Router } from 'express';
@@ -49,6 +50,36 @@ notificationRoutes.post('/discord', async (req, res) => {
   await settings.save();
 
   res.status(200).json(settings.notifications.agents.discord);
+});
+
+notificationRoutes.get('/wecom', (_req, res) => {
+  const settings = getSettings();
+  res.status(200).json(settings.notifications.agents.wecom);
+});
+
+notificationRoutes.post('/wecom', async (req, res) => {
+  const settings = getSettings();
+  settings.notifications.agents.wecom = req.body;
+  await settings.save();
+  res.status(200).json(settings.notifications.agents.wecom);
+});
+
+notificationRoutes.post('/wecom/test', async (req, res, next) => {
+  if (!req.user) {
+    return next({
+      status: 500,
+      message: 'User information is missing from the request.',
+    });
+  }
+  const wecomAgent = new WecomAgent(req.body);
+  if (await sendTestNotification(wecomAgent, req.user)) {
+    return res.status(204).send();
+  } else {
+    return next({
+      status: 500,
+      message: 'Failed to send WeCom notification.',
+    });
+  }
 });
 
 notificationRoutes.post('/discord/test', async (req, res, next) => {

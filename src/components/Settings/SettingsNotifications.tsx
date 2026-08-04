@@ -12,6 +12,7 @@ import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import {
   BoltIcon,
+  ChatBubbleLeftRightIcon,
   CloudIcon,
   EnvelopeIcon,
   SignalIcon,
@@ -157,6 +158,17 @@ const SettingsNotifications = ({ children }: SettingsNotificationsProps) => {
       ),
       route: '/settings/notifications/mediary',
       regex: /^\/settings\/notifications\/mediary/,
+    },
+    {
+      text: 'WeCom',
+      content: (
+        <span className="flex items-center">
+          <ChatBubbleLeftRightIcon className="mr-2 h-4" />
+          企业微信
+        </span>
+      ),
+      route: '/settings/notifications/wecom',
+      regex: /^\/settings\/notifications\/wecom/,
     },
   ];
 

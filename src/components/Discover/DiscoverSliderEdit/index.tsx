@@ -132,8 +132,6 @@ const DiscoverSliderEdit = ({
 
   const getSliderTitle = (slider: Partial<DiscoverSlider>): string => {
     switch (slider.type) {
-      case DiscoverSliderType.RECENTLY_ADDED:
-        return intl.formatMessage(sliderTitles.recentlyAdded);
       case DiscoverSliderType.RECENT_REQUESTS:
         return intl.formatMessage(sliderTitles.recentrequests);
       case DiscoverSliderType.TRENDING:

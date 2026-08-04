@@ -36,6 +36,9 @@ const messages = defineMessages('components.Settings.SettingsMain', {
     'Configure global and default settings for Sinerr.',
   apikey: 'API Key',
   apikeyCopied: 'Copied API key to clipboard.',
+  tmdbApiKey: 'TMDB API Key',
+  tmdbApiKeyTip:
+    'TMDB API key used for all metadata lookups. Leave blank to use the built-in shared key. Takes precedence over the environment variable TMDB_API_KEY.',
   applicationTitle: 'Application Title',
   applicationurl: 'Application URL',
   discoverRegion: 'Discover Region',
@@ -81,6 +84,9 @@ const messages = defineMessages('components.Settings.SettingsMain', {
   serverConnectionUrl: 'Server Connection URL',
   serverConnectionUrlTip:
     'Server connection address shown in the sidebar for users to copy.',
+  mcpEnabled: 'MCP 服务',
+  mcpEnabledTip:
+    '允许 AI 代理（openclaw 等）通过 MCP 协议访问本服务（只读工具集）。Bearer 令牌复用上方「应用程序密钥」。',
   validationUrl: 'You must provide a valid URL',
   validationUrlTrailingSlash: 'URL must not end in a trailing slash',
 });
@@ -169,6 +175,7 @@ const SettingsMain = () => {
           initialValues={{
             applicationTitle: data?.applicationTitle,
             applicationUrl: data?.applicationUrl,
+            tmdbkey: data?.tmdbkey || '',
             hideAvailable: data?.hideAvailable,
             hideBlocklisted: data?.hideBlocklisted,
             locale: data?.locale ?? 'en',
@@ -184,6 +191,7 @@ const SettingsMain = () => {
             cacheImages: data?.cacheImages,
             clientDownloadUrls: data?.clientDownloadUrls || [],
             serverConnectionUrl: data?.serverConnectionUrl || '',
+            mcpEnabled: data?.mcpEnabled ?? false,
           }}
           enableReinitialize
           validationSchema={MainSettingsSchema}
@@ -192,6 +200,7 @@ const SettingsMain = () => {
               await axios.post('/api/v1/settings/main', {
                 applicationTitle: values.applicationTitle,
                 applicationUrl: values.applicationUrl,
+                tmdbkey: values.tmdbkey,
                 hideAvailable: values.hideAvailable,
                 hideBlocklisted: values.hideBlocklisted,
                 locale: values.locale,
@@ -207,6 +216,7 @@ const SettingsMain = () => {
                 cacheImages: values.cacheImages,
                 clientDownloadUrls: values.clientDownloadUrls,
                 serverConnectionUrl: values.serverConnectionUrl,
+                mcpEnabled: values.mcpEnabled,
               });
               mutate('/api/v1/settings/public');
 
@@ -277,6 +287,19 @@ const SettingsMain = () => {
                     </div>
                   </div>
                 )}
+                <div className="form-row">
+                  <label htmlFor="tmdbkey" className="text-label">
+                    <span>{intl.formatMessage(messages.tmdbApiKey)}</span>
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.tmdbApiKeyTip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <div className="form-input-field">
+                      <Field id="tmdbkey" name="tmdbkey" type="text" />
+                    </div>
+                  </div>
+                </div>
                 <div className="form-row">
                   <label htmlFor="applicationTitle" className="text-label">
                     {intl.formatMessage(messages.applicationTitle)}
@@ -690,6 +713,18 @@ const SettingsMain = () => {
                         inputMode="url"
                       />
                     </div>
+                  </div>
+                </div>
+                {/* MCP 服务（模块 9） */}
+                <div className="form-row">
+                  <label htmlFor="mcpEnabled" className="checkbox-label">
+                    {intl.formatMessage(messages.mcpEnabled)}
+                    <span className="label-tip">
+                      {intl.formatMessage(messages.mcpEnabledTip)}
+                    </span>
+                  </label>
+                  <div className="form-input-area">
+                    <Field type="checkbox" id="mcpEnabled" name="mcpEnabled" />
                   </div>
                 </div>
                 <div className="actions">
