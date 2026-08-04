@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 const LAST_SEEN_KEY = 'activity-last-seen';
@@ -13,6 +13,17 @@ const readLastSeen = (): string => {
   } catch {
     return new Date(Date.now() - DEFAULT_WINDOW_MS).toISOString();
   }
+};
+
+/**
+ * 模块级「已读」广播：进入动态流（ActivityList）写入 localStorage 后通知
+ * 所有 useActivityUnreadCount 实例（侧栏 + Discover Tab）立即刷新，
+ * 否则各实例的 SWR 状态互相独立，红点要等刷新浏览器才消失。
+ */
+const readListeners = new Set<() => void>();
+
+export const notifyActivityRead = (): void => {
+  readListeners.forEach((listener) => listener());
 };
 
 interface ActivityUnread {
@@ -36,15 +47,26 @@ export const useActivityUnreadCount = (): ActivityUnread => {
     { refreshInterval: 60000 }
   );
 
+  // 订阅「已读」广播：重读 localStorage（since 变化改 SWR key）并立即置 0
+  useEffect(() => {
+    const onRead = () => {
+      setVersion((v) => v + 1);
+      mutate({ count: 0 }, false);
+    };
+    readListeners.add(onRead);
+    return () => {
+      readListeners.delete(onRead);
+    };
+  }, [mutate]);
+
   const markRead = useCallback(() => {
     try {
       localStorage.setItem(LAST_SEEN_KEY, new Date().toISOString());
     } catch {
       // localStorage may not be available
     }
-    setVersion((v) => v + 1);
-    mutate({ count: 0 }, false);
-  }, [mutate]);
+    notifyActivityRead();
+  }, []);
 
   return { count: data?.count ?? 0, markRead };
 };

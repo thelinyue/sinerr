@@ -3,6 +3,7 @@ import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
+import { notifyActivityRead } from '@app/hooks/useActivityUnreadCount';
 import type { User } from '@app/hooks/useUser';
 import { useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
@@ -126,7 +127,9 @@ const ActivityFeedItem = ({
 
   // 播放时长（秒 → 分钟），不足 1 分钟不显示
   const playbackDuration =
-    item.type === 'playback' && item.payload.durationSeconds
+    item.type === 'playback' &&
+    item.payload.durationSeconds != null &&
+    item.payload.durationSeconds >= 60
       ? `${Math.round(item.payload.durationSeconds / 60)}${
           intl.locale.startsWith('zh') ? ' 分钟' : ' min'
         }`
@@ -377,13 +380,14 @@ const ActivityList = ({
     setSize(1);
   }, [activeType, filterUserId, setSize]);
 
-  // 进入动态流即标记已读（模块 1：写入 localStorage，下次轮询清空未读红点）
+  // 进入动态流即标记已读（模块 1：写入 localStorage 并广播，让侧栏/Tab 红点立即消失）
   useEffect(() => {
     try {
       localStorage.setItem('activity-last-seen', new Date().toISOString());
     } catch {
       // localStorage may not be available
     }
+    notifyActivityRead();
   }, []);
 
   const setFilter = (updates: {
