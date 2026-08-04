@@ -60,6 +60,8 @@ interface HeroSlideProps {
 const HeroSlide = ({ item, active }: HeroSlideProps) => {
   const intl = useIntl();
   const { ref, inView } = useInView({ triggerOnce: true });
+  // 背景图加载失败/超时时回退到默认渐变
+  const [imgError, setImgError] = useState(false);
   const url =
     item.media.mediaType === 'movie'
       ? `/api/v1/movie/${item.media.tmdbId}`
@@ -67,6 +69,11 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
   const { data: title } = useSWR<MovieDetails | TvDetails>(
     inView && active ? url : null
   );
+
+  // 标题变化（懒加载完成后拿到 backdropPath）时重置错误态
+  useEffect(() => {
+    setImgError(false);
+  }, [title?.backdropPath]);
 
   const totalNew = item.episodeCount;
   const isEnded =
@@ -139,7 +146,7 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
         href={href}
         className="relative block h-full w-full overflow-hidden"
       >
-        {title?.backdropPath ? (
+        {title?.backdropPath && !imgError ? (
           <div className="absolute inset-0">
             <CachedImage
               type="tmdb"
@@ -147,6 +154,7 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
               alt=""
               fill
               className="object-cover"
+              onError={() => setImgError(true)}
             />
           </div>
         ) : (
