@@ -388,10 +388,15 @@ export class MediaRequestSubscriber implements EntitySubscriberInterface<MediaRe
 
         const tmdbId = entity.media.tmdbId;
 
-        // 订阅用户名显示为提交者（来源标注）：如 `ceshi (Sinerr)`。
+        // 订阅用户名显示为提交者（来源标注）：如 `linyue (Sinerr)`。
         // seerr 端点会取载荷里的 requestedBy_username 作为订阅的 username 字段。
+        // 名字解析：优先 displayName（nickname || username || jellyfinUsername || email），
+        // 用 || 而非 ?? 以处理空字符串（Jellyfin 用户 username 可能为空串）。
         const requesterName =
-          entity.requestedBy?.username ?? entity.requestedBy?.displayName ?? '';
+          entity.requestedBy?.displayName ||
+          entity.requestedBy?.username ||
+          entity.requestedBy?.jellyfinUsername ||
+          '';
         const sinerrUsername = requesterName
           ? `${requesterName} (Sinerr)`
           : 'Sinerr';
