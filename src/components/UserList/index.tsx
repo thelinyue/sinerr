@@ -1,13 +1,13 @@
 import Alert from '@app/components/Common/Alert';
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import Header from '@app/components/Common/Header';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
 import SensitiveInput from '@app/components/Common/SensitiveInput';
 import Table from '@app/components/Common/Table';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import BulkEditModal from '@app/components/UserList/BulkEditModal';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
@@ -943,14 +943,7 @@ const UserList = () => {
                     href={`/users/${user.id}`}
                     className="h-10 w-10 flex-shrink-0"
                   >
-                    <CachedImage
-                      type="avatar"
-                      className="h-10 w-10 rounded-full object-cover"
-                      src={user.avatar}
-                      alt=""
-                      width={40}
-                      height={40}
-                    />
+                    <UserAvatar user={user} size="md" />
                   </Link>
                   <div className="ml-4">
                     <Link

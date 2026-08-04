@@ -3,6 +3,7 @@ import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
 import Tooltip from '@app/components/Common/Tooltip';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import RequestModal from '@app/components/RequestModal';
 import StatusBadge from '@app/components/StatusBadge';
 import useDeepLinks from '@app/hooks/useDeepLinks';
@@ -117,16 +118,11 @@ const RequestCardError = ({ requestData }: RequestCardErrorProps) => {
                       href={`/users/${requestData.requestedBy.id}`}
                       className="group flex items-center"
                     >
-                      <span className="avatar-sm">
-                        <CachedImage
-                          type="avatar"
-                          src={requestData.requestedBy.avatar}
-                          alt=""
-                          className="avatar-sm object-cover"
-                          width={20}
-                          height={20}
-                        />
-                      </span>
+                      <UserAvatar
+                        user={requestData.requestedBy}
+                        size="sm"
+                        className="mr-1"
+                      />
                       <span className="truncate group-hover:underline">
                         {requestData.requestedBy.displayName}
                       </span>
@@ -198,9 +194,15 @@ const RequestCardError = ({ requestData }: RequestCardErrorProps) => {
 interface RequestCardProps {
   request: NonFunctionProperties<MediaRequest>;
   onTitleData?: (requestId: number, title: MovieDetails | TvDetails) => void;
+  /** 隐藏声援（点赞）区域：用于发现页最新请求等强调影片的卡片场景 */
+  hideVote?: boolean;
 }
 
-const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
+const RequestCard = ({
+  request,
+  onTitleData,
+  hideVote = false,
+}: RequestCardProps) => {
   const { ref, inView } = useInView({
     triggerOnce: true,
   });
@@ -424,16 +426,11 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
                 href={`/users/${requestData.requestedBy.id}`}
                 className="group flex items-center"
               >
-                <span className="avatar-sm">
-                  <CachedImage
-                    type="avatar"
-                    src={requestData.requestedBy.avatar}
-                    alt=""
-                    className="avatar-sm object-cover"
-                    width={20}
-                    height={20}
-                  />
-                </span>
+                <UserAvatar
+                  user={requestData.requestedBy}
+                  size="sm"
+                  className="mr-1"
+                />
                 <span className="truncate font-semibold group-hover:text-white group-hover:underline">
                   {requestData.requestedBy.displayName}
                 </span>
@@ -496,7 +493,8 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
               />
             )}
           </div>
-          {requestData.requestedBy.id !== user?.id &&
+          {!hideVote &&
+            requestData.requestedBy.id !== user?.id &&
             hasPermission(Permission.VOTE) && (
               <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5 sm:mt-1">
                 <Button
@@ -525,19 +523,11 @@ const RequestCard = ({ request, onTitleData }: RequestCardProps) => {
                         content={voter.displayName}
                         key={`vote-avatar-${voter.id}`}
                       >
-                        <span className="avatar-sm overflow-hidden rounded-full ring-2 ring-gray-800">
-                          <CachedImage
-                            type="avatar"
-                            src={
-                              voter.avatar ??
-                              'https://gravatar.com/avatar/00000000000000000000000000000000.png'
-                            }
-                            alt=""
-                            className="avatar-sm object-cover"
-                            width={20}
-                            height={20}
-                          />
-                        </span>
+                        <UserAvatar
+                          user={voter}
+                          size="sm"
+                          className="ring-2 ring-gray-800"
+                        />
                       </Tooltip>
                     ))}
                   </div>

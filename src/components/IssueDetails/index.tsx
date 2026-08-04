@@ -4,6 +4,7 @@ import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
 import PageTitle from '@app/components/Common/PageTitle';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import IssueComment from '@app/components/IssueDetails/IssueComment';
 import IssueDescription from '@app/components/IssueDetails/IssueDescription';
 import { issueOptions } from '@app/components/IssueModal/constants';
@@ -275,13 +276,10 @@ const IssueDetails = () => {
                   }
                   className="group ml-1 inline-flex h-full items-center xl:ml-1.5"
                 >
-                  <CachedImage
-                    type="avatar"
-                    src={issueData.createdBy.avatar}
-                    alt=""
-                    className="mr-0.5 h-5 w-5 scale-100 transform-gpu rounded-full object-cover transition duration-300 group-hover:scale-105 xl:mr-1 xl:h-6 xl:w-6"
-                    width={20}
-                    height={20}
+                  <UserAvatar
+                    user={issueData.createdBy}
+                    size="sm"
+                    className="mr-0.5 scale-100 transform-gpu transition duration-300 group-hover:scale-105 xl:mr-1"
                   />
                   <span className="font-semibold text-gray-100 transition duration-300 group-hover:text-white group-hover:underline">
                     {issueData.createdBy.displayName}

@@ -1,5 +1,5 @@
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import type { User } from '@app/hooks/useUser';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
@@ -42,13 +42,10 @@ const ProfileHeader = ({ user, isSettingsPage }: ProfileHeaderProps) => {
       <div className="flex items-end justify-items-end space-x-5">
         <div className="flex-shrink-0">
           <div className="relative">
-            <CachedImage
-              type="avatar"
-              className="h-24 w-24 rounded-full bg-gray-600 object-cover ring-1 ring-gray-700"
-              src={user.avatar}
-              alt=""
-              width={96}
-              height={96}
+            <UserAvatar
+              user={user}
+              size="xxl"
+              className="ring-1 ring-gray-700"
             />
             <span
               className="absolute inset-0 rounded-full shadow-inner"

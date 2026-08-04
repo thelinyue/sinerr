@@ -2,6 +2,7 @@ import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
 import Tooltip from '@app/components/Common/Tooltip';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import { issueOptions } from '@app/components/IssueModal/constants';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
@@ -267,13 +268,10 @@ const IssueItem = ({ issue }: IssueItemProps) => {
                         href={`/users/${issue.createdBy.id}`}
                         className="group flex items-center truncate"
                       >
-                        <CachedImage
-                          type="avatar"
-                          src={issue.createdBy.avatar}
-                          alt=""
-                          className="avatar-sm ml-1.5 object-cover"
-                          width={20}
-                          height={20}
+                        <UserAvatar
+                          user={issue.createdBy}
+                          size="sm"
+                          className="ml-1.5"
                         />
                         <span className="truncate text-sm font-semibold group-hover:text-white group-hover:underline">
                           {issue.createdBy.displayName}

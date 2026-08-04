@@ -1,17 +1,13 @@
 import Badge from '@app/components/Common/Badge';
-import Modal from '@app/components/Common/Modal';
-import ConnectionGuide from '@app/components/Discover/ConnectionGuide';
 import VersionStatus from '@app/components/Layout/VersionStatus';
 import { useActivityUnreadCount } from '@app/hooks/useActivityUnreadCount';
 import useClickOutside from '@app/hooks/useClickOutside';
 import { Permission, useUser } from '@app/hooks/useUser';
-import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
 import { Transition } from '@headlessui/react';
 import {
   ClockIcon,
   CogIcon,
-  DevicePhoneMobileIcon,
   ExclamationTriangleIcon,
   EyeSlashIcon,
   FilmIcon,
@@ -24,7 +20,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { useIntl } from 'react-intl';
 
 export const menuMessages = defineMessages('components.Layout.Sidebar', {
@@ -37,7 +33,6 @@ export const menuMessages = defineMessages('components.Layout.Sidebar', {
   issues: 'Issues',
   users: 'Users',
   settings: 'Settings',
-  watchguide: '观影指南',
 });
 
 interface SidebarProps {
@@ -151,7 +146,6 @@ const Sidebar = ({
   const intl = useIntl();
   const { hasPermission } = useUser();
   const { count: activityUnreadCount } = useActivityUnreadCount();
-  const [showGuide, setShowGuide] = useState(false);
   useClickOutside(navRef, () => setClosed());
 
   // 链接高亮判定：优先 asPath 命中（?tab=activity），其次 pathname，最后排除规则互斥
@@ -267,17 +261,6 @@ const Sidebar = ({
                           </Link>
                         );
                       })}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setClosed();
-                          setShowGuide(true);
-                        }}
-                        className="flex items-center rounded-md px-2 py-2 text-base font-medium leading-6 text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none"
-                      >
-                        <DevicePhoneMobileIcon className="mr-3 h-6 w-6" />
-                        {intl.formatMessage(menuMessages.watchguide)}
-                      </button>
                     </nav>
                     {hasPermission(Permission.ADMIN) && (
                       <div className="px-2">
@@ -376,14 +359,6 @@ const Sidebar = ({
                     </Link>
                   );
                 })}
-                <button
-                  type="button"
-                  onClick={() => setShowGuide(true)}
-                  className="group flex items-center rounded-md px-2 py-2 text-lg font-medium leading-6 text-white transition duration-150 ease-in-out hover:bg-gray-700 focus:bg-gray-700 focus:outline-none"
-                >
-                  <DevicePhoneMobileIcon className="mr-3 h-6 w-6" />
-                  {intl.formatMessage(menuMessages.watchguide)}
-                </button>
               </nav>
               {hasPermission(Permission.ADMIN) && (
                 <div className="px-2">
@@ -394,16 +369,6 @@ const Sidebar = ({
           </div>
         </div>
       </div>
-      {showGuide && (
-        <Modal
-          title={intl.formatMessage(menuMessages.watchguide)}
-          onCancel={() => setShowGuide(false)}
-          backgroundClickable
-          cancelText={intl.formatMessage(globalMessages.close)}
-        >
-          <ConnectionGuide />
-        </Modal>
-      )}
     </>
   );
 };

@@ -22,21 +22,16 @@ export enum DiscoverSliderType {
   TMDB_NETWORK,
   TMDB_MOVIE_STREAMING_SERVICES,
   TMDB_TV_STREAMING_SERVICES,
+  /** 已废弃：周排行榜由动态 Tab 的「本周热播」领奖台取代，不再渲染（枚举值保留避免存量配置错位） */
   MOST_PLAYED,
 }
 
 export const defaultSliders: Partial<DiscoverSlider>[] = [
   {
-    type: DiscoverSliderType.MOST_PLAYED,
-    enabled: true,
-    isBuiltIn: true,
-    order: 0,
-  },
-  {
     type: DiscoverSliderType.RECENT_REQUESTS,
     enabled: true,
     isBuiltIn: true,
-    order: 1,
+    order: 0,
   },
   {
     type: DiscoverSliderType.TRENDING,

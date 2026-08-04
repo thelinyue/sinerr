@@ -33,7 +33,8 @@ interface ConnectionGuideProps {
  * 「观影指南」引导卡片
  *
  * 三步指引：装客户端（含下载地址）→ 连服务器（含 443 提示）→ 登录即看。
- * 通过侧栏「观影指南」入口以弹窗打开，不再占用搜索页空态（避免与实时搜索打架）。
+ * 集成在顶栏搜索框：聚焦搜索且未输入时以嵌入式卡片显示（embedded），
+ * 开始输入即隐藏并进入搜索结果。
  */
 const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
   const intl = useIntl();
@@ -47,10 +48,7 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
     settings.currentSettings.jellyfinHost;
   const downloads = settings.currentSettings.clientDownloadUrls || [];
 
-  // 无服务器信息（未配置媒体服务器）时引导无意义
-  if (!serverUrl && downloads.length === 0) {
-    return null;
-  }
+  // 无服务器信息/下载地址时仍展示指引，对应步骤显示「未配置」提示（引导新用户去设置）
 
   const serverType =
     settings.currentSettings.mediaServerType === MediaServerType.EMBY

@@ -1,8 +1,8 @@
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import LanguageSelector from '@app/components/LanguageSelector';
 import QuotaSelector from '@app/components/QuotaSelector';
 import RegionSelector from '@app/components/RegionSelector';
@@ -190,13 +190,10 @@ const UserGeneralSettings = () => {
           </label>
           <div className="form-input-area">
             <div className="flex flex-wrap items-center gap-5">
-              <CachedImage
-                type="avatar"
-                src={user?.avatar ?? ''}
-                alt=""
-                className="h-20 w-20 rounded-full object-cover ring-2 ring-indigo-400"
-                width={80}
-                height={80}
+              <UserAvatar
+                user={user}
+                size="xl"
+                className="ring-2 ring-indigo-400"
               />
               <div className="flex flex-col gap-2">
                 <label className="cursor-pointer">

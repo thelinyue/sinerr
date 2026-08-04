@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import CachedImage from '@app/components/Common/CachedImage';
 import SlideCheckbox from '@app/components/Common/SlideCheckbox';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import type { User } from '@app/hooks/useUser';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
@@ -486,13 +486,10 @@ const AdvancedRequester = ({
                     <span className="inline-block w-full rounded-md shadow-sm">
                       <Listbox.Button className="focus:shadow-outline-blue relative w-full cursor-default rounded-md border border-gray-700 bg-gray-800 py-2 pl-3 pr-10 text-left text-white transition duration-150 ease-in-out focus:border-blue-300 focus:outline-none sm:text-sm sm:leading-5">
                         <span className="flex items-center">
-                          <CachedImage
-                            type="avatar"
-                            src={selectedUser.avatar}
-                            alt=""
-                            className="h-6 w-6 flex-shrink-0 rounded-full object-cover"
-                            width={24}
-                            height={24}
+                          <UserAvatar
+                            user={selectedUser}
+                            size="sm"
+                            className="flex-shrink-0"
                           />
                           <span className="ml-3 block">
                             {selectedUser.displayName}
@@ -540,13 +537,10 @@ const AdvancedRequester = ({
                                     selected ? 'font-semibold' : 'font-normal'
                                   } flex items-center`}
                                 >
-                                  <CachedImage
-                                    type="avatar"
-                                    src={user.avatar}
-                                    alt=""
-                                    className="h-6 w-6 flex-shrink-0 rounded-full object-cover"
-                                    width={24}
-                                    height={24}
+                                  <UserAvatar
+                                    user={user}
+                                    size="sm"
+                                    className="flex-shrink-0"
                                   />
                                   <span className="ml-3 block flex-shrink-0">
                                     {user.displayName}

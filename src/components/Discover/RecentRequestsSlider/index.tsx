@@ -63,6 +63,7 @@ const RecentRequestsSlider = () => {
           <RequestCard
             key={`request-slider-item-${request.id}`}
             request={request}
+            hideVote
           />
         ))}
         placeholder={<RequestCard.Placeholder />}

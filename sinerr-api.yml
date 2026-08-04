@@ -4395,15 +4395,6 @@ paths:
           required: true
           schema:
             type: number
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                avatar:
-                  type: string
-                  format: binary
       responses:
         '200':
           description: Updated avatar URL
@@ -4486,6 +4477,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ActivityFeed'
+  /activity/watched:
+    get:
+      summary: Weekly watched media ranking
+      description: |
+        Returns the most-watched media (movies / series) in the last `days` days, ranked by
+        watch count. Each item includes aggregate counts and the users who watched it
+        (for the avatar cluster). Non-admin users only see playback from users with
+        `playbackVisible` enabled.
+      tags:
+        - activity
+      parameters:
+        - in: query
+          name: days
+          schema:
+            type: number
+            example: 7
+            default: 7
+        - in: query
+          name: take
+          schema:
+            type: number
+            example: 8
+            default: 8
+        - in: query
+          name: mediaType
+          schema:
+            type: string
+            enum: [movie, tv]
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tmdbId:
+                          type: number
+                        mediaType:
+                          type: string
+                          enum: [movie, tv]
+                        watchCount:
+                          type: number
+                        watchers:
+                          type: number
+                        durationSeconds:
+                          type: number
+                        users:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: number
+                              displayName:
+                                type: string
+                              avatar:
+                                type: string
   /activity/count:
     get:
       summary: Unread activity count

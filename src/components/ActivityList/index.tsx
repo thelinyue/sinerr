@@ -3,6 +3,7 @@ import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import Tooltip from '@app/components/Common/Tooltip';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import { notifyActivityRead } from '@app/hooks/useActivityUnreadCount';
 import type { User } from '@app/hooks/useUser';
 import { useUser } from '@app/hooks/useUser';
@@ -26,7 +27,7 @@ import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import type { MessageDescriptor } from 'react-intl';
 import { FormattedRelativeTime, useIntl } from 'react-intl';
@@ -191,15 +192,10 @@ const ActivityFeedItem = ({
         aria-label={item.actor.displayName}
         title={item.actor.displayName}
       >
-        <CachedImage
-          type="avatar"
-          src={item.actor.avatar}
-          alt=""
-          className={`h-10 w-10 rounded-full object-cover sm:h-14 sm:w-14 ${
-            isMine ? 'ring-2 ring-indigo-400' : ''
-          }`}
-          width={56}
-          height={56}
+        <UserAvatar
+          user={item.actor}
+          size="md"
+          className={`sm:h-14 sm:w-14 ${isMine ? 'ring-2 ring-indigo-400' : ''}`}
         />
       </button>
       <div className="min-w-0 flex-1 text-sm text-gray-300 sm:text-base">
@@ -332,11 +328,13 @@ const ActivityList = ({
   const intl = useIntl();
   const { user } = useUser();
   const router = useRouter();
+  const tabsRef = useRef<HTMLDivElement>(null);
 
   const activeType = (router.query.type as ActivityType | 'all') ?? 'all';
   const filterUserId = router.query.userId
     ? Number(router.query.userId)
     : undefined;
+  const lastScrolledTypeRef = useRef<ActivityType | 'all'>(activeType);
 
   const { data: filterUser } = useSWR<User>(
     filterUserId ? `/api/v1/user/${filterUserId}` : null
@@ -382,6 +380,20 @@ const ActivityList = ({
     setSize(1);
   }, [activeType, filterUserId, setSize]);
 
+  // 分类切换后：等新分类数据就绪，把标签栏滚动到视口顶部（scroll-mt 贴齐固定头部），
+  // 避免在 feed 重载期（页面变短）滚动被钳制
+  useEffect(() => {
+    if (lastScrolledTypeRef.current === activeType) {
+      return;
+    }
+    if (data?.[0]?.results?.length) {
+      lastScrolledTypeRef.current = activeType;
+      requestAnimationFrame(() => {
+        tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [activeType, data]);
+
   // 进入动态流即标记已读（模块 1：写入 localStorage 并广播，让侧栏/Tab 红点立即消失）
   useEffect(() => {
     try {
@@ -415,7 +427,12 @@ const ActivityList = ({
       params.delete('userId');
     }
     const qs = params.toString();
-    router.push({ pathname: basePath, query: qs || undefined });
+    // scroll:false 避免默认跳到最上方；shallow 避免 getInitialProps 重跑导致滚动重置
+    // 实际滚动到标签位置由下方 useEffect（数据就绪后）执行
+    router.push({ pathname: basePath, query: qs || undefined }, undefined, {
+      scroll: false,
+      shallow: true,
+    });
   };
 
   // 无限滚动：列表底部 sentinel 进入视口时加载下一页
@@ -496,8 +513,11 @@ const ActivityList = ({
         <PageTitle title={intl.formatMessage(messages.activity)} />
       )}
       <div className={embedded ? 'mb-0 px-0' : 'mb-8 px-4 sm:px-8'}>
-        {/* 类型过滤（方案 C：图标行 + 只看我开关） */}
-        <div className="mb-6 flex items-center justify-between gap-3">
+        {/* 类型过滤（方案 C：图标行 + 只看我开关）；scroll-mt 贴齐固定头部 */}
+        <div
+          ref={tabsRef}
+          className="mb-6 flex scroll-mt-16 items-center justify-between gap-3"
+        >
           <div className="hide-scrollbar flex flex-1 items-center gap-1 overflow-x-auto">
             {typeTabs.map((tab) => (
               <button

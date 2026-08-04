@@ -1,6 +1,6 @@
 import Alert from '@app/components/Common/Alert';
-import CachedImage from '@app/components/Common/CachedImage';
 import Modal from '@app/components/Common/Modal';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import useSettings from '@app/hooks/useSettings';
 import useToasts from '@app/hooks/useToasts';
 import globalMessages from '@app/i18n/globalMessages';
@@ -232,13 +232,13 @@ const JellyfinImportModal: React.FC<JellyfinImportProps> = ({
                             </td>
                             <td className="whitespace-nowrap px-1 py-4 text-sm font-medium leading-5 text-gray-100 md:px-6">
                               <div className="flex items-center">
-                                <CachedImage
-                                  type="avatar"
-                                  className="h-10 w-10 flex-shrink-0 rounded-full"
-                                  src={user.thumb}
-                                  alt=""
-                                  width={40}
-                                  height={40}
+                                <UserAvatar
+                                  user={{
+                                    avatar: user.thumb,
+                                    username: user.username,
+                                  }}
+                                  size="md"
+                                  className="flex-shrink-0"
                                 />
                                 <div className="ml-4">
                                   <div className="text-base font-bold leading-5">

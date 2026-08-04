@@ -6,6 +6,7 @@ import ConfirmButton from '@app/components/Common/ConfirmButton';
 import Header from '@app/components/Common/Header';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import useDebouncedState from '@app/hooks/useDebouncedState';
 import useToasts from '@app/hooks/useToasts';
 import { useUpdateQueryParams } from '@app/hooks/useUpdateQueryParams';
@@ -417,14 +418,10 @@ const BlocklistedItem = ({ item, revalidateList }: BlocklistedItemProps) => {
                   user: item.user ? (
                     <Link href={`/users/${item.user.id}`}>
                       <span className="group flex items-center truncate">
-                        <CachedImage
-                          type="avatar"
-                          src={item.user.avatar}
-                          alt=""
-                          className="avatar-sm ml-1.5"
-                          width={20}
-                          height={20}
-                          style={{ objectFit: 'cover' }}
+                        <UserAvatar
+                          user={item.user}
+                          size="sm"
+                          className="ml-1.5"
                         />
                         <span className="ml-1 truncate text-sm font-semibold group-hover:text-white group-hover:underline">
                           {item.user.displayName}

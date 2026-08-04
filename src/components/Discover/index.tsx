@@ -1,3 +1,4 @@
+import ActivityLeaderboard from '@app/components/ActivityLeaderboard';
 import ActivityList from '@app/components/ActivityList';
 import Button from '@app/components/Common/Button';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
@@ -90,7 +91,7 @@ const Discover = () => {
   // 吸顶 发现/动态 segmented Tab 栏（两 Tab 共用）
   const tabBar = (
     <div className="sticky top-16 z-10 -mx-4 mb-4 bg-gray-900/95 px-4 py-3 backdrop-blur">
-      <div className="flex w-full max-w-xs rounded-xl bg-gray-800 p-1 ring-1 ring-gray-700">
+      <div className="mx-auto flex w-full max-w-xs rounded-xl bg-gray-800 p-1 ring-1 ring-gray-700">
         <button
           type="button"
           onClick={() => setTab('discover')}
@@ -177,12 +178,13 @@ const Discover = () => {
     .toISOString()
     .split('T')[0];
 
-  // 动态 Tab：完整活动流（嵌入模式），不依赖滑块配置，无 ConnectionGuide/编辑按钮
+  // 动态 Tab：本周热播领奖台 + 完整活动流（嵌入模式），不依赖滑块配置
   if (activeTab === 'activity') {
     return (
       <>
         <PageTitle title={intl.formatMessage(messages.tabActivity)} />
         {tabBar}
+        <ActivityLeaderboard />
         <ActivityList basePath="/" embedded />
       </>
     );
@@ -465,15 +467,8 @@ const Discover = () => {
             );
             break;
           case DiscoverSliderType.MOST_PLAYED:
-            sliderComponent = (
-              <MediaSlider
-                sliderKey="mostplayed"
-                title={intl.formatMessage(sliderTitles.mostplayed)}
-                url="/api/v1/discover/mostplayed"
-                extraParams="period=week"
-                linkUrl="/discover/mostplayed"
-              />
-            );
+            // 已废弃：周排行榜由动态 Tab 的「本周热播」领奖台取代，不再渲染
+            sliderComponent = null;
             break;
         }
 

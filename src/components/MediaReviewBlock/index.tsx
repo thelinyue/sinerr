@@ -1,7 +1,7 @@
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Tooltip from '@app/components/Common/Tooltip';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import {
@@ -467,14 +467,7 @@ const MediaReviewBlock = ({
                 }
                 className="flex-shrink-0"
               >
-                <CachedImage
-                  type="avatar"
-                  src={review.user.avatar}
-                  alt=""
-                  className="h-8 w-8 rounded-full object-cover"
-                  width={32}
-                  height={32}
-                />
+                <UserAvatar user={review.user} size="md" />
               </Link>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center space-x-2 text-sm">

@@ -14,7 +14,7 @@ import type {
 import { Permission } from '@server/lib/permissions';
 import { isAuthenticated } from '@server/middleware/auth';
 import { Router } from 'express';
-import { MoreThan } from 'typeorm';
+import { In, MoreThan } from 'typeorm';
 
 const activityRoutes = Router();
 
@@ -340,6 +340,114 @@ activityRoutes.get('/count', isAuthenticated(), async (req, res, next) => {
     return res
       .status(200)
       .json({ count: requests + votes + issues + playbacks + reviews });
+  } catch (e) {
+    next({ status: 500, message: e.message });
+  }
+});
+
+/**
+ * 本周剧集/电影观看排行（媒体维度）
+ *
+ * 统计近 `days`（默认 7）天内 PlaybackEvent，按 tmdbId+mediaType 聚合：
+ * - watchCount：观看次数（记录条数，同一用户重复观看会累计）
+ * - watchers：观看人数（distinct 用户）
+ * - durationSeconds：累计净观看时长
+ *
+ * 隐私：只统计 playbackVisible 公开用户的记录（与动态播放记录一致）。
+ * 排序：优先 watchers，其次 watchCount。
+ */
+activityRoutes.get('/watched', isAuthenticated(), async (req, res, next) => {
+  try {
+    const days = req.query.days ? Number(req.query.days) : 7;
+    const take = req.query.take ? Number(req.query.take) : 10;
+    const mediaType =
+      req.query.mediaType === 'movie' || req.query.mediaType === 'tv'
+        ? req.query.mediaType
+        : undefined;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const qb = getRepository(PlaybackEvent)
+      .createQueryBuilder('event')
+      .innerJoin('event.user', 'user')
+      .where('event.createdAt >= :since', { since })
+      .select('event.tmdbId', 'tmdbId')
+      .addSelect('event.mediaType', 'mediaType')
+      .addSelect('COUNT(*)', 'watchCount')
+      .addSelect('COUNT(DISTINCT event.userId)', 'watchers')
+      .addSelect('SUM(event.durationSeconds)', 'durationSeconds')
+      .groupBy('event.tmdbId')
+      .addGroupBy('event.mediaType')
+      .orderBy('watchers', 'DESC')
+      .addOrderBy('watchCount', 'DESC')
+      .limit(take);
+
+    if (mediaType) {
+      qb.andWhere('event.mediaType = :mediaType', { mediaType });
+    }
+
+    // 隐私：非管理员只统计 playbackVisible 公开用户的记录（与动态播放记录一致）
+    if (!req.user?.hasPermission(Permission.MANAGE_USERS)) {
+      qb.innerJoin('user.settings', 'userSettings').andWhere(
+        '(userSettings.playbackVisible IS NULL OR userSettings.playbackVisible = :visible)',
+        { visible: true }
+      );
+    }
+
+    const rows = await qb.getRawMany();
+
+    // 每个媒体的观看者（distinct 用户）：id / displayName / avatar，供头像簇展示
+    const tmdbIds = rows.map((row) => Number(row.tmdbId));
+    let usersByTmdb = new Map<
+      number,
+      { id: number; displayName: string; avatar: string }[]
+    >();
+    if (tmdbIds.length > 0) {
+      const distinctRows = await getRepository(PlaybackEvent)
+        .createQueryBuilder('event')
+        .innerJoin('event.user', 'user')
+        .where('event.createdAt >= :since', { since })
+        .andWhere('event.tmdbId IN (:...tmdbIds)', { tmdbIds })
+        .select('event.tmdbId', 'tmdbId')
+        .addSelect('event.userId', 'userId')
+        .groupBy('event.tmdbId')
+        .addGroupBy('event.userId')
+        .getRawMany();
+
+      const userIds = [...new Set(distinctRows.map((r) => Number(r.userId)))];
+      const users = userIds.length
+        ? await getRepository(User).find({ where: { id: In(userIds) } })
+        : [];
+      const userById = new Map(users.map((u) => [u.id, u]));
+
+      usersByTmdb = new Map();
+      for (const row of distinctRows) {
+        const tmdbId = Number(row.tmdbId);
+        const u = userById.get(Number(row.userId));
+        if (!u) continue;
+        const list = usersByTmdb.get(tmdbId) ?? [];
+        if (list.length >= 6) continue; // 头像簇最多展示 6 个
+        list.push({
+          id: u.id,
+          displayName: u.displayName || u.username || u.jellyfinUsername || '',
+          avatar: u.avatar,
+        });
+        usersByTmdb.set(tmdbId, list);
+      }
+    }
+
+    return res.status(200).json({
+      results: rows.map((row) => {
+        const tmdbId = Number(row.tmdbId);
+        return {
+          tmdbId,
+          mediaType: row.mediaType,
+          watchCount: Number(row.watchCount),
+          watchers: Number(row.watchers),
+          durationSeconds: Number(row.durationSeconds ?? 0),
+          users: usersByTmdb.get(tmdbId) ?? [],
+        };
+      }),
+    });
   } catch (e) {
     next({ status: 500, message: e.message });
   }

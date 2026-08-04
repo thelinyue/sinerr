@@ -592,3 +592,22 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
 }
+
+/* 本周热播背景：Ken Burns 缓慢缩放 + 入场淡入 */
+@keyframes leaderboard-kenburns {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes leaderboard-bg-fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

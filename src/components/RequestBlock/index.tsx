@@ -1,7 +1,7 @@
 import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import Tooltip from '@app/components/Common/Tooltip';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import RequestModal from '@app/components/RequestModal';
 import useRequestOverride from '@app/hooks/useRequestOverride';
 import { useUser } from '@app/hooks/useUser';
@@ -110,16 +110,11 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
                   }
                   className="flex items-center font-semibold text-gray-100 transition duration-300 hover:text-white hover:underline"
                 >
-                  <span className="avatar-sm">
-                    <CachedImage
-                      type="avatar"
-                      src={request.requestedBy.avatar}
-                      alt=""
-                      className="avatar-sm object-cover"
-                      width={20}
-                      height={20}
-                    />
-                  </span>
+                  <UserAvatar
+                    user={request.requestedBy}
+                    size="sm"
+                    className="mr-1"
+                  />
                   {request.requestedBy.displayName}
                 </Link>
               </span>
@@ -140,16 +135,11 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
                     }
                     className="flex items-center font-semibold text-gray-100 transition duration-300 hover:text-white hover:underline"
                   >
-                    <span className="avatar-sm">
-                      <CachedImage
-                        type="avatar"
-                        src={request.modifiedBy.avatar}
-                        alt=""
-                        className="avatar-sm object-cover"
-                        width={20}
-                        height={20}
-                      />
-                    </span>
+                    <UserAvatar
+                      user={request.modifiedBy}
+                      size="sm"
+                      className="mr-1"
+                    />
                     {request.modifiedBy.displayName}
                   </Link>
                 </span>
@@ -163,14 +153,11 @@ const RequestBlock = ({ request, onUpdate }: RequestBlockProps) => {
               </span>
               <div className="flex">
                 {votesData.results.slice(0, 5).map((voter) => (
-                  <CachedImage
+                  <UserAvatar
                     key={voter.id}
-                    type="avatar"
-                    src={voter.avatar ?? ''}
-                    alt=""
-                    className="-ml-1 h-6 w-6 rounded-full object-cover ring-2 ring-gray-800"
-                    width={24}
-                    height={24}
+                    user={voter}
+                    size="sm"
+                    className="-ml-1 ring-2 ring-gray-800"
                   />
                 ))}
               </div>

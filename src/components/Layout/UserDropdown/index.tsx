@@ -1,4 +1,4 @@
-import CachedImage from '@app/components/Common/CachedImage';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import MiniQuotaDisplay from '@app/components/Layout/UserDropdown/MiniQuotaDisplay';
 import useSettings from '@app/hooks/useSettings';
 import { Permission, useUser } from '@app/hooks/useUser';
@@ -65,14 +65,7 @@ const UserDropdown = () => {
           className="flex max-w-xs items-center rounded-full text-sm ring-1 ring-gray-700 hover:ring-gray-500 focus:outline-none focus:ring-gray-500"
           data-testid="user-menu"
         >
-          <CachedImage
-            type="avatar"
-            className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
-            src={user ? user.avatar : ''}
-            alt=""
-            width={40}
-            height={40}
-          />
+          <UserAvatar user={user} size="md" />
         </Menu.Button>
       </div>
       <Transition
@@ -89,14 +82,7 @@ const UserDropdown = () => {
           <div className="divide-y divide-gray-700 rounded-md bg-gray-800/80 ring-1 ring-gray-700 backdrop-blur">
             <div className="flex flex-col space-y-4 px-4 py-4">
               <div className="flex items-center space-x-2">
-                <CachedImage
-                  type="avatar"
-                  className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
-                  src={user ? user.avatar : ''}
-                  alt=""
-                  width={40}
-                  height={40}
-                />
+                <UserAvatar user={user} size="md" />
                 <div className="flex min-w-0 flex-col">
                   <span className="truncate text-xl font-semibold text-gray-200">
                     {user?.displayName}

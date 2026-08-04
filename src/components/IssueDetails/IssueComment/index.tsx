@@ -1,6 +1,6 @@
 import Button from '@app/components/Common/Button';
-import CachedImage from '@app/components/Common/CachedImage';
 import Modal from '@app/components/Common/Modal';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
@@ -87,13 +87,10 @@ const IssueComment = ({
         </Modal>
       </Transition>
       <Link href={isActiveUser ? '/profile' : `/users/${comment.user.id}`}>
-        <CachedImage
-          type="avatar"
-          src={comment.user.avatar}
-          alt=""
-          className="h-10 w-10 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
-          width={40}
-          height={40}
+        <UserAvatar
+          user={comment.user}
+          size="md"
+          className="scale-100 transform-gpu ring-1 ring-gray-500 transition duration-300 hover:scale-105"
         />
       </Link>
       <div className="relative flex-1">

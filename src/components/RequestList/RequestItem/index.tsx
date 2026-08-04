@@ -3,6 +3,7 @@ import Badge from '@app/components/Common/Badge';
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
+import UserAvatar from '@app/components/Common/UserAvatar';
 import RequestModal from '@app/components/RequestModal';
 import StatusBadge from '@app/components/StatusBadge';
 import useDeepLinks from '@app/hooks/useDeepLinks';
@@ -172,16 +173,11 @@ const RequestItemError = ({
                             href={`/users/${requestData.requestedBy.id}`}
                             className="group flex items-center truncate"
                           >
-                            <span className="avatar-sm ml-1.5">
-                              <CachedImage
-                                type="avatar"
-                                src={requestData.requestedBy.avatar}
-                                alt=""
-                                className="avatar-sm object-cover"
-                                width={20}
-                                height={20}
-                              />
-                            </span>
+                            <UserAvatar
+                              user={requestData.requestedBy}
+                              size="sm"
+                              className="ml-1.5"
+                            />
                             <span className="truncate text-sm group-hover:underline">
                               {requestData.requestedBy.displayName}
                             </span>
@@ -232,16 +228,11 @@ const RequestItemError = ({
                           href={`/users/${requestData.modifiedBy.id}`}
                           className="group flex items-center truncate"
                         >
-                          <span className="avatar-sm ml-1.5">
-                            <CachedImage
-                              type="avatar"
-                              src={requestData.modifiedBy.avatar}
-                              alt=""
-                              className="avatar-sm object-cover"
-                              width={20}
-                              height={20}
-                            />
-                          </span>
+                          <UserAvatar
+                            user={requestData.modifiedBy}
+                            size="sm"
+                            className="ml-1.5"
+                          />
                           <span className="truncate text-sm group-hover:underline">
                             {requestData.modifiedBy.displayName}
                           </span>
@@ -590,16 +581,11 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                           href={`/users/${requestData.requestedBy.id}`}
                           className="group flex items-center truncate"
                         >
-                          <span className="avatar-sm ml-1.5">
-                            <CachedImage
-                              type="avatar"
-                              src={requestData.requestedBy.avatar}
-                              alt=""
-                              className="avatar-sm object-cover"
-                              width={20}
-                              height={20}
-                            />
-                          </span>
+                          <UserAvatar
+                            user={requestData.requestedBy}
+                            size="sm"
+                            className="ml-1.5"
+                          />
                           <span className="truncate text-sm font-semibold group-hover:text-white group-hover:underline">
                             {requestData.requestedBy.displayName}
                           </span>
@@ -650,16 +636,11 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                         href={`/users/${requestData.modifiedBy.id}`}
                         className="group flex items-center truncate"
                       >
-                        <span className="avatar-sm ml-1.5">
-                          <CachedImage
-                            type="avatar"
-                            src={requestData.modifiedBy.avatar}
-                            alt=""
-                            className="avatar-sm object-cover"
-                            width={20}
-                            height={20}
-                          />
-                        </span>
+                        <UserAvatar
+                          user={requestData.modifiedBy}
+                          size="sm"
+                          className="ml-1.5"
+                        />
                         <span className="truncate text-sm font-semibold group-hover:text-white group-hover:underline">
                           {requestData.modifiedBy.displayName}
                         </span>
