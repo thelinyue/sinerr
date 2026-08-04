@@ -119,7 +119,8 @@ function dirSize(dir) {
   let total = 0;
   for (const f of files) {
     const p = path.join(dir, f.name);
-    total += f.isDirectory() ? dirSize(p) : fs.statSync(p).size;
+    // lstat：不跟随 symlink（stage 中存在未追踪到的悬空 symlink，statSync 会抛 ENOENT）
+    total += f.isDirectory() ? dirSize(p) : fs.lstatSync(p).size;
   }
   return total;
 }
