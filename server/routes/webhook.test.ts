@@ -198,7 +198,7 @@ describe('POST /webhook/emby', () => {
     assert.strictEqual(event.durationSeconds, 2500);
   });
 
-  it('keeps only the latest playback record per series for the same user', async () => {
+  it('keeps a separate playback record per episode for the same user', async () => {
     const userRepo = getRepository(User);
     const friend = await userRepo.findOneOrFail({
       where: { email: 'friend@sinerr.dev' },
@@ -206,7 +206,7 @@ describe('POST /webhook/emby', () => {
     friend.jellyfinUserId = 'dedupe-user-1';
     await userRepo.save(friend);
 
-    // 同一用户连续观看同一剧集的 S01E01、S01E02
+    // 同一用户连续观看同一剧集的 S01E01、S01E02：不同集各自成记录，不互相覆盖
     for (const ep of [1, 2]) {
       const res = await request(app)
         .post('/webhook/emby')
@@ -227,9 +227,9 @@ describe('POST /webhook/emby', () => {
       .createQueryBuilder('event')
       .where('event.tmdbId = :tmdbId', { tmdbId: 88888 })
       .getMany();
-    assert.strictEqual(events.length, 1, '同一剧集应只保留一条播放记录');
-    assert.strictEqual(events[0].episodeNumber, 2);
-    assert.strictEqual(events[0].completed, true);
+    assert.strictEqual(events.length, 2, '同一剧集不同集应各保留一条播放记录');
+    assert.deepStrictEqual(events.map((e) => e.episodeNumber).sort(), [1, 2]);
+    assert.ok(events.every((e) => e.completed === true));
   });
 
   it('does not refresh the timestamp when the same episode is replayed', async () => {

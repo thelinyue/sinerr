@@ -226,48 +226,31 @@ async function handlePlaybackEvent(
 
   const playbackEventRepository = getRepository(PlaybackEvent);
 
-  // 播放记录去重：同一用户重复观看同一媒体（剧集或电影）时不刷屏。
-  // 剧集维度 = user + tmdbId + tv；电影维度 = user + tmdbId + movie。
+  // 播放记录去重：同一用户重复观看同一媒体时不刷屏。
+  // 剧集按「集」去重（同一用户的不同集各自独立成记录，不互相覆盖）；
+  // 电影按「媒体」去重（同一部电影只保留一条）。
   // 重复播放规则：
   // - 已看完的内容再次播放 → 忽略（不刷新时间）
   // - 仍未看完再次播放 → 忽略（避免反复 stop 把记录顶到动态流顶部）
   // - 从未看完 → 看完 → 更新完成状态并刷新时间
-  // 剧集额外支持：播放到新的一集时，推进为最新集并刷新时间。
   if (mediaType === MediaType.TV || mediaType === MediaType.MOVIE) {
+    // 剧集按 (user, tmdbId, 季, 集) 去重；电影按 (user, tmdbId)
+    const dedupeWhere: Parameters<
+      typeof playbackEventRepository.findOne
+    >[0]['where'] = { user: { id: user.id }, tmdbId, mediaType };
+    if (
+      mediaType === MediaType.TV &&
+      seasonNumber != null &&
+      episodeNumber != null
+    ) {
+      dedupeWhere.seasonNumber = seasonNumber;
+      dedupeWhere.episodeNumber = episodeNumber;
+    }
     const existing = await playbackEventRepository.findOne({
-      where: { user: { id: user.id }, tmdbId, mediaType },
+      where: dedupeWhere,
     });
     if (existing) {
-      // 剧集播放到新的一集：正常推进为最新集
-      const isNewTvEpisode =
-        mediaType === MediaType.TV &&
-        !(
-          existing.seasonNumber === seasonNumber &&
-          existing.episodeNumber === episodeNumber
-        );
-
-      if (isNewTvEpisode) {
-        existing.completed = completed;
-        existing.durationSeconds = durationSeconds;
-        existing.seasonNumber = seasonNumber;
-        existing.episodeNumber = episodeNumber;
-        existing.createdAt = new Date();
-        await playbackEventRepository.save(existing);
-
-        logger.info('Updated latest playback event for series', {
-          label: 'Webhook',
-          event,
-          tmdbId,
-          completed,
-          durationSeconds,
-          seasonNumber,
-          episodeNumber,
-          user: user.displayName,
-        });
-        return;
-      }
-
-      // 同一部电影或同一集重复播放：
+      // 同一集或同一部电影重复播放：
       // 已看完再次播放、或仍未看完再次播放 → 忽略；
       // 仅「从未看完 → 看完」更新完成状态并刷新时间
       if (existing.completed || !completed) {
