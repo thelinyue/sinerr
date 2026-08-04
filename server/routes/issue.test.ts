@@ -8,15 +8,10 @@ import Issue from '@server/entity/Issue';
 import Media from '@server/entity/Media';
 import { User } from '@server/entity/User';
 import { Permission } from '@server/lib/permissions';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { IssueSubscriber } from '@server/subscriber/IssueSubscriber';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
-import authRoutes from './auth';
 import issueRoutes from './issue';
 
 const sendIssueNotificationMock = mock.method(
@@ -29,37 +24,8 @@ const sendIssueNotificationMock = mock.method(
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/issue', issueRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(issueRoutes, '/issue');
 });
 
 beforeEach(() => {
@@ -68,28 +34,12 @@ beforeEach(() => {
 
 setupTestDb();
 
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
-
 async function seedMedia() {
   return getRepository(Media).save(
     new Media({
       mediaType: MediaType.MOVIE,
       tmdbId: 12345,
       status: MediaStatus.AVAILABLE,
-
     })
   );
 }
@@ -103,7 +53,7 @@ describe('POST /issue', () => {
       where: { email: 'friend@sinerr.dev' },
     });
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.VIDEO,
       message: 'Playback stutters near the end.',
@@ -128,7 +78,7 @@ describe('POST /issue', () => {
   it('defaults to the authenticated user when userId is omitted', async () => {
     const media = await seedMedia();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.AUDIO,
       message: 'Audio is out of sync.',
@@ -150,7 +100,7 @@ describe('POST /issue', () => {
     friend.permissions = Permission.CREATE_ISSUES;
     await userRepo.save(friend);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.SUBTITLES,
       message: 'Subtitles are missing.',
@@ -176,7 +126,7 @@ describe('POST /issue', () => {
     friend.permissions = Permission.CREATE_ISSUES;
     await userRepo.save(friend);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.OTHER,
       message: 'Something else is wrong.',
@@ -194,7 +144,7 @@ describe('POST /issue', () => {
   it('returns 404 when the supplied userId does not exist', async () => {
     const media = await seedMedia();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.post('/issue').send({
       issueType: IssueType.OTHER,
       message: 'Something else is wrong.',
@@ -206,5 +156,3 @@ describe('POST /issue', () => {
     assert.strictEqual(res.body.message, 'Issue user not found');
   });
 });
-
-

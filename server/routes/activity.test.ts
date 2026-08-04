@@ -14,67 +14,19 @@ import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
 import { UserSettings } from '@server/entity/UserSettings';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
 import request from 'supertest';
 import activityRoutes from './activity';
-import authRoutes from './auth';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/activity', activityRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(activityRoutes, '/activity');
 });
 
 setupTestDb();
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 async function seedRequestAndVote() {
   const userRepo = getRepository(User);
@@ -122,7 +74,7 @@ describe('GET /activity', () => {
   it('returns request and vote activity merged by recency', async () => {
     await seedRequestAndVote();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity');
 
     assert.strictEqual(res.status, 200);
@@ -148,7 +100,7 @@ describe('GET /activity', () => {
   it('supports take and skip pagination', async () => {
     await seedRequestAndVote();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity?take=1&skip=0');
 
     assert.strictEqual(res.status, 200);
@@ -156,7 +108,7 @@ describe('GET /activity', () => {
   });
 
   it('returns an empty result set when there is no activity', async () => {
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity');
 
     assert.strictEqual(res.status, 200);
@@ -201,7 +153,7 @@ describe('GET /activity playback records', () => {
   it('includes playback records in the merged feed', async () => {
     await seedPlaybackEvents();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity');
 
     assert.strictEqual(res.status, 200);
@@ -231,7 +183,7 @@ describe('GET /activity playback records', () => {
   it('filters by type=playback', async () => {
     await seedPlaybackEvents();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity?type=playback');
 
     assert.strictEqual(res.status, 200);
@@ -261,7 +213,7 @@ describe('GET /activity playback records', () => {
     }
 
     // 普通用户（非管理员）看不到 friend 的播放记录
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get('/activity?type=playback');
 
     // friend 登录后，其自身记录可见（本人始终可见），但为了验证隐藏逻辑，
@@ -286,7 +238,7 @@ describe('GET /activity playback records', () => {
       );
     }
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity?type=playback');
 
     assert.strictEqual(res.status, 200);
@@ -296,7 +248,7 @@ describe('GET /activity playback records', () => {
   it('filters playback by userId for admins', async () => {
     const { friend } = await seedPlaybackEvents();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/activity?type=playback&userId=${friend.id}`);
 
     assert.strictEqual(res.status, 200);
@@ -344,7 +296,7 @@ describe('GET /activity review records', () => {
   it('includes media reviews in the merged feed with rating and message', async () => {
     await seedReview();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity');
 
     assert.strictEqual(res.status, 200);
@@ -363,7 +315,7 @@ describe('GET /activity review records', () => {
   it('filters by type=review', async () => {
     await seedReview();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/activity?type=review');
 
     assert.strictEqual(res.status, 200);
@@ -376,7 +328,7 @@ describe('GET /activity review records', () => {
   it('filters reviews by userId', async () => {
     const { admin } = await seedReview();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/activity?type=review&userId=${admin.id}`);
 
     assert.strictEqual(res.status, 200);
@@ -395,7 +347,7 @@ describe('GET /activity/count', () => {
 
     // 一个较早的时间点，seed 事件都晚于它
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/activity/count?since=${encodeURIComponent(since)}`
     );
@@ -408,7 +360,7 @@ describe('GET /activity/count', () => {
 
   it('returns zero when since is in the future', async () => {
     const since = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/activity/count?since=${encodeURIComponent(since)}`
     );

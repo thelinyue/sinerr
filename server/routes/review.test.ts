@@ -7,74 +7,25 @@ import Media from '@server/entity/Media';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
 import { Permission } from '@server/lib/permissions';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
-import authRoutes from './auth';
 import reviewRoutes from './review';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/review', reviewRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(reviewRoutes, '/review');
 });
 
 setupTestDb();
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 async function loginWithPermissions(email: string, permissions: number) {
   const userRepository = getRepository(User);
   const user = await userRepository.findOneOrFail({ where: { email } });
   user.permissions = permissions;
   await userRepository.save(user);
-  return loginAs(email, 'test1234');
+  return loginAs(app, email, 'test1234');
 }
 
 async function seedMedia() {
@@ -104,7 +55,7 @@ async function seedTvMedia() {
 describe('GET /review/:tmdbId/:mediaType', () => {
   it('returns an empty review list for media without reviews', async () => {
     await seedMedia();
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
 
     const res = await agent.get('/review/24681/movie');
 
@@ -115,13 +66,13 @@ describe('GET /review/:tmdbId/:mediaType', () => {
   });
 
   it('returns 404 for media that does not exist', async () => {
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/review/99999999/movie');
     assert.strictEqual(res.status, 404);
   });
 
   it('rejects an invalid media type', async () => {
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get('/review/24681/album');
     assert.strictEqual(res.status, 400);
   });
@@ -268,13 +219,13 @@ describe('DELETE /review/:reviewId', () => {
     });
     const reviewId = create.body.id;
 
-    const adminAgent = await loginAs('admin@sinerr.dev', 'test1234');
+    const adminAgent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await adminAgent.delete(`/review/${reviewId}`);
     assert.strictEqual(res.status, 204);
   });
 
   it('returns 404 for a non-existent review', async () => {
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete('/review/99999999');
     assert.strictEqual(res.status, 404);
   });

@@ -10,14 +10,9 @@ import { getRepository } from '@server/datasource';
 import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
 import { User } from '@server/entity/User';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
-import authRoutes from './auth';
 import requestRoutes from './request';
 
 const sendNotificationMock = mock.method(
@@ -28,37 +23,8 @@ const sendNotificationMock = mock.method(
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/request', requestRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(requestRoutes, '/request');
 });
 
 beforeEach(() => {
@@ -66,21 +32,6 @@ beforeEach(() => {
 });
 
 setupTestDb();
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 async function seedRequest(status = MediaRequestStatus.PENDING) {
   const userRepo = getRepository(User);
@@ -119,7 +70,7 @@ describe('DELETE /request/:requestId', () => {
   it('allows the owner to delete their own pending request', async () => {
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -128,7 +79,7 @@ describe('DELETE /request/:requestId', () => {
   it('allows an admin to delete any pending request', async () => {
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -161,7 +112,7 @@ describe('DELETE /request/:requestId', () => {
       })
     );
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 403);
@@ -170,14 +121,14 @@ describe('DELETE /request/:requestId', () => {
   it('prevents the owner from deleting an approved request', async () => {
     const mediaRequest = await seedRequest(MediaRequestStatus.APPROVED);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${mediaRequest.id}`);
 
     assert.strictEqual(res.status, 403);
   });
 
   it('returns 404 for a non-existent request', async () => {
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete('/request/99999999');
 
     assert.strictEqual(res.status, 404);
@@ -189,7 +140,7 @@ describe('PUT /request/:requestId (movie)', () => {
     const requestRepo = getRepository(MediaRequest);
     const mediaRequest = await seedRequest();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.put(`/request/${mediaRequest.id}`).send({
       mediaType: MediaType.MOVIE,
       serverId: 3,
@@ -219,7 +170,7 @@ describe('POST /request/:requestId/:status', () => {
     it(`transitions to ${action}d and records the acting user`, async () => {
       const repo = getRepository(MediaRequest);
       const pending = await seedRequest();
-      const admin = await loginAs('admin@sinerr.dev', 'test1234');
+      const admin = await loginAs(app, 'admin@sinerr.dev', 'test1234');
 
       const res = await admin.post(`/request/${pending.id}/${action}`);
 
@@ -243,7 +194,7 @@ describe('POST /request/:requestId/retry', () => {
   it('re-approves a failed request and records the acting user', async () => {
     const repo = getRepository(MediaRequest);
     const failed = await seedRequest(MediaRequestStatus.FAILED);
-    const admin = await loginAs('admin@sinerr.dev', 'test1234');
+    const admin = await loginAs(app, 'admin@sinerr.dev', 'test1234');
 
     const res = await admin.post(`/request/${failed.id}/retry`);
 
@@ -309,55 +260,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const mediaRepo = getRepository(Media);
     const { media, newRequest } = await seedDeletedMediaScenario();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
-    const res = await agent.delete(`/request/${newRequest.id}`);
-
-    assert.strictEqual(res.status, 204);
-
-    const updated = await mediaRepo.findOneOrFail({ where: { id: media.id } });
-    assert.strictEqual(updated.status, MediaStatus.DELETED);
-  });
-
-  it('restores media status to DELETED when the re-request is deleted and a stale completed request remains', async () => {
-    const userRepo = getRepository(User);
-    const mediaRepo = getRepository(Media);
-    const requestRepo = getRepository(MediaRequest);
-
-    const admin = await userRepo.findOneOrFail({
-      where: { email: 'admin@sinerr.dev' },
-    });
-
-    const media = await mediaRepo.save(
-      new Media({
-        mediaType: MediaType.MOVIE,
-        tmdbId: 99003,
-        status: MediaStatus.UNKNOWN,
-      })
-    );
-
-    await requestRepo.save(
-      new MediaRequest({
-        type: MediaType.MOVIE,
-        status: MediaRequestStatus.COMPLETED,
-        media,
-        requestedBy: admin,
-        isAutoRequest: true,
-      })
-    );
-
-    media.status = MediaStatus.PENDING;
-    await mediaRepo.save(media);
-
-    const newRequest = await requestRepo.save(
-      new MediaRequest({
-        type: MediaType.MOVIE,
-        status: MediaRequestStatus.APPROVED,
-        media,
-        requestedBy: admin,
-      })
-    );
-
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${newRequest.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -372,7 +275,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
     const { media, newRequest, staleRequest } =
       await seedDeletedMediaScenario();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
 
     await agent.delete(`/request/${newRequest.id}`);
 
@@ -427,7 +330,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
 
     await agent.delete(`/request/${newRequest.id}`);
 
@@ -473,7 +376,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${req1.id}`);
 
     assert.strictEqual(res.status, 204);
@@ -508,7 +411,7 @@ describe('DELETE /request/:requestId, deleted media status restoration', () => {
       })
     );
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.delete(`/request/${completedRequest.id}`);
 
     assert.strictEqual(res.status, 204);

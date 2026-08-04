@@ -3,69 +3,21 @@ import { before, describe, it } from 'node:test';
 
 import { getRepository } from '@server/datasource';
 import { User } from '@server/entity/User';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import { appDataPath } from '@server/utils/appDataVolume';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import request from 'supertest';
-import authRoutes from './auth';
 import userRoutes from './user';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/user', userRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(userRoutes, '/user');
 });
 
 setupTestDb();
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 /** 1x1 PNG 字节 */
 const TINY_PNG = Buffer.from(
@@ -90,7 +42,7 @@ describe('avatar upload / delete', () => {
     });
     await cleanupAvatarFiles(friend.id);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent
       .post(`/user/${friend.id}/avatar`)
       .attach('avatar', TINY_PNG, {
@@ -113,7 +65,7 @@ describe('avatar upload / delete', () => {
       where: { email: 'friend@sinerr.dev' },
     });
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent
       .post(`/user/${friend.id}/avatar`)
       .attach('avatar', Buffer.from('<svg/>'), {
@@ -132,7 +84,7 @@ describe('avatar upload / delete', () => {
     friend.avatar = '/avatarproxy/upload/' + friend.id;
     await getRepository(User).save(friend);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.delete(`/user/${friend.id}/avatar`);
 
     assert.strictEqual(res.status, 200);
@@ -145,7 +97,7 @@ describe('avatar upload / delete', () => {
       where: { email: 'admin@sinerr.dev' },
     });
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent
       .post(`/user/${admin.id}/avatar`)
       .attach('avatar', TINY_PNG, {

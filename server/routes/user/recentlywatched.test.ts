@@ -5,67 +5,18 @@ import { MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
-import authRoutes from '@server/routes/auth';
 import userRoutes from '@server/routes/user';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/user', userRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(userRoutes, '/user');
 });
 
 setupTestDb();
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 async function seedPlayback() {
   const userRepo = getRepository(User);
@@ -100,7 +51,7 @@ describe('GET /user/:id/recently-watched', () => {
   it('returns playback records newest first with media metadata', async () => {
     const friend = await seedPlayback();
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${friend.id}/recently-watched`);
 
     assert.strictEqual(res.status, 200);
@@ -124,7 +75,7 @@ describe('GET /user/:id/recently-watched', () => {
   it('allows an admin to view another user recently watched', async () => {
     const friend = await seedPlayback();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${friend.id}/recently-watched`);
 
     assert.strictEqual(res.status, 200);
@@ -136,7 +87,7 @@ describe('GET /user/:id/recently-watched', () => {
       where: { email: 'admin@sinerr.dev' },
     });
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${admin.id}/recently-watched`);
 
     assert.strictEqual(res.status, 403);
@@ -148,7 +99,7 @@ describe('GET /user/:id/recently-watched', () => {
       where: { email: 'admin@sinerr.dev' },
     });
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${admin.id}/recently-watched`);
 
     assert.strictEqual(res.status, 200);
@@ -214,7 +165,7 @@ describe('GET /user/:id/recently-watched', () => {
       }),
     ]);
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${dedupeUser.id}/recently-watched`);
 
     assert.strictEqual(res.status, 200);

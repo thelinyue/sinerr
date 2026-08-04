@@ -5,74 +5,19 @@ import { MediaStatus, MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Episode from '@server/entity/Episode';
 import Media from '@server/entity/Media';
-import { User } from '@server/entity/User';
 import { Permission } from '@server/lib/permissions';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginWithPermissions } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
-import authRoutes from './auth';
 import discoverRoutes from './discover';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/discover', discoverRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(discoverRoutes, '/discover');
 });
 
 setupTestDb();
-
-async function loginWithPermissions(email: string, permissions: number) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-  try {
-    const userRepo = getRepository(User);
-    const user = await userRepo.findOneOrFail({ where: { email } });
-    user.permissions = permissions;
-    await userRepo.save(user);
-    const agent = request.agent(app);
-    const res = await agent
-      .post('/auth/local')
-      .send({ email, password: 'test1234' });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 /** 造媒体：mediaAddedAt 与可选新增单集 */
 async function seedMedia(opts: {
@@ -111,6 +56,7 @@ const days = (n: number) => new Date(NOW - n * 24 * 60 * 60 * 1000);
 describe('GET /discover/recentlyadded', () => {
   it('requires RECENT_VIEW permission', async () => {
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST
     );
@@ -121,6 +67,7 @@ describe('GET /discover/recentlyadded', () => {
   it('returns newly added movie (mediaAddedAt in window, no episodes)', async () => {
     await seedMedia({ tmdbId: 1, mediaAddedAt: days(1) });
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST | Permission.RECENT_VIEW
     );
@@ -145,6 +92,7 @@ describe('GET /discover/recentlyadded', () => {
       ],
     });
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST | Permission.RECENT_VIEW
     );
@@ -163,6 +111,7 @@ describe('GET /discover/recentlyadded', () => {
   it('excludes media without recent activity', async () => {
     await seedMedia({ tmdbId: 3, mediaAddedAt: days(30) });
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST | Permission.RECENT_VIEW
     );
@@ -177,6 +126,7 @@ describe('GET /discover/recentlyadded', () => {
     await seedMedia({ tmdbId: 4, mediaAddedAt: days(3) });
     await seedMedia({ tmdbId: 5, mediaAddedAt: days(1) });
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST | Permission.RECENT_VIEW
     );
@@ -195,6 +145,7 @@ describe('GET /discover/recentlyadded', () => {
   it('returns empty results when nothing is recent', async () => {
     await seedMedia({ tmdbId: 6, mediaAddedAt: days(60) });
     const agent = await loginWithPermissions(
+      app,
       'friend@sinerr.dev',
       Permission.REQUEST | Permission.RECENT_VIEW
     );

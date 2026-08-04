@@ -5,13 +5,10 @@ import { getRepository } from '@server/datasource';
 import { User } from '@server/entity/User';
 import PreparedEmail from '@server/lib/email';
 import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
 import { setupTestDb } from '@server/test/db';
-import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
+import { createTestApp } from '@server/test/helpers';
+import { Router, type Express } from 'express';
 import request from 'supertest';
-import authRoutes from './auth';
 
 const emailMock = mock.method(PreparedEmail.prototype, 'send', async () => {
   return undefined;
@@ -19,37 +16,8 @@ const emailMock = mock.method(PreparedEmail.prototype, 'send', async () => {
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // We must provide a next function for the function signature here even though its not used
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(Router());
 });
 
 setupTestDb();

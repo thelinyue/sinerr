@@ -17,49 +17,15 @@ import {
 } from '@server/lib/episodeNotification';
 import notificationManager, { Notification } from '@server/lib/notifications';
 import { Permission } from '@server/lib/permissions';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
-import authRoutes from '@server/routes/auth';
 import userRoutes from '@server/routes/user';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/user', userRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(userRoutes, '/user');
 });
 
 setupTestDb();
@@ -74,20 +40,6 @@ beforeEach(() => {
   sendNotificationMock.resetCalls();
   resetEpisodeNotificationState();
 });
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 async function seedFollowedMedia() {
   const userRepo = getRepository(User);
@@ -186,7 +138,7 @@ describe('GET /user/:id/following-updates (F2)', () => {
   it('returns the followed media with update state for the owner', async () => {
     const { admin, media } = await seedFollowedMedia();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${admin.id}/following-updates`);
 
     assert.strictEqual(res.status, 200);
@@ -208,7 +160,7 @@ describe('GET /user/:id/following-updates (F2)', () => {
       where: { email: 'admin@sinerr.dev' },
     });
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${admin.id}/following-updates`);
     assert.strictEqual(res.status, 403);
   });

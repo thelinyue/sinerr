@@ -8,49 +8,15 @@ import Episode from '@server/entity/Episode';
 import Media from '@server/entity/Media';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import { User } from '@server/entity/User';
-import { getSettings } from '@server/lib/settings';
-import { checkUser } from '@server/middleware/auth';
-import authRoutes from '@server/routes/auth';
 import userRoutes from '@server/routes/user';
 import { setupTestDb } from '@server/test/db';
+import { createTestApp, loginAs } from '@server/test/helpers';
 import type { Express } from 'express';
-import express from 'express';
-import session from 'express-session';
-import request from 'supertest';
 
 let app: Express;
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
-  app.use(
-    session({
-      secret: 'test-secret',
-      resave: false,
-      saveUninitialized: false,
-    })
-  );
-  app.use(checkUser);
-  app.use('/auth', authRoutes);
-  app.use('/user', userRoutes);
-  app.use(
-    (
-      err: { status?: number; message?: string },
-      _req: express.Request,
-      res: express.Response,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _next: express.NextFunction
-    ) => {
-      res
-        .status(err.status ?? 500)
-        .json({ status: err.status ?? 500, message: err.message });
-    }
-  );
-  return app;
-}
-
 before(async () => {
-  app = createApp();
+  app = createTestApp(userRoutes, '/user');
 });
 
 setupTestDb();
@@ -83,21 +49,6 @@ beforeEach(() => {
   }));
   getSeriesProgressMock.mockImplementation(async () => null);
 });
-
-async function loginAs(email: string, password: string) {
-  const settings = getSettings();
-  const priorLocalLogin = settings.main.localLogin;
-  settings.main.localLogin = true;
-
-  try {
-    const agent = request.agent(app);
-    const res = await agent.post('/auth/local').send({ email, password });
-    assert.strictEqual(res.status, 200);
-    return agent;
-  } finally {
-    settings.main.localLogin = priorLocalLogin;
-  }
-}
 
 /** 给用户设置 jellyfinUserId 并创建关联媒体 */
 async function seedUserAndMedia() {
@@ -135,7 +86,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
     const { friend, movie } = await seedUserAndMedia();
     getUserPlaybackActivityMock.mockImplementation(async () => []);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${friend.id}/media/${movie.tmdbId}/movie/playback`
     );
@@ -157,7 +108,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
       },
     ]);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${friend.id}/media/${movie.tmdbId}/movie/playback`
     );
@@ -238,7 +189,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
       },
     ]);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${friend.id}/media/${tv.tmdbId}/tv/playback`
     );
@@ -285,7 +236,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
     // 不应触发 getUserPlaybackActivity
     getUserPlaybackActivityMock.mockImplementation(async () => []);
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${friend.id}/media/${tv.tmdbId}/tv/playback`
     );
@@ -316,7 +267,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
       })
     );
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${admin.id}/media/${media.tmdbId}/movie/playback`
     );
@@ -328,7 +279,7 @@ describe('GET /user/:id/media/:tmdbId/:mediaType/playback', () => {
   it('forbids viewing another user playback without permission', async () => {
     const { friend } = await seedUserAndMedia();
 
-    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'admin@sinerr.dev', 'test1234');
     const res = await agent.get(
       `/user/${friend.id}/media/55501/movie/playback`
     );
@@ -371,7 +322,7 @@ describe('GET /user/:id/watchtime', () => {
       })
     );
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${friend.id}/watchtime`);
 
     assert.strictEqual(res.status, 200);
@@ -384,7 +335,7 @@ describe('GET /user/:id/watchtime', () => {
   it('returns zero when there are no playback events', async () => {
     const { friend } = await seedUserAndMedia();
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${friend.id}/watchtime`);
 
     assert.strictEqual(res.status, 200);
@@ -398,7 +349,7 @@ describe('GET /user/:id/watchtime', () => {
       where: { email: 'admin@sinerr.dev' },
     });
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${admin.id}/watchtime`);
 
     assert.strictEqual(res.status, 403);
@@ -412,7 +363,7 @@ describe('GET /user/:id/watchtime', () => {
       totalSeconds: 99900,
     }));
 
-    const agent = await loginAs('friend@sinerr.dev', 'test1234');
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
     const res = await agent.get(`/user/${friend.id}/watchtime`);
 
     assert.strictEqual(res.status, 200);
