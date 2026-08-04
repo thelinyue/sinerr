@@ -154,4 +154,87 @@ describe('GET /user/:id/recently-watched', () => {
     assert.strictEqual(res.status, 200);
     assert.deepStrictEqual(res.body.results, []);
   });
+
+  it('dedupes duplicate episodes and movies keeping the most recent', async () => {
+    const userRepo = getRepository(User);
+    const playbackRepo = getRepository(PlaybackEvent);
+    const admin = await userRepo.findOneOrFail({
+      where: { email: 'admin@sinerr.dev' },
+    });
+
+    const dedupeUser = new User();
+    dedupeUser.username = 'dedupe';
+    dedupeUser.email = 'dedupe@sinerr.dev';
+    dedupeUser.password = admin.password;
+    dedupeUser.permissions = 32;
+    dedupeUser.avatar = '/avatarproxy/default';
+    await userRepo.save(dedupeUser);
+
+    await playbackRepo.save([
+      new PlaybackEvent({
+        user: dedupeUser,
+        tmdbId: 55501,
+        mediaType: MediaType.TV,
+        completed: false,
+        seasonNumber: 1,
+        episodeNumber: 5,
+        durationSeconds: 1000,
+      }),
+      new PlaybackEvent({
+        user: dedupeUser,
+        tmdbId: 55501,
+        mediaType: MediaType.TV,
+        completed: false,
+        seasonNumber: 1,
+        episodeNumber: 5,
+        durationSeconds: 2000,
+      }),
+      new PlaybackEvent({
+        user: dedupeUser,
+        tmdbId: 55501,
+        mediaType: MediaType.TV,
+        completed: true,
+        seasonNumber: 1,
+        episodeNumber: 6,
+        durationSeconds: 3000,
+      }),
+      new PlaybackEvent({
+        user: dedupeUser,
+        tmdbId: 55502,
+        mediaType: MediaType.MOVIE,
+        completed: true,
+        durationSeconds: 4000,
+      }),
+      new PlaybackEvent({
+        user: dedupeUser,
+        tmdbId: 55502,
+        mediaType: MediaType.MOVIE,
+        completed: false,
+        durationSeconds: 5000,
+      }),
+    ]);
+
+    const agent = await loginAs('admin@sinerr.dev', 'test1234');
+    const res = await agent.get(`/user/${dedupeUser.id}/recently-watched`);
+
+    assert.strictEqual(res.status, 200);
+    const results = res.body.results as {
+      tmdbId: number;
+      mediaType: string;
+      seasonNumber: number | null;
+      episodeNumber: number | null;
+    }[];
+
+    // 剧集：S1E5 重复只保留一条，S1E6 保留 → 共 2 条
+    const tv = results.filter((r) => r.tmdbId === 55501);
+    assert.strictEqual(tv.length, 2);
+    assert.ok(
+      tv.some((r) => r.seasonNumber === 1 && r.episodeNumber === 5) &&
+        tv.some((r) => r.seasonNumber === 1 && r.episodeNumber === 6)
+    );
+
+    // 电影：重复只保留一条
+    const movie = results.filter((r) => r.tmdbId === 55502);
+    assert.strictEqual(movie.length, 1);
+  });
 });

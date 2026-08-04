@@ -41,6 +41,8 @@ const messages = defineMessages('components.UserProfile', {
   followingTitle: '追更中',
   followingUpdatedTo: '已更新至 第{season}季 第{episode}集',
   followingFinished: '已完结 · 全{seasons}季 · {episodes}集',
+  followingShowMore: '展开全部（{count}）',
+  followingCollapse: '收起',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -208,6 +210,7 @@ const UserProfile = () => {
   const [availableTitles, setAvailableTitles] = useState<
     Record<number, MediaTitle>
   >({});
+  const [showAllFollowing, setShowAllFollowing] = useState(false);
 
   const { data: requests, error: requestError } = useSWR<UserRequestsResponse>(
     user &&
@@ -554,13 +557,29 @@ const UserProfile = () => {
             </div>
           </div>
           <div className="space-y-2">
-            {followingUpdates.results.map((item) => (
+            {(showAllFollowing
+              ? followingUpdates.results
+              : followingUpdates.results.slice(0, 3)
+            ).map((item) => (
               <FollowingUpdateRow
                 key={`following-${item.media.tmdbId}`}
                 item={item}
               />
             ))}
           </div>
+          {followingUpdates.results.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setShowAllFollowing((v) => !v)}
+              className="mt-3 w-full rounded-lg bg-gray-800 px-4 py-2 text-xs font-medium text-gray-300 ring-1 ring-gray-700 hover:bg-gray-700"
+            >
+              {showAllFollowing
+                ? intl.formatMessage(messages.followingCollapse)
+                : intl.formatMessage(messages.followingShowMore, {
+                    count: followingUpdates.results.length - 3,
+                  })}
+            </button>
+          )}
         </div>
       )}
     </>

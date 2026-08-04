@@ -215,6 +215,7 @@ const RecentlyAddedHero = () => {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const { data } = useSWR<{ results: RecentlyAddedItem[] }>(
     '/api/v1/discover/recentlyadded?days=7&take=6'
@@ -269,6 +270,22 @@ const RecentlyAddedHero = () => {
       className="relative mb-6 overflow-hidden rounded-2xl ring-1 ring-gray-700/60"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+        setPaused(true);
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current == null) return;
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        touchStartX.current = null;
+        setPaused(false);
+        const threshold = 50;
+        if (deltaX < -threshold) {
+          goTo(index + 1);
+        } else if (deltaX > threshold) {
+          goTo(index - 1);
+        }
+      }}
     >
       <div
         className="flex h-full transition-transform duration-500"

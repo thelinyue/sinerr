@@ -1860,6 +1860,8 @@
   "components.UserProfile.followingTitle": "追更中",
   "components.UserProfile.followingUpdatedTo": "已更新至 第{season}季 第{episode}集",
   "components.UserProfile.followingFinished": "已完结 · 全{seasons}季 · {episodes}集",
+  "components.UserProfile.followingShowMore": "展开全部（{count}）",
+  "components.UserProfile.followingCollapse": "收起",
   "components.Discover.RecentlyAddedList.title": "最近添加",
   "components.Discover.RecentlyAddedList.updatedTo": "已更新至 第{season}季 第{episode}集",
   "components.Discover.RecentlyAddedList.finished": "已完结 · 全{seasons}季 · {episodes}集",

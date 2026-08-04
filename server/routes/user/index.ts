@@ -1,5 +1,5 @@
 import JellyfinAPI from '@server/api/jellyfin';
-import { MediaRequestStatus } from '@server/constants/media';
+import { MediaRequestStatus, MediaType } from '@server/constants/media';
 import { MediaServerType } from '@server/constants/server';
 import { UserType } from '@server/constants/user';
 import dataSource, { getRepository } from '@server/datasource';
@@ -1206,11 +1206,24 @@ router.get<{ id: string }, RecentlyWatchedResponse>(
         .leftJoinAndSelect('event.user', 'user')
         .where('user.id = :userId', { userId })
         .orderBy('event.createdAt', 'DESC')
-        .take(24)
+        .take(100)
         .getMany();
 
+      // 去重：剧集按 (tmdbId, 季, 集) 保留最近一次观看；电影按 tmdbId 保留最近一次
+      const seen = new Set<string>();
+      const deduped: PlaybackEvent[] = [];
+      for (const event of events) {
+        const key =
+          event.mediaType === MediaType.TV
+            ? `tv-${event.tmdbId}-${event.seasonNumber ?? ''}-${event.episodeNumber ?? ''}`
+            : `movie-${event.tmdbId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(event);
+      }
+
       return res.status(200).json({
-        results: events.map((event) => ({
+        results: deduped.slice(0, 24).map((event) => ({
           tmdbId: event.tmdbId,
           mediaType: event.mediaType,
           completed: event.completed,

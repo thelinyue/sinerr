@@ -1873,6 +1873,8 @@
   "components.UserProfile.followingTitle": "Following",
   "components.UserProfile.followingUpdatedTo": "Updated to S{season}E{episode}",
   "components.UserProfile.followingFinished": "Finished · {seasons} seasons · {episodes} episodes",
+  "components.UserProfile.followingShowMore": "Show all ({count})",
+  "components.UserProfile.followingCollapse": "Collapse",
   "components.Discover.RecentlyAddedList.title": "Recently Added",
   "components.Discover.RecentlyAddedList.updatedTo": "Updated to S{season}E{episode}",
   "components.Discover.RecentlyAddedList.finished": "Finished · {seasons} seasons · {episodes} episodes",
