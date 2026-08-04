@@ -10,7 +10,6 @@ interface MoviePilotStatusResponse {
 }
 
 const messages = defineMessages('components.MoviePilotStatus', {
-  downloading: 'Downloading',
   subscribed: 'Subscribed',
   completed: 'Completed',
   paused: 'Paused',
@@ -48,9 +47,10 @@ const MoviePilotStatus = ({
   } else if (state === 'P') {
     label = intl.formatMessage(messages.paused);
     badgeType = 'warning';
-  } else if (completedEpisode > 0) {
-    label = intl.formatMessage(messages.downloading);
-    badgeType = 'primary';
+  } else {
+    // 部分集已下但未完成、或仅处于订阅态，统一显示「订阅中」
+    label = intl.formatMessage(messages.subscribed);
+    badgeType = 'default';
   }
 
   return (

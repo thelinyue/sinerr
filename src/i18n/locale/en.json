@@ -450,7 +450,6 @@
   "components.MovieDetails.watchlistSuccess": "<strong>{title}</strong> added to watchlist successfully!",
   "components.MovieDetails.watchtrailer": "Watch Trailer",
   "components.MoviePilotStatus.completed": "Completed",
-  "components.MoviePilotStatus.downloading": "Downloading",
   "components.MoviePilotStatus.label": "MoviePilot",
   "components.MoviePilotStatus.paused": "Paused",
   "components.MoviePilotStatus.subscribed": "Subscribed",
