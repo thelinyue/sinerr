@@ -17,6 +17,7 @@ const messages = defineMessages('components.Discover.RecentlyAddedHero', {
   newEpisodes: '＋{count} 集',
   noResults: '暂无最近添加',
   viewAll: '查看全部',
+  updatedOn: '{date} 更新',
 });
 
 interface NewEpisodeRef {
@@ -202,6 +203,15 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
               <span className="text-amber-400">
                 ★ {title.voteAverage?.toFixed(1)}
               </span>
+              <span className="text-gray-500">·</span>
+              <span className="text-gray-400">
+                {intl.formatMessage(messages.updatedOn, {
+                  date: intl.formatDate(new Date(item.latestEventAt), {
+                    month: 'numeric',
+                    day: 'numeric',
+                  }),
+                })}
+              </span>
             </div>
           )}
           {stateLine}
@@ -226,7 +236,7 @@ const RecentlyAddedHero = () => {
   const touchStartX = useRef<number | null>(null);
 
   const { data } = useSWR<{ results: RecentlyAddedItem[] }>(
-    '/api/v1/discover/recentlyadded?days=7&take=6'
+    '/api/v1/discover/recentlyadded?days=7&take=8'
   );
 
   const items = data?.results ?? [];

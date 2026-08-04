@@ -1,7 +1,6 @@
 import Header from '@app/components/Common/Header';
 import ListView from '@app/components/Common/ListView';
 import PageTitle from '@app/components/Common/PageTitle';
-import ConnectionGuide from '@app/components/Discover/ConnectionGuide';
 import useDiscover from '@app/hooks/useDiscover';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
@@ -42,13 +41,9 @@ const Search = () => {
     return <ErrorPage statusCode={500} />;
   }
 
-  const isEmptyQuery = !router.query.query;
-
   return (
     <>
       <PageTitle title={intl.formatMessage(messages.search)} />
-      {/* 方案 A：引导在空查询 / 无结果时出现（不常驻首页横幅） */}
-      {(isEmptyQuery || isEmpty) && <ConnectionGuide embedded />}
       <div className="mb-5 mt-1">
         <Header>{intl.formatMessage(messages.searchresults)}</Header>
       </div>

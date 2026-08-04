@@ -3,22 +3,24 @@ import useSettings from '@app/hooks/useSettings';
 import { useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
 import { MediaServerType } from '@server/constants/server';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useIntl } from 'react-intl';
 
 const messages = defineMessages('components.Discover.ConnectionGuide', {
-  guideTitle: '三步开启观影',
+  guideTitle: '观影指南',
   guideCopyAll: '复制全部信息',
   guideCopied: '已复制',
   guideStep1: '装好客户端',
-  guideStep1Desc: '在手机 / 平板 / 电视上安装 {appName} 客户端',
+  guideStep1Desc: '在手机 / 平板 / 电视上安装客户端',
   guideStep2: '连上服务器',
   guideStep2Desc: '类型选 {serverType}，地址填 {server}',
+  guidePortHint: '（HTTPS 默认端口 443，可省略）',
   guideStep3: '登录即看',
   guideStep3Desc: '账号 {username} + 密码',
   guideServerTypeEmby: 'Emby',
   guideServerTypeJellyfin: 'Jellyfin',
   guideNoServer: '尚未配置服务器',
+  guideNoDownload: '未配置客户端下载地址，请到 设置 → 常规 填写',
   guideDismiss: '关闭',
 });
 
@@ -28,27 +30,16 @@ interface ConnectionGuideProps {
 }
 
 /**
- * 「三步开启观影」引导卡片
+ * 「观影指南」引导卡片
  *
- * 方案 A：不再常驻探索页横幅，改为在搜索页空态（无查询 / 无结果）出现，
- * 用户在「想找片但可能还没播放器」的时刻看到引导。可手动关闭（localStorage）。
+ * 三步指引：装客户端（含下载地址）→ 连服务器（含 443 提示）→ 登录即看。
+ * 通过侧栏「观影指南」入口以弹窗打开，不再占用搜索页空态（避免与实时搜索打架）。
  */
 const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
   const intl = useIntl();
   const settings = useSettings();
   const { user } = useUser();
-  const [dismissed, setDismissed] = useState(true);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    try {
-      setDismissed(
-        localStorage.getItem('connection-guide-dismissed') === 'true'
-      );
-    } catch {
-      setDismissed(true);
-    }
-  }, []);
 
   const serverUrl =
     settings.currentSettings.serverConnectionUrl ||
@@ -58,10 +49,6 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
 
   // 无服务器信息（未配置媒体服务器）时引导无意义
   if (!serverUrl && downloads.length === 0) {
-    return null;
-  }
-
-  if (dismissed) {
     return null;
   }
 
@@ -75,19 +62,13 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
   // 登录账号用「用户名字段」，不用 displayName/昵称
   const loginUsername = user?.jellyfinUsername || user?.username || '';
 
-  const dismiss = () => {
-    try {
-      localStorage.setItem('connection-guide-dismissed', 'true');
-    } catch {
-      // localStorage may not be available
-    }
-    setDismissed(true);
-  };
+  const isHttps = serverUrl ? /^https:\/\//i.test(serverUrl) : false;
 
   const copyAll = async () => {
     const lines = [
-      `${intl.formatMessage(messages.guideStep2)}: ${serverUrl}`,
+      `${intl.formatMessage(messages.guideStep2)}: ${serverType} ${serverUrl}`,
       `${intl.formatMessage(messages.guideStep3)}: ${loginUsername}`,
+      ...downloads.map((d) => `${d.name}: ${d.url}`),
     ];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
@@ -109,13 +90,6 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
           <span className="mr-1.5">🎬</span>
           {intl.formatMessage(messages.guideTitle)}
         </h2>
-        <button
-          onClick={dismiss}
-          className="text-xs text-gray-400 transition hover:text-white"
-          aria-label={intl.formatMessage(messages.guideDismiss)}
-        >
-          ✕
-        </button>
       </div>
       <div className="mt-3 space-y-3 border-t border-indigo-500/20 pt-3">
         <div className="flex items-start gap-3">
@@ -126,15 +100,26 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
             <p className="text-sm font-medium text-white">
               {intl.formatMessage(messages.guideStep1)}
             </p>
-            <p className="text-xs text-gray-300">
-              {downloads.length > 0
-                ? intl.formatMessage(messages.guideStep1Desc, {
-                    appName: settings.currentSettings.applicationTitle,
-                  })
-                : intl.formatMessage(messages.guideStep1Desc, {
-                    appName: settings.currentSettings.applicationTitle,
-                  })}
-            </p>
+            {downloads.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {downloads.map((d) => (
+                  <a
+                    key={d.name}
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border border-indigo-400/40 bg-black/40 px-2.5 py-1 text-xs text-indigo-200 transition hover:bg-black/60 hover:text-white"
+                  >
+                    <span className="text-[10px]">{d.icon}</span>
+                    {d.name}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-gray-300">
+                {intl.formatMessage(messages.guideNoDownload)}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-start gap-3">
@@ -145,21 +130,26 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
             <p className="text-sm font-medium text-white">
               {intl.formatMessage(messages.guideStep2)}
             </p>
-            <p className="text-xs text-gray-300">
-              {serverUrl ? (
-                <>
-                  <span className="font-semibold text-emerald-300">
-                    {serverType}
-                  </span>{' '}
-                  ·{' '}
-                  <code className="rounded bg-gray-800/80 px-1 font-mono">
-                    {serverUrl}
-                  </code>
-                </>
-              ) : (
-                intl.formatMessage(messages.guideNoServer)
-              )}
-            </p>
+            {serverUrl ? (
+              <p className="mt-1 text-xs text-gray-300">
+                <span className="font-semibold text-emerald-300">
+                  {serverType}
+                </span>{' '}
+                ·{' '}
+                <code className="rounded bg-gray-800/80 px-1 font-mono">
+                  {serverUrl}
+                </code>
+                {isHttps && (
+                  <span className="ml-1.5 text-gray-400">
+                    {intl.formatMessage(messages.guidePortHint)}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-300">
+                {intl.formatMessage(messages.guideNoServer)}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-start gap-3">
@@ -170,7 +160,7 @@ const ConnectionGuide = ({ embedded = false }: ConnectionGuideProps) => {
             <p className="text-sm font-medium text-white">
               {intl.formatMessage(messages.guideStep3)}
             </p>
-            <p className="text-xs text-gray-300">
+            <p className="mt-1 text-xs text-gray-300">
               {intl.formatMessage(messages.guideStep3Desc, {
                 username: loginUsername || '…',
               })}
