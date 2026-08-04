@@ -366,11 +366,38 @@ webhookRoutes.post('/emby', async (req, res) => {
     }
   }
 
-  if (
-    event === 'library.new' ||
-    event === 'system.libraryscancomplete' ||
-    event === 'item.updated'
-  ) {
+  // library.new / item.updated：按 ItemId 精准刷新该部剧/电影，避免全库最近扫描
+  if (event === 'library.new' || event === 'item.updated') {
+    const itemId =
+      (req.body?.ItemId as string | undefined) ??
+      (req.body?.Item?.Id as string | undefined);
+
+    if (!itemId) {
+      logger.debug('Webhook item event without ItemId, skipping', {
+        label: 'Webhook',
+        event,
+        itemName,
+      });
+    } else {
+      logger.info('Precisely refreshing media item due to webhook', {
+        label: 'Webhook',
+        event,
+        itemName,
+        itemId,
+      });
+      const refreshed = await jellyfinRecentScanner.processMediaItem(itemId);
+      if (!refreshed) {
+        logger.info('Skipped targeted media refresh', {
+          label: 'Webhook',
+          event,
+          itemId,
+        });
+      }
+    }
+  }
+
+  // system.libraryscancomplete：整库变更，保留全库最近扫描
+  if (event === 'system.libraryscancomplete') {
     if (jellyfinRecentScanner.status().running) {
       logger.info('Skipping recent scan: already running', {
         label: 'Webhook',

@@ -474,6 +474,96 @@ class JellyfinScanner
     }
   }
 
+  /**
+   * 精准刷新单个媒体（webhook library.new / item.updated 触发）
+   *
+   * 按 ItemId 反查该媒体，只处理这一部剧/电影（剧集/季自动解析到整部剧），
+   * 复用 processShow 的 Episode 表同步逻辑，避免每次新入库都触发全库最近扫描。
+   * 返回 false 表示已有扫描在运行、配置缺失或媒体不存在（不做全库回退，交给定时扫描兜底）。
+   */
+  public async processMediaItem(itemId: string): Promise<boolean> {
+    const settings = getSettings();
+
+    if (
+      settings.main.mediaServerType != MediaServerType.JELLYFIN &&
+      settings.main.mediaServerType != MediaServerType.EMBY
+    ) {
+      return false;
+    }
+
+    if (this.running) {
+      return false;
+    }
+
+    const sessionId = this.startRun();
+
+    try {
+      const userRepository = getRepository(User);
+      const admin = await userRepository.findOne({
+        where: { id: 1 },
+        select: ['id', 'jellyfinUserId', 'jellyfinDeviceId'],
+        order: { id: 'ASC' },
+      });
+
+      if (!admin) {
+        this.log('No admin configured. Jellyfin sync skipped.', 'warn');
+        return false;
+      }
+
+      this.jfClient = new JellyfinAPI(
+        getHostname(),
+        settings.jellyfin.apiKey,
+        admin.jellyfinDeviceId
+      );
+      this.jfClient.setUserId(admin.jellyfinUserId ?? '');
+
+      this.libraries = settings.jellyfin.libraries.filter(
+        (library) => library.enabled
+      );
+      this.processedAnidbSeason = new Map();
+
+      const item = await this.jfClient.getItemData(itemId);
+      if (!item?.Id) {
+        this.log(
+          `No item found for Id: ${itemId}. Skipping targeted refresh`,
+          'warn'
+        );
+        return false;
+      }
+
+      this.log(
+        `Precisely refreshing media item: ${item.Name ?? itemId} (${item.Type})`,
+        'info'
+      );
+
+      if (item.Type === 'Movie') {
+        await this.processJellyfinMovie(item);
+      } else if (
+        item.Type === 'Series' ||
+        item.Type === 'Season' ||
+        item.Type === 'Episode'
+      ) {
+        // 剧集/季/单集统一走剧集处理（内部按 SeriesId 解析到整部剧）
+        await this.processJellyfinShow(item);
+      } else {
+        this.log(
+          `Unsupported item type for targeted refresh: ${item.Type}`,
+          'debug'
+        );
+      }
+
+      this.log('Targeted media refresh complete', 'info');
+      return true;
+    } catch (e) {
+      this.log('Targeted media refresh failed', 'error', {
+        errorMessage: e instanceof Error ? e.message : 'Unknown error',
+      });
+      return false;
+    } finally {
+      this.endRun(sessionId);
+    }
+  }
+
   public status(): JellyfinSyncStatus {
     return {
       running: this.running,
