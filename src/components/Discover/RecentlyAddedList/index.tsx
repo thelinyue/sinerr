@@ -6,7 +6,7 @@ import defineMessages from '@app/utils/defineMessages';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
@@ -40,6 +40,8 @@ const isMovie = (title: MovieDetails | TvDetails): title is MovieDetails =>
 const RecentCard = ({ item }: { item: RecentItem }) => {
   const intl = useIntl();
   const { ref, inView } = useInView({ triggerOnce: true });
+  // 背景图加载失败/超时时回退到默认渐变
+  const [imgError, setImgError] = useState(false);
   const url =
     item.media.mediaType === 'movie'
       ? `/api/v1/movie/${item.media.tmdbId}`
@@ -49,6 +51,11 @@ const RecentCard = ({ item }: { item: RecentItem }) => {
     item.media.mediaType === 'movie'
       ? `/movie/${item.media.tmdbId}`
       : `/tv/${item.media.tmdbId}`;
+
+  // 标题懒加载完成后重置错误态
+  useEffect(() => {
+    setImgError(false);
+  }, [title?.backdropPath]);
 
   const latest = item.newEpisodes.reduce(
     (best, ep) =>
@@ -90,7 +97,7 @@ const RecentCard = ({ item }: { item: RecentItem }) => {
   return (
     <Link href={href} className="block" ref={ref as never}>
       <div className="relative overflow-hidden rounded-xl ring-1 ring-gray-700">
-        {title?.backdropPath ? (
+        {title?.backdropPath && !imgError ? (
           <div className="relative aspect-video">
             <CachedImage
               type="tmdb"
@@ -98,6 +105,7 @@ const RecentCard = ({ item }: { item: RecentItem }) => {
               alt=""
               fill
               className="object-cover"
+              onError={() => setImgError(true)}
             />
           </div>
         ) : (
