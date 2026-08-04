@@ -1,5 +1,5 @@
 import TheMovieDb from '@server/api/themoviedb';
-import { MediaRequestStatus } from '@server/constants/media';
+import { MediaRequestStatus, type MediaType } from '@server/constants/media';
 import { getRepository } from '@server/datasource';
 import Issue from '@server/entity/Issue';
 import { MediaRequest } from '@server/entity/MediaRequest';
@@ -7,6 +7,8 @@ import MediaReview from '@server/entity/MediaReview';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
+import type { MediaRequestBody } from '@server/interfaces/api/requestInterfaces';
+import { Permission } from '@server/lib/permissions';
 import { getRecentlyAdded } from '@server/lib/recentlyAdded';
 
 interface McpTool {
@@ -21,6 +23,7 @@ interface McpTool {
  * MCP 工具集（Sinerr 2.0 模块 9）
  *
  * 只读工具：搜索媒体 / 查请求 / 查动态 / 查用户 / 最近添加。
+ * 写工具：发起请求 / 更新请求状态 / 删除请求（管理员级）。
  * 令牌鉴权（Bearer 复用「应用程序密钥」apiKey），管理员级访问。
  */
 
@@ -252,6 +255,160 @@ const listRecentlyAdded: McpTool = {
   },
 };
 
+/** 解析操作人（缺省管理员 id=1），返回 null 表示用户不存在 */
+async function resolveActor(userIdRaw: unknown): Promise<User | null> {
+  const userId = Number(userIdRaw ?? 1);
+  if (!Number.isInteger(userId)) return null;
+  return getRepository(User).findOne({ where: { id: userId } });
+}
+
+const requestMedia: McpTool = {
+  name: 'request_media',
+  title: '发起请求',
+  description: '提交影视请求（电影/剧集，可指定季；写操作，需管理员密钥）',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      mediaType: {
+        type: 'string',
+        enum: ['movie', 'tv'],
+        description: '媒体类型',
+      },
+      tmdbId: { type: 'number', description: 'TMDB id' },
+      seasons: {
+        type: 'array',
+        items: { type: 'number' },
+        description: '剧集：请求的季号，缺省请求全部季',
+      },
+      userId: { type: 'number', description: '提交人用户 id，缺省为管理员' },
+    },
+    required: ['mediaType', 'tmdbId'],
+  },
+  handler: async (args) => {
+    const mediaType = String(args.mediaType);
+    if (mediaType !== 'movie' && mediaType !== 'tv') {
+      return { success: false, error: 'mediaType 必须是 movie 或 tv' };
+    }
+    const actor = await resolveActor(args.userId);
+    if (!actor) {
+      return { success: false, error: `操作人用户不存在` };
+    }
+
+    const body: MediaRequestBody = {
+      mediaType: mediaType as MediaType,
+      mediaId: Number(args.tmdbId),
+      userId: actor.id,
+      seasons:
+        mediaType === 'tv'
+          ? Array.isArray(args.seasons) && args.seasons.length > 0
+            ? (args.seasons as number[])
+            : 'all'
+          : undefined,
+    };
+
+    try {
+      const request = await MediaRequest.request(body, actor);
+      return {
+        success: true,
+        requestId: request.id,
+        status: request.status,
+        tmdbId: request.media?.tmdbId,
+        mediaType: request.media?.mediaType,
+      };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Unknown error',
+      };
+    }
+  },
+};
+
+const updateRequestStatus: McpTool = {
+  name: 'update_request_status',
+  title: '更新请求状态',
+  description: '审批/驳回/转待处理请求（需操作人具备 MANAGE_REQUESTS 权限）',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      requestId: { type: 'number', description: '请求 id' },
+      status: {
+        type: 'string',
+        enum: ['approve', 'decline', 'pending'],
+        description: '目标状态',
+      },
+      userId: { type: 'number', description: '操作人用户 id，缺省为管理员' },
+    },
+    required: ['requestId', 'status'],
+  },
+  handler: async (args) => {
+    const statusMap = {
+      approve: MediaRequestStatus.APPROVED,
+      decline: MediaRequestStatus.DECLINED,
+      pending: MediaRequestStatus.PENDING,
+    } as const;
+    const newStatus = statusMap[String(args.status) as keyof typeof statusMap];
+    if (!newStatus) {
+      return { success: false, error: 'status 必须是 approve/decline/pending' };
+    }
+    const actor = await resolveActor(args.userId);
+    if (!actor) {
+      return { success: false, error: `操作人用户不存在` };
+    }
+    if (!actor.hasPermission(Permission.MANAGE_REQUESTS)) {
+      return { success: false, error: '操作人缺少 MANAGE_REQUESTS 权限' };
+    }
+
+    const request = await getRepository(MediaRequest).findOne({
+      where: { id: Number(args.requestId) },
+      relations: { requestedBy: true, modifiedBy: true },
+    });
+    if (!request) {
+      return { success: false, error: '请求不存在' };
+    }
+    request.status = newStatus;
+    request.modifiedBy = actor;
+    await getRepository(MediaRequest).save(request);
+
+    return { success: true, requestId: request.id, status: request.status };
+  },
+};
+
+const deleteRequest: McpTool = {
+  name: 'delete_request',
+  title: '删除请求',
+  description: '删除媒体请求（管理员，或请求人删除自己的待处理请求）',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      requestId: { type: 'number', description: '请求 id' },
+      userId: { type: 'number', description: '操作人用户 id，缺省为管理员' },
+    },
+    required: ['requestId'],
+  },
+  handler: async (args) => {
+    const actor = await resolveActor(args.userId);
+    if (!actor) {
+      return { success: false, error: `操作人用户不存在` };
+    }
+    const request = await getRepository(MediaRequest).findOne({
+      where: { id: Number(args.requestId) },
+      relations: { requestedBy: true },
+    });
+    if (!request) {
+      return { success: false, error: '请求不存在' };
+    }
+    if (
+      !actor.hasPermission(Permission.MANAGE_REQUESTS) &&
+      request.requestedBy.id !== actor.id
+    ) {
+      return { success: false, error: '无权限删除该请求' };
+    }
+    await getRepository(MediaRequest).remove(request);
+    return { success: true, requestId: Number(args.requestId) };
+  },
+};
+
 export const mcpTools: McpTool[] = [
   searchMedia,
   listRequests,
@@ -260,6 +417,9 @@ export const mcpTools: McpTool[] = [
   listUsers,
   getUser,
   listRecentlyAdded,
+  requestMedia,
+  updateRequestStatus,
+  deleteRequest,
 ];
 
 /**
