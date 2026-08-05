@@ -198,7 +198,7 @@ const UserProfile = () => {
       </div>
 
       {/* 吸顶 Tab */}
-      <div className="sticky top-0 z-50 -mx-6 bg-gray-900/95 px-6 backdrop-blur sm:mx-0 sm:px-0">
+      <div className="sticky top-0 z-50 -mx-4 bg-gray-900/95 px-4 backdrop-blur">
         <div className="flex">
           <button
             type="button"
