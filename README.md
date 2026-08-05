@@ -86,6 +86,10 @@ docker compose up -d
 
 访问 `http://localhost:5055` 完成初始化配置。
 
+## 功能使用文档
+
+完整的功能与操作说明见：[功能使用指南](docs/using-sinerr/feature-guide.md)
+
 ## 功能特性
 
 - 完整的 Jellyfin/Emby 集成，支持用户导入与管理
