@@ -154,6 +154,144 @@ components:
         createdAt:
           type: string
           format: date-time
+    WatchedItem:
+      type: object
+      properties:
+        tmdbId:
+          type: number
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        playCount:
+          type: number
+          description: Play count (watched episode count for series).
+        playDurationSeconds:
+          type: number
+          description: Total play duration in seconds.
+        completed:
+          type: boolean
+          nullable: true
+          description: Whether the title was finished.
+        watchedCount:
+          type: number
+          nullable: true
+          description: Watched episode count (series only).
+        totalCount:
+          type: number
+          nullable: true
+          description: Total episode count (series only).
+        watchedPercent:
+          type: number
+          nullable: true
+          description: Watched episode percentage 0-100 (series only).
+        rating:
+          type: number
+          nullable: true
+          description: The user's local rating 1-5, if any.
+    UserWatched:
+      type: object
+      properties:
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedItem'
+    ReportMonthItem:
+      type: object
+      properties:
+        tmdbId:
+          type: number
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        playCount:
+          type: number
+        playDurationSeconds:
+          type: number
+    ReportMonth:
+      type: object
+      properties:
+        month:
+          type: number
+          example: 1
+        playCount:
+          type: number
+        playDurationSeconds:
+          type: number
+        titleCount:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportMonthItem'
+    UserReport:
+      type: object
+      properties:
+        year:
+          type: number
+        totalSeconds:
+          type: number
+        playCount:
+          type: number
+        watchedTitles:
+          type: number
+        movieTitles:
+          type: number
+        tvTitles:
+          type: number
+        topItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportMonthItem'
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportMonth'
+    UserActivityItem:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [watch, update, request]
+        createdAt:
+          type: string
+          format: date-time
+        media:
+          type: object
+          properties:
+            tmdbId:
+              type: number
+            mediaType:
+              type: string
+              enum: [movie, tv]
+        completed:
+          type: boolean
+          nullable: true
+        durationSeconds:
+          type: number
+          nullable: true
+        seasonNumber:
+          type: number
+          nullable: true
+        episodeNumber:
+          type: number
+          nullable: true
+        episodeCount:
+          type: number
+          nullable: true
+        requestStatus:
+          type: number
+          nullable: true
+    UserActivity:
+      type: object
+      properties:
+        pageInfo:
+          $ref: '#/components/schemas/PageInfo'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserActivityItem'
     UserAchievements:
       type: object
       properties:
@@ -4289,6 +4427,110 @@ paths:
                 $ref: '#/components/schemas/PlaybackProgress'
         '403':
           description: Not permitted to view this user's playback data
+  /user/{userId}/watched:
+    get:
+      summary: Get user watched titles
+      description: |
+        Returns the titles a user has watched (movies and series), aggregated from
+        the Playback Reporting plugin (PlaybackActivity table) and mapped to local
+        tmdbId values. Includes play count, duration, series progress and the user's
+        local rating when available.
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: take
+          required: false
+          schema:
+            type: number
+        - in: query
+          name: skip
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Watched titles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWatched'
+        '403':
+          description: Not permitted to view this user's watched titles
+  /user/{userId}/report:
+    get:
+      summary: Get user watch report
+      description: |
+        Returns yearly watch statistics for a user: total duration, play count,
+        distinct titles (movie / series breakdown), a leaderboard of top titles and
+        per-month drill-down. Data comes from the Playback Reporting plugin.
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: year
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Yearly watch report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserReport'
+        '403':
+          description: Not permitted to view this user's watch report
+  /user/{userId}/activity:
+    get:
+      summary: Get user activity timeline
+      description: |
+        Returns a merged timeline of the user's recent activity: playback events,
+        media update events (from recently-added aggregation of titles the user
+        requested or supported) and request events, newest first.
+
+        Visible to the user themselves or users with `MANAGE_USERS` / `MANAGE_REQUESTS`.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: take
+          required: false
+          schema:
+            type: number
+        - in: query
+          name: skip
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Activity timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActivity'
+        '403':
+          description: Not permitted to view this user's activity
   /user/{userId}/achievements:
     get:
       summary: Get user achievements

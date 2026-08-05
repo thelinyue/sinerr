@@ -1,20 +1,17 @@
-import CachedImage from '@app/components/Common/CachedImage';
 import ImageFader from '@app/components/Common/ImageFader';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import ProgressCircle from '@app/components/Common/ProgressCircle';
 import RequestCard from '@app/components/RequestCard';
-import Slider from '@app/components/Slider';
-import Achievements from '@app/components/UserProfile/Achievements';
+import ActivityTimeline from '@app/components/UserProfile/ActivityTimeline';
 import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
+import WatchedSection from '@app/components/UserProfile/WatchedSection';
 import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
-import { isMovie } from '@app/utils/media';
-import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import type {
   QuotaResponse,
-  RecentlyWatchedItem,
+  UserActivityResponse,
   UserRequestsResponse,
   UserWatchTimeResponse,
 } from '@server/interfaces/api/userInterfaces';
@@ -27,23 +24,25 @@ import { useIntl } from 'react-intl';
 import useSWR from 'swr';
 
 const messages = defineMessages('components.UserProfile', {
-  recentrequests: 'Recent Requests',
-  limit: '{remaining} of {limit}',
-  requestsperdays: '{limit} remaining',
-  unlimited: 'Unlimited',
+  overview: 'Overview',
+  watched: 'Watched',
+  requests: 'Requests',
+  stats: 'Stats',
+  activity: 'Activity',
+  viewAll: 'View All',
   totalrequests: 'Total Requests',
-  pastdays: '{type} (past {days} days)',
+  watchtimeTotal: 'Total Watch Time',
+  watchtimeToday: 'Watched Today',
   movierequests: 'Movie Requests',
   seriesrequest: 'Series Requests',
-  watchtimeToday: 'Watched Today',
-  watchtimeTotal: 'Total Watch Time',
-  recentlyWatched: 'Recently Watched',
-  noRecentlyWatched: 'No playback records yet.',
-  followingTitle: '追更中',
-  followingUpdatedTo: '已更新至 第{season}季 第{episode}集',
-  followingFinished: '已完结 · 全{seasons}季 · {episodes}集',
-  followingShowMore: '展开全部（{count}）',
-  followingCollapse: '收起',
+  pastdays: '{type} (past {days} days)',
+  requestsperdays: '{limit} remaining',
+  limit: '{remaining} of {limit}',
+  unlimited: 'Unlimited',
+  loadMore: 'Load More',
+  activityEmpty: 'No recent activity.',
+  recentrequests: 'Recent Requests',
+  noRequests: 'No requests yet.',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -58,144 +57,7 @@ const formatDuration = (totalSeconds: number): string => {
   return `${display}h`;
 };
 
-/** 最近观看单条海报卡片：懒加载媒体详情拿海报与标题 */
-const RecentlyWatchedCard = ({ item }: { item: RecentlyWatchedItem }) => {
-  const url =
-    item.mediaType === 'movie'
-      ? `/api/v1/movie/${item.tmdbId}`
-      : `/api/v1/tv/${item.tmdbId}`;
-  const { data } = useSWR<MovieDetails | TvDetails>(url);
-  const href =
-    item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
-  const title = data ? (isMovie(data) ? data.title : data.name) : null;
-
-  return (
-    <Link href={href} className="w-28 flex-shrink-0 sm:w-32">
-      <div className="relative">
-        <CachedImage
-          type="tmdb"
-          src={
-            data?.posterPath
-              ? `https://image.tmdb.org/t/p/w342${data.posterPath}`
-              : '/images/sinerr_poster_not_found.png'
-          }
-          alt=""
-          className="h-40 w-28 rounded-lg object-cover sm:h-48 sm:w-32"
-          width={128}
-          height={192}
-        />
-        {item.completed && (
-          <span className="absolute right-1 top-1 rounded bg-green-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            ✓
-          </span>
-        )}
-        {item.mediaType === 'tv' && item.episodeNumber != null && (
-          <span className="absolute bottom-1 left-1 rounded bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-200">
-            {item.seasonNumber != null
-              ? `S${item.seasonNumber}E${item.episodeNumber}`
-              : `E${item.episodeNumber}`}
-          </span>
-        )}
-      </div>
-      <div className="mt-1 line-clamp-1 text-xs text-gray-300">{title}</div>
-    </Link>
-  );
-};
-
-/** 追更中单条：懒加载标题 + 更新状态行（已更新至 / 已完结） */
-const FollowingUpdateRow = ({
-  item,
-}: {
-  item: {
-    media: { id: number; tmdbId: number; mediaType: 'movie' | 'tv' };
-    episodeCount: number;
-    newEpisodes: {
-      seasonNumber: number;
-      episodeNumber: number;
-      addedAt: string;
-    }[];
-  };
-}) => {
-  const intl = useIntl();
-  const url =
-    item.media.mediaType === 'movie'
-      ? `/api/v1/movie/${item.media.tmdbId}`
-      : `/api/v1/tv/${item.media.tmdbId}`;
-  const { data } = useSWR<MovieDetails | TvDetails>(url);
-  const href =
-    item.media.mediaType === 'movie'
-      ? `/movie/${item.media.tmdbId}`
-      : `/tv/${item.media.tmdbId}`;
-  const title = data ? (isMovie(data) ? data.title : data.name) : null;
-
-  const latest = item.newEpisodes.reduce(
-    (best, ep) =>
-      !best ||
-      ep.seasonNumber > best.seasonNumber ||
-      (ep.seasonNumber === best.seasonNumber &&
-        ep.episodeNumber > best.episodeNumber)
-        ? ep
-        : best,
-    null as { seasonNumber: number; episodeNumber: number } | null
-  );
-  const isEnded =
-    item.media.mediaType === 'tv' &&
-    !!data &&
-    !isMovie(data) &&
-    (data.status === 'Ended' || data.status === 'Canceled');
-
-  let state: React.ReactNode = null;
-  if (item.media.mediaType === 'tv' && data && !isMovie(data) && isEnded) {
-    state = (
-      <span className="text-xs text-gray-300">
-        {intl.formatMessage(messages.followingFinished, {
-          seasons: data.numberOfSeasons,
-          episodes: data.numberOfEpisodes,
-        })}
-      </span>
-    );
-  } else if (latest) {
-    state = (
-      <span className="text-xs text-emerald-300">
-        {intl.formatMessage(messages.followingUpdatedTo, {
-          season: latest.seasonNumber,
-          episode: latest.episodeNumber,
-        })}
-        {item.episodeCount > 0 && (
-          <span className="ml-1.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px]">
-            ＋{item.episodeCount} 集
-          </span>
-        )}
-      </span>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-800/60 p-3 transition hover:bg-gray-700/50"
-    >
-      <CachedImage
-        type="tmdb"
-        src={
-          data?.posterPath
-            ? `https://image.tmdb.org/t/p/w154${data.posterPath}`
-            : '/images/sinerr_poster_not_found.png'
-        }
-        alt=""
-        className="h-14 w-10 flex-shrink-0 rounded-md object-cover"
-        width={64}
-        height={96}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-white">
-          {title ?? '\u00A0'}
-        </div>
-        <div className="mt-0.5">{state}</div>
-      </div>
-    </Link>
-  );
-};
+type Tab = 'overview' | 'watched' | 'requests';
 
 const UserProfile = () => {
   const intl = useIntl();
@@ -207,17 +69,19 @@ const UserProfile = () => {
   const [availableTitles, setAvailableTitles] = useState<
     Record<number, MediaTitle>
   >({});
-  const [showAllFollowing, setShowAllFollowing] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [activitySkip, setActivitySkip] = useState(0);
 
-  const { data: requests, error: requestError } = useSWR<UserRequestsResponse>(
+  // 请求 Tab：本人 + REQUEST_VIEW 可见
+  const canViewRequests =
     user &&
-      (user.id === currentUser?.id ||
-        currentHasPermission(
-          [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
-          { type: 'or' }
-        ))
-      ? `/api/v1/user/${user?.id}/requests?take=10&skip=0`
-      : null
+    (user.id === currentUser?.id ||
+      currentHasPermission(
+        [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
+        { type: 'or' }
+      ));
+  const { data: requests } = useSWR<UserRequestsResponse>(
+    canViewRequests ? `/api/v1/user/${user?.id}/requests?take=10&skip=0` : null
   );
   const { data: quota } = useSWR<QuotaResponse>(
     user &&
@@ -239,37 +103,14 @@ const UserProfile = () => {
       ? `/api/v1/user/${user.id}/watchtime`
       : null
   );
-
-  const { data: recentlyWatched } = useSWR<{ results: RecentlyWatchedItem[] }>(
+  const { data: activity } = useSWR<UserActivityResponse>(
     user &&
       (user.id === currentUser?.id ||
         currentHasPermission(
           [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
           { type: 'or' }
         ))
-      ? `/api/v1/user/${user.id}/recently-watched`
-      : null
-  );
-
-  // 追更中（模块 4-F2）：本人 + REQUEST_VIEW 可见
-  const { data: followingUpdates } = useSWR<{
-    results: {
-      media: { id: number; tmdbId: number; mediaType: 'movie' | 'tv' };
-      episodeCount: number;
-      newEpisodes: {
-        seasonNumber: number;
-        episodeNumber: number;
-        addedAt: string;
-      }[];
-    }[];
-  }>(
-    user &&
-      (user.id === currentUser?.id ||
-        currentHasPermission(
-          [Permission.MANAGE_USERS, Permission.REQUEST_VIEW],
-          { type: 'or' }
-        ))
-      ? `/api/v1/user/${user.id}/following-updates?days=7&take=20`
+      ? `/api/v1/user/${user.id}/activity?take=10&skip=${activitySkip}`
       : null
   );
 
@@ -285,6 +126,8 @@ const UserProfile = () => {
 
   useEffect(() => {
     setAvailableTitles({});
+    setActiveTab('overview');
+    setActivitySkip(0);
   }, [user?.id]);
 
   if (!user && !error) {
@@ -295,8 +138,15 @@ const UserProfile = () => {
     return <ErrorPage statusCode={404} />;
   }
 
+  const tabClass = (tab: Tab) =>
+    `flex-1 border-b-2 px-1 py-3 text-center text-sm font-medium transition ${
+      activeTab === tab
+        ? 'border-indigo-500 text-white'
+        : 'border-transparent text-gray-400 hover:text-gray-200'
+    }`;
+
   return (
-    <>
+    <div className="min-h-screen">
       <PageTitle title={user.displayName} />
       {Object.keys(availableTitles).length > 0 && (
         <div className="absolute -top-16 left-0 right-0 z-0 h-96">
@@ -314,272 +164,253 @@ const UserProfile = () => {
         </div>
       )}
       <ProfileHeader user={user} />
-      <Achievements userId={user.id} />
-      {quota &&
-        (user.id === currentUser?.id ||
-          currentHasPermission(
-            [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
-            { type: 'and' }
-          )) && (
-          <div className="relative z-40">
-            <dl className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
-              <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
-                <dt className="truncate text-sm font-bold text-gray-300">
-                  {intl.formatMessage(messages.totalrequests)}
-                </dt>
-                <dd className="mt-1 text-3xl font-semibold text-white">
-                  <Link
-                    href={
-                      currentHasPermission(
-                        [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
-                        { type: 'or' }
-                      )
-                        ? `/users/${user?.id}/requests?filter=all`
-                        : '/requests'
-                    }
-                  >
-                    {intl.formatNumber(user.requestCount ?? 0)}
-                  </Link>
-                </dd>
-              </div>
-              <div
-                className={`overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ${
-                  quota.movie.restricted
-                    ? 'bg-gradient-to-t from-red-900 to-transparent ring-red-500'
-                    : 'ring-gray-700'
-                } sm:p-6`}
-              >
-                <dt
-                  className={`truncate text-sm font-bold ${
-                    quota.movie.restricted ? 'text-red-500' : 'text-gray-300'
-                  }`}
-                >
-                  {quota.movie.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.movierequests),
-                        days: quota?.movie.days,
-                      })
-                    : intl.formatMessage(messages.movierequests)}
-                </dt>
-                <dd
-                  className={`mt-1 flex items-center text-sm ${
-                    quota.movie.restricted ? 'text-red-500' : 'text-white'
-                  }`}
-                >
-                  {quota.movie.limit ? (
-                    <>
-                      <ProgressCircle
-                        progress={Math.round(
-                          ((quota?.movie.remaining ?? 0) /
-                            (quota?.movie.limit ?? 1)) *
-                            100
-                        )}
-                        useHeatLevel
-                        className="mr-2 h-8 w-8"
-                      />
-                      <div>
-                        {intl.formatMessage(messages.requestsperdays, {
-                          limit: (
-                            <span className="text-3xl font-semibold">
-                              {intl.formatMessage(messages.limit, {
-                                remaining: quota.movie.remaining,
-                                limit: quota.movie.limit,
-                              })}
-                            </span>
-                          ),
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-3xl font-semibold">
-                      {intl.formatMessage(messages.unlimited)}
-                    </span>
-                  )}
-                </dd>
-              </div>
-              <div
-                className={`overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ${
-                  quota.tv.restricted
-                    ? 'bg-gradient-to-t from-red-900 to-transparent ring-red-500'
-                    : 'ring-gray-700'
-                } sm:p-6`}
-              >
-                <dt
-                  className={`truncate text-sm font-bold ${
-                    quota.tv.restricted ? 'text-red-500' : 'text-gray-300'
-                  }`}
-                >
-                  {quota.tv.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.seriesrequest),
-                        days: quota?.tv.days,
-                      })
-                    : intl.formatMessage(messages.seriesrequest)}
-                </dt>
-                <dd
-                  className={`mt-1 flex items-center text-sm ${
-                    quota.tv.restricted ? 'text-red-500' : 'text-white'
-                  }`}
-                >
-                  {quota.tv.limit ? (
-                    <>
-                      <ProgressCircle
-                        progress={Math.round(
-                          ((quota?.tv.remaining ?? 0) /
-                            (quota?.tv.limit ?? 1)) *
-                            100
-                        )}
-                        useHeatLevel
-                        className="mr-2 h-8 w-8"
-                      />
-                      <div>
-                        {intl.formatMessage(messages.requestsperdays, {
-                          limit: (
-                            <span className="text-3xl font-semibold">
-                              {intl.formatMessage(messages.limit, {
-                                remaining: quota.tv.remaining,
-                                limit: quota.tv.limit,
-                              })}
-                            </span>
-                          ),
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-3xl font-semibold">
-                      {intl.formatMessage(messages.unlimited)}
-                    </span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
-      {watchTime &&
-        (user.id === currentUser?.id ||
-          currentHasPermission(
-            [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
-            { type: 'or' }
-          )) && (
-          <div className="relative z-40">
-            <dl className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
-                <dt className="truncate text-sm font-bold text-gray-300">
-                  {intl.formatMessage(messages.watchtimeToday)}
-                </dt>
-                <dd className="mt-1 text-3xl font-semibold text-white">
-                  {formatDuration(watchTime.todaySeconds)}
-                </dd>
-              </div>
-              <div className="overflow-hidden rounded-lg bg-gray-800/50 px-4 py-5 shadow ring-1 ring-gray-700 sm:p-6">
-                <dt className="truncate text-sm font-bold text-gray-300">
-                  {intl.formatMessage(messages.watchtimeTotal)}
-                </dt>
-                <dd className="mt-1 text-3xl font-semibold text-white">
-                  {formatDuration(watchTime.totalSeconds)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
-      {(user.id === currentUser?.id ||
-        currentHasPermission(
-          [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
-          { type: 'or' }
-        )) &&
-        (!requests || !!requests.results.length) &&
-        !requestError && (
-          <>
-            <div className="slider-header">
-              <Link
-                href={
-                  currentHasPermission(
-                    [Permission.MANAGE_REQUESTS, Permission.REQUEST_VIEW],
-                    { type: 'or' }
-                  )
-                    ? `/users/${user?.id}/requests?filter=all`
-                    : '/requests'
-                }
-                className="slider-title"
-              >
-                <span>{intl.formatMessage(messages.recentrequests)}</span>
-                <ArrowRightCircleIcon />
-              </Link>
-            </div>
-            <Slider
-              sliderKey="requests"
-              isLoading={!requests}
-              items={(requests?.results ?? []).map((request) => (
-                <RequestCard
-                  key={`request-slider-item-${request.id}`}
-                  request={request}
-                  onTitleData={updateAvailableTitles}
-                />
-              ))}
-              placeholder={<RequestCard.Placeholder />}
-            />
-          </>
-        )}
 
-      {recentlyWatched && !!recentlyWatched.results.length && (
-        <div className="relative z-40 mt-8">
-          <div className="slider-header">
-            <div className="slider-title">
-              <span>{intl.formatMessage(messages.recentlyWatched)}</span>
+      {/* 关键数据带（Hero band） */}
+      <div className="relative z-40 -mt-6 mb-8">
+        <div className="mx-4 flex items-center justify-between rounded-2xl border border-gray-700 bg-gray-800/80 px-6 py-4 backdrop-blur">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-white">
+              {intl.formatNumber(user.requestCount ?? 0)}
+            </div>
+            <div className="mt-0.5 text-xs text-gray-400">
+              {intl.formatMessage(messages.totalrequests)}
             </div>
           </div>
-          <Slider
-            sliderKey="recently-watched"
-            isLoading={!recentlyWatched}
-            isEmpty={recentlyWatched.results.length === 0}
-            emptyMessage={intl.formatMessage(messages.noRecentlyWatched)}
-            items={recentlyWatched.results.map((item) => (
-              <RecentlyWatchedCard
-                key={`recently-watched-${item.mediaType}-${item.tmdbId}`}
-                item={item}
-              />
-            ))}
-            placeholder={
-              <div className="h-40 w-28 animate-pulse rounded-lg bg-gray-800 sm:h-48 sm:w-32" />
-            }
-          />
+          <div className="h-10 w-px bg-gray-700" />
+          <div className="text-center">
+            <div className="text-2xl font-bold text-white">
+              {watchTime ? formatDuration(watchTime.totalSeconds) : '--'}
+            </div>
+            <div className="mt-0.5 text-xs text-gray-400">
+              {intl.formatMessage(messages.watchtimeTotal)}
+            </div>
+          </div>
+          <div className="h-10 w-px bg-gray-700" />
+          <div className="text-center">
+            <div className="text-2xl font-bold text-white">
+              {watchTime ? formatDuration(watchTime.todaySeconds) : '--'}
+            </div>
+            <div className="mt-0.5 text-xs text-gray-400">
+              {intl.formatMessage(messages.watchtimeToday)}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {followingUpdates && !!followingUpdates.results.length && (
-        <div className="relative z-40 mt-8">
-          <div className="slider-header">
-            <div className="slider-title">
-              <span>{intl.formatMessage(messages.followingTitle)}</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {(showAllFollowing
-              ? followingUpdates.results
-              : followingUpdates.results.slice(0, 3)
-            ).map((item) => (
-              <FollowingUpdateRow
-                key={`following-${item.media.tmdbId}`}
-                item={item}
-              />
-            ))}
-          </div>
-          {followingUpdates.results.length > 3 && (
+      {/* 吸顶 Tab */}
+      <div className="sticky top-0 z-50 -mx-6 bg-gray-900/95 px-6 backdrop-blur sm:mx-0 sm:px-0">
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={tabClass('overview')}
+          >
+            {intl.formatMessage(messages.overview)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('watched')}
+            className={tabClass('watched')}
+          >
+            {intl.formatMessage(messages.watched)}
+          </button>
+          {canViewRequests && (
             <button
               type="button"
-              onClick={() => setShowAllFollowing((v) => !v)}
-              className="mt-3 w-full rounded-lg bg-gray-800 px-4 py-2 text-xs font-medium text-gray-300 ring-1 ring-gray-700 hover:bg-gray-700"
+              onClick={() => setActiveTab('requests')}
+              className={tabClass('requests')}
             >
-              {showAllFollowing
-                ? intl.formatMessage(messages.followingCollapse)
-                : intl.formatMessage(messages.followingShowMore, {
-                    count: followingUpdates.results.length - 3,
-                  })}
+              {intl.formatMessage(messages.requests)}
             </button>
           )}
         </div>
+      </div>
+
+      {/* ===== 总览 ===== */}
+      {activeTab === 'overview' && (
+        <div className="mt-6 space-y-8">
+          {quota && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
+                <dt className="truncate text-xs font-bold text-gray-400">
+                  {quota.movie.limit
+                    ? intl.formatMessage(messages.pastdays, {
+                        type: intl.formatMessage(messages.movierequests),
+                        days: quota.movie.days,
+                      })
+                    : intl.formatMessage(messages.movierequests)}
+                </dt>
+                <dd className="mt-1 flex items-center gap-3">
+                  <ProgressCircle
+                    progress={
+                      quota.movie.limit
+                        ? Math.round(
+                            ((quota.movie.remaining ?? 0) /
+                              (quota.movie.limit ?? 1)) *
+                              100
+                          )
+                        : 100
+                    }
+                    useHeatLevel
+                    className="h-8 w-8"
+                  />
+                  <span
+                    className={`text-lg font-semibold ${
+                      quota.movie.restricted ? 'text-red-500' : 'text-white'
+                    }`}
+                  >
+                    {quota.movie.limit
+                      ? intl.formatMessage(messages.limit, {
+                          remaining: quota.movie.remaining,
+                          limit: quota.movie.limit,
+                        })
+                      : intl.formatMessage(messages.unlimited)}
+                  </span>
+                </dd>
+              </div>
+              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
+                <dt className="truncate text-xs font-bold text-gray-400">
+                  {quota.tv.limit
+                    ? intl.formatMessage(messages.pastdays, {
+                        type: intl.formatMessage(messages.seriesrequest),
+                        days: quota.tv.days,
+                      })
+                    : intl.formatMessage(messages.seriesrequest)}
+                </dt>
+                <dd className="mt-1 flex items-center gap-3">
+                  <ProgressCircle
+                    progress={
+                      quota.tv.limit
+                        ? Math.round(
+                            ((quota.tv.remaining ?? 0) /
+                              (quota.tv.limit ?? 1)) *
+                              100
+                          )
+                        : 100
+                    }
+                    useHeatLevel
+                    className="h-8 w-8"
+                  />
+                  <span
+                    className={`text-lg font-semibold ${
+                      quota.tv.restricted ? 'text-red-500' : 'text-white'
+                    }`}
+                  >
+                    {quota.tv.limit
+                      ? intl.formatMessage(messages.limit, {
+                          remaining: quota.tv.remaining,
+                          limit: quota.tv.limit,
+                        })
+                      : intl.formatMessage(messages.unlimited)}
+                  </span>
+                </dd>
+              </div>
+              <Link
+                href={`/users/${user.id}/report`}
+                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-sm font-semibold text-white transition hover:from-indigo-500 hover:to-purple-500"
+              >
+                {intl.formatMessage(messages.viewAll)} →
+              </Link>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* 动态时间线 */}
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-white">
+                  {intl.formatMessage(messages.activity)}
+                </h2>
+              </div>
+              {!activity ? (
+                <LoadingSpinner />
+              ) : activity.results.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-400">
+                  {intl.formatMessage(messages.activityEmpty)}
+                </div>
+              ) : (
+                <>
+                  <ActivityTimeline items={activity.results} />
+                  {activity.results.length >= 10 && (
+                    <button
+                      type="button"
+                      onClick={() => setActivitySkip(activitySkip + 10)}
+                      className="mt-2 w-full rounded-lg bg-gray-800 px-4 py-2 text-xs font-medium text-gray-300 ring-1 ring-gray-700 hover:bg-gray-700"
+                    >
+                      {intl.formatMessage(messages.loadMore)}
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+
+            {/* 最近请求 */}
+            {canViewRequests && requests && !!requests.results.length && (
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-white">
+                    {intl.formatMessage(messages.recentrequests)}
+                  </h2>
+                  <Link
+                    href={`/users/${user.id}/requests`}
+                    className="text-xs text-indigo-400 hover:text-indigo-300"
+                  >
+                    {intl.formatMessage(messages.viewAll)} →
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {requests.results.map((request) => (
+                    <RequestCard
+                      key={`request-${request.id}`}
+                      request={request}
+                      onTitleData={updateAvailableTitles}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
       )}
-    </>
+
+      {/* ===== 已看 ===== */}
+      {activeTab === 'watched' && (
+        <div className="mt-6">
+          <WatchedSection userId={user.id} />
+        </div>
+      )}
+
+      {/* ===== 请求 ===== */}
+      {activeTab === 'requests' && canViewRequests && (
+        <div className="mt-6">
+          {requests && !!requests.results.length ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {requests.results.map((request) => (
+                  <RequestCard
+                    key={`request-${request.id}`}
+                    request={request}
+                    onTitleData={updateAvailableTitles}
+                  />
+                ))}
+              </div>
+              <div className="mt-6 text-center">
+                <Link
+                  href={`/users/${user.id}/requests`}
+                  className="inline-block rounded-lg bg-gray-800 px-5 py-2 text-sm text-gray-300 ring-1 ring-gray-700 transition hover:bg-gray-700"
+                >
+                  {intl.formatMessage(messages.viewAll)} →
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="py-12 text-center text-sm text-gray-400">
+              {intl.formatMessage(messages.noRequests)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

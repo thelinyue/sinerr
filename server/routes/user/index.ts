@@ -7,6 +7,7 @@ import Episode from '@server/entity/Episode';
 import Issue from '@server/entity/Issue';
 import Media from '@server/entity/Media';
 import { MediaRequest } from '@server/entity/MediaRequest';
+import MediaReview from '@server/entity/MediaReview';
 import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
@@ -14,12 +15,18 @@ import { UserPushSubscription } from '@server/entity/UserPushSubscription';
 import type { PlaybackProgressResponse } from '@server/interfaces/api/playbackInterfaces';
 import type {
   Achievement,
+  ActivityItem,
   QuotaResponse,
   RecentlyWatchedResponse,
+  ReportMonth,
   UserAchievementsResponse,
+  UserActivityResponse,
+  UserReportResponse,
   UserRequestsResponse,
   UserResultsResponse,
   UserWatchTimeResponse,
+  UserWatchedResponse,
+  WatchedItem,
 } from '@server/interfaces/api/userInterfaces';
 import { Permission, hasPermission } from '@server/lib/permissions';
 import { getRecentlyAdded } from '@server/lib/recentlyAdded';
@@ -1523,5 +1530,617 @@ router.get<
     next({ status: 404, message: e.message });
   }
 });
+
+/**
+ * 已看 grid：实时查询 Playback Reporting 插件（权威），再与本地
+ * Media/Episode/MediaReview 映射补齐 tmdbId / 剧集进度 / 用户评分。
+ *
+ * 可见范围：本人或具备 MANAGE_USERS / MANAGE_REQUESTS 权限。
+ */
+router.get<{ id: string }, UserWatchedResponse>(
+  '/:id/watched',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const targetUser = await getRepository(User).findOneOrFail({
+        where: { id: userId },
+      });
+
+      if (!targetUser.jellyfinUserId) {
+        return res.status(200).json({
+          pageInfo: { pages: 0, pageSize: 0, results: 0, page: 0 },
+          results: [],
+        });
+      }
+
+      const settings = getSettings();
+      const hostname = getHostname();
+      const jellyfinClient = new JellyfinAPI(
+        hostname,
+        settings.jellyfin.apiKey,
+        'BOT_sinerr',
+        settings.main.mediaServerType
+      );
+
+      // 1) 插件权威播放记录（电影 + 单集两类）
+      const [movieActivity, episodeActivity] = await Promise.all([
+        jellyfinClient.getAllUserPlaybackActivity(
+          targetUser.jellyfinUserId,
+          'Movie'
+        ),
+        jellyfinClient.getAllUserPlaybackActivity(
+          targetUser.jellyfinUserId,
+          'Episode'
+        ),
+      ]);
+
+      // 2) 电影：ItemId(=jellyfinMediaId) → Media.tmdbId
+      const movieMediaIds = movieActivity.map((a) => a.ItemId).filter(Boolean);
+      const movieMediaRows = movieMediaIds.length
+        ? await getRepository(Media)
+            .createQueryBuilder('media')
+            .where('media.jellyfinMediaId IN (:...ids)', {
+              ids: movieMediaIds,
+            })
+            .getMany()
+        : [];
+      const movieByJellyfinId = new Map(
+        movieMediaRows.map((m) => [m.jellyfinMediaId, m])
+      );
+
+      // 3) 单集：ItemId(=jellyfinEpisodeId) → Episode(media)
+      const episodeJellyfinIds = episodeActivity
+        .map((a) => a.ItemId)
+        .filter(Boolean);
+      const episodeRows = episodeJellyfinIds.length
+        ? await getRepository(Episode)
+            .createQueryBuilder('episode')
+            .leftJoinAndSelect('episode.media', 'media')
+            .where('episode.jellyfinEpisodeId IN (:...ids)', {
+              ids: episodeJellyfinIds,
+            })
+            .getMany()
+        : [];
+      const episodeByJellyfinId = new Map(
+        episodeRows.map((ep) => [ep.jellyfinEpisodeId, ep])
+      );
+
+      // 4) 本用户评分：tmdbId → rating
+      const reviewRows = await getRepository(MediaReview)
+        .createQueryBuilder('review')
+        .leftJoinAndSelect('review.media', 'media')
+        .where('review.userId = :userId', { userId })
+        .getMany();
+      const ratingByTmdb = new Map<number, number>();
+      for (const review of reviewRows) {
+        if (
+          review.media?.tmdbId != null &&
+          !ratingByTmdb.has(review.media.tmdbId)
+        ) {
+          ratingByTmdb.set(review.media.tmdbId, review.rating);
+        }
+      }
+
+      // 5) 电影聚合
+      const watchedById = new Map<number, WatchedItem>();
+      for (const activity of movieActivity) {
+        const media = movieByJellyfinId.get(activity.ItemId);
+        if (!media) continue;
+        const item: WatchedItem = {
+          tmdbId: media.tmdbId,
+          mediaType: 'movie',
+          playCount: activity.PlayCount,
+          playDurationSeconds: activity.PlayDurationSeconds,
+          rating: ratingByTmdb.get(media.tmdbId) ?? null,
+        };
+        watchedById.set(media.tmdbId, item);
+      }
+
+      // 6) 剧集聚合：先算每部剧的已看集数集合，再查本地总集数
+      const watchedCountByMediaId = new Map<number, number>();
+      const mediaIdSet = new Set<number>();
+      for (const activity of episodeActivity) {
+        const ep = episodeByJellyfinId.get(activity.ItemId);
+        if (!ep?.media?.id) continue;
+        mediaIdSet.add(ep.media.id);
+        watchedCountByMediaId.set(
+          ep.media.id,
+          (watchedCountByMediaId.get(ep.media.id) ?? 0) + 1
+        );
+      }
+
+      const tvMediaRows = mediaIdSet.size
+        ? await getRepository(Media)
+            .createQueryBuilder('media')
+            .where('media.id IN (:...ids)', { ids: [...mediaIdSet] })
+            .getMany()
+        : [];
+      const totalCountByMediaId = new Map<number, number>();
+      if (mediaIdSet.size) {
+        const countRows = await getRepository(Episode)
+          .createQueryBuilder('episode')
+          .select('episode.mediaId', 'mediaId')
+          .addSelect('COUNT(1)', 'total')
+          .where('episode.mediaId IN (:...ids)', { ids: [...mediaIdSet] })
+          .groupBy('episode.mediaId')
+          .getRawMany<{ mediaId: string; total: string }>();
+        for (const row of countRows) {
+          totalCountByMediaId.set(Number(row.mediaId), Number(row.total));
+        }
+      }
+      for (const media of tvMediaRows) {
+        const watchedCount = watchedCountByMediaId.get(media.id) ?? 0;
+        const totalCount = totalCountByMediaId.get(media.id) ?? 0;
+        watchedById.set(media.tmdbId, {
+          tmdbId: media.tmdbId,
+          mediaType: 'tv',
+          playCount: watchedCount,
+          playDurationSeconds: 0,
+          completed: totalCount > 0 && watchedCount >= totalCount,
+          watchedCount,
+          totalCount,
+          watchedPercent: totalCount
+            ? Math.round((watchedCount / totalCount) * 100)
+            : 0,
+          rating: ratingByTmdb.get(media.tmdbId) ?? null,
+        });
+      }
+
+      // 7) 本地回退：插件为空时用 PlaybackEvent（兼容未装插件的部署）
+      if (watchedById.size === 0) {
+        const events = await getRepository(PlaybackEvent)
+          .createQueryBuilder('event')
+          .leftJoinAndSelect('event.user', 'user')
+          .where('user.id = :userId', { userId })
+          .orderBy('event.createdAt', 'DESC')
+          .take(500)
+          .getMany();
+        const seen = new Set<string>();
+        for (const event of events) {
+          const key =
+            event.mediaType === MediaType.TV
+              ? `tv-${event.tmdbId}`
+              : `movie-${event.tmdbId}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const existing = watchedById.get(event.tmdbId);
+          if (existing) {
+            existing.completed = existing.completed || event.completed;
+            existing.playDurationSeconds += event.durationSeconds;
+            continue;
+          }
+          watchedById.set(event.tmdbId, {
+            tmdbId: event.tmdbId,
+            mediaType: event.mediaType,
+            playCount: 1,
+            playDurationSeconds: event.durationSeconds,
+            completed: event.completed,
+            rating: ratingByTmdb.get(event.tmdbId) ?? null,
+          });
+        }
+      }
+
+      // 8) 排序 + 分页
+      const all = [...watchedById.values()].sort(
+        (a, b) =>
+          b.playCount - a.playCount ||
+          b.playDurationSeconds - a.playDurationSeconds
+      );
+      const take = req.query.take ? Number(req.query.take) : 24;
+      const skip = req.query.skip ? Number(req.query.skip) : 0;
+      const slice = all.slice(skip, skip + take);
+
+      return res.status(200).json({
+        pageInfo: {
+          pages: Math.ceil(all.length / take),
+          pageSize: take,
+          results: all.length,
+          page: Math.floor(skip / take) + 1,
+        },
+        results: slice,
+      });
+    } catch (e) {
+      next({ status: 500, message: e.message });
+    }
+  }
+);
+
+/**
+ * 年度报告：按年份聚合插件播放记录（电影 + 单集），
+ * 输出总时长 / 播放次数 / 去重媒体数 / 金榜 TOP / 按月下钻。
+ *
+ * 可见范围：本人或具备 MANAGE_USERS / MANAGE_REQUESTS 权限。
+ */
+router.get<{ id: string }, UserReportResponse>(
+  '/:id/report',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const targetUser = await getRepository(User).findOneOrFail({
+        where: { id: userId },
+      });
+
+      if (!targetUser.jellyfinUserId) {
+        return res.status(200).json({
+          year: 0,
+          totalSeconds: 0,
+          playCount: 0,
+          watchedTitles: 0,
+          movieTitles: 0,
+          tvTitles: 0,
+          topItems: [],
+          months: [],
+        });
+      }
+
+      const year = req.query.year
+        ? Number(req.query.year)
+        : new Date().getFullYear();
+      const since = new Date(year, 0, 1);
+      const until = new Date(year + 1, 0, 1);
+
+      const settings = getSettings();
+      const hostname = getHostname();
+      const jellyfinClient = new JellyfinAPI(
+        hostname,
+        settings.jellyfin.apiKey,
+        'BOT_sinerr',
+        settings.main.mediaServerType
+      );
+
+      const events = await jellyfinClient.getUserPlaybackEvents(
+        targetUser.jellyfinUserId,
+        since,
+        until
+      );
+      if (events.length === 0) {
+        return res.status(200).json({
+          year,
+          totalSeconds: 0,
+          playCount: 0,
+          watchedTitles: 0,
+          movieTitles: 0,
+          tvTitles: 0,
+          topItems: [],
+          months: [],
+        });
+      }
+
+      // 映射 ItemId → tmdbId（电影走 Media，单集走 Episode）
+      const movieIds = events
+        .filter((e) => e.ItemType === 'Movie')
+        .map((e) => e.ItemId)
+        .filter(Boolean);
+      const episodeIds = events
+        .filter((e) => e.ItemType !== 'Movie')
+        .map((e) => e.ItemId)
+        .filter(Boolean);
+
+      const movieRows = movieIds.length
+        ? await getRepository(Media)
+            .createQueryBuilder('media')
+            .where('media.jellyfinMediaId IN (:...ids)', { ids: movieIds })
+            .getMany()
+        : [];
+      const movieTmdbByJellyfinId = new Map(
+        movieRows.map((m) => [m.jellyfinMediaId, m.tmdbId])
+      );
+      const episodeRows = episodeIds.length
+        ? await getRepository(Episode)
+            .createQueryBuilder('episode')
+            .leftJoinAndSelect('episode.media', 'media')
+            .where('episode.jellyfinEpisodeId IN (:...ids)', {
+              ids: episodeIds,
+            })
+            .getMany()
+        : [];
+      const episodeTmdbByJellyfinId = new Map(
+        episodeRows.map((ep) => [ep.jellyfinEpisodeId, ep.media?.tmdbId])
+      );
+
+      // 逐条解析成 { tmdbId, mediaType, seconds, month }
+      interface ParsedEvent {
+        tmdbId: number;
+        mediaType: 'movie' | 'tv';
+        seconds: number;
+        month: number;
+      }
+      const parsed: ParsedEvent[] = [];
+      for (const event of events) {
+        if (event.ItemType === 'Movie') {
+          const tmdbId = movieTmdbByJellyfinId.get(event.ItemId);
+          if (tmdbId == null) continue;
+          const d = new Date(event.DateCreated);
+          parsed.push({
+            tmdbId,
+            mediaType: 'movie',
+            seconds: event.PlayDurationSeconds,
+            month: isNaN(d.getTime()) ? 0 : d.getMonth() + 1,
+          });
+        } else {
+          const tmdbId = episodeTmdbByJellyfinId.get(event.ItemId);
+          if (tmdbId == null) continue;
+          const d = new Date(event.DateCreated);
+          parsed.push({
+            tmdbId,
+            mediaType: 'tv',
+            seconds: event.PlayDurationSeconds,
+            month: isNaN(d.getTime()) ? 0 : d.getMonth() + 1,
+          });
+        }
+      }
+
+      const totalSeconds = parsed.reduce((sum, e) => sum + e.seconds, 0);
+      const uniqueTitles = new Set(parsed.map((e) => e.tmdbId));
+      const movieTitles = new Set(
+        parsed.filter((e) => e.mediaType === 'movie').map((e) => e.tmdbId)
+      );
+      const tvTitles = new Set(
+        parsed.filter((e) => e.mediaType === 'tv').map((e) => e.tmdbId)
+      );
+
+      // 金榜：按媒体聚合时长，取 TOP
+      const agg = new Map<
+        number,
+        { mediaType: 'movie' | 'tv'; playCount: number; seconds: number }
+      >();
+      for (const event of parsed) {
+        const cur = agg.get(event.tmdbId) ?? {
+          mediaType: event.mediaType,
+          playCount: 0,
+          seconds: 0,
+        };
+        cur.playCount += 1;
+        cur.seconds += event.seconds;
+        agg.set(event.tmdbId, cur);
+      }
+      const topItems = [...agg.entries()]
+        .sort((a, b) => b[1].seconds - a[1].seconds)
+        .slice(0, 3)
+        .map(([tmdbId, v]) => ({
+          tmdbId,
+          mediaType: v.mediaType,
+          playCount: v.playCount,
+          playDurationSeconds: v.seconds,
+        }));
+
+      // 按月下钻
+      const monthsMap = new Map<number, ReportMonth>();
+      for (let m = 1; m <= 12; m++) {
+        monthsMap.set(m, {
+          month: m,
+          playCount: 0,
+          playDurationSeconds: 0,
+          titleCount: 0,
+          items: [],
+        });
+      }
+      const perMonthAgg = new Map<
+        string,
+        { playCount: number; seconds: number }
+      >();
+      for (const event of parsed) {
+        if (event.month === 0) continue;
+        const monthInfo = monthsMap.get(event.month);
+        if (monthInfo) {
+          monthInfo.playCount += 1;
+          monthInfo.playDurationSeconds += event.seconds;
+        }
+        const key = `${event.month}-${event.tmdbId}`;
+        const cur = perMonthAgg.get(key) ?? { playCount: 0, seconds: 0 };
+        cur.playCount += 1;
+        cur.seconds += event.seconds;
+        perMonthAgg.set(key, cur);
+      }
+      for (const event of parsed) {
+        if (event.month === 0) continue;
+        const monthInfo = monthsMap.get(event.month);
+        if (monthInfo) {
+          monthInfo.titleCount = new Set(
+            parsed.filter((e) => e.month === event.month).map((e) => e.tmdbId)
+          ).size;
+        }
+      }
+      for (const [key, v] of perMonthAgg.entries()) {
+        const [monthStr, tmdbIdStr] = key.split('-');
+        const month = Number(monthStr);
+        const tmdbId = Number(tmdbIdStr);
+        const monthInfo = monthsMap.get(month);
+        if (monthInfo) {
+          const event = parsed.find(
+            (e) => e.month === month && e.tmdbId === tmdbId
+          );
+          monthInfo.items.push({
+            tmdbId,
+            mediaType: event?.mediaType ?? 'tv',
+            playCount: v.playCount,
+            playDurationSeconds: v.seconds,
+          });
+        }
+      }
+      for (const monthInfo of monthsMap.values()) {
+        monthInfo.items.sort(
+          (a, b) => b.playDurationSeconds - a.playDurationSeconds
+        );
+      }
+      // 剔除整月无数据的月份
+      const months = [...monthsMap.values()].filter((m) => m.playCount > 0);
+
+      return res.status(200).json({
+        year,
+        totalSeconds,
+        playCount: parsed.length,
+        watchedTitles: uniqueTitles.size,
+        movieTitles: movieTitles.size,
+        tvTitles: tvTitles.size,
+        topItems,
+        months,
+      });
+    } catch (e) {
+      next({ status: 500, message: e.message });
+    }
+  }
+);
+
+/**
+ * 动态时间线：合并「观看 / 剧集更新 / 请求」三源，按时间倒序分页。
+ *
+ * - 观看：PlaybackEvent（webhook 推进，本地）；
+ * - 更新：我请求/声援过的剧最近有新集（recentlyAdded 聚合）；
+ * - 请求：我发起的请求（MediaRequest）。
+ *
+ * 可见范围：本人或具备 MANAGE_USERS / MANAGE_REQUESTS 权限。
+ */
+router.get<{ id: string }, UserActivityResponse>(
+  '/:id/activity',
+  async (req, res, next) => {
+    try {
+      const userId = Number(req.params.id);
+
+      if (
+        userId !== req.user?.id &&
+        !req.user?.hasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        )
+      ) {
+        return next({
+          status: 403,
+          message: 'You do not have permission to view this user.',
+        });
+      }
+
+      const take = req.query.take ? Number(req.query.take) : 10;
+      const skip = req.query.skip ? Number(req.query.skip) : 0;
+
+      // 三源各自取「可能进入本页窗口」的记录（保守取 50）
+      const sourceLimit = Math.min(50, skip + take);
+
+      // 观看源
+      const watchEvents = await getRepository(PlaybackEvent)
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.user', 'user')
+        .where('user.id = :userId', { userId })
+        .orderBy('event.createdAt', 'DESC')
+        .take(sourceLimit)
+        .getMany();
+
+      // 请求源
+      const requestEvents = await getRepository(MediaRequest)
+        .createQueryBuilder('request')
+        .leftJoinAndSelect('request.media', 'media')
+        .leftJoinAndSelect('request.requestedBy', 'requestedBy')
+        .where('requestedBy.id = :userId', { userId })
+        .orderBy('request.createdAt', 'DESC')
+        .take(sourceLimit)
+        .getMany();
+
+      // 更新源：我请求/声援过的剧 + recentlyAdded 聚合
+      const voteRepo = getRepository(RequestVote);
+      const myRequests = await getRepository(MediaRequest)
+        .createQueryBuilder('request')
+        .leftJoinAndSelect('request.media', 'media')
+        .leftJoin('request.requestedBy', 'requestedBy')
+        .where('requestedBy.id = :userId', { userId })
+        .getMany();
+      const myVotes = await voteRepo.find({
+        where: { user: { id: userId } },
+        relations: { request: { media: true } },
+      });
+      const mediaIds = [
+        ...new Set(
+          [
+            ...myRequests.map((r) => r.media?.id),
+            ...myVotes.map((v) => v.request?.media?.id),
+          ].filter((id): id is number => !!id)
+        ),
+      ];
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const { results: updateItems } = await getRecentlyAdded(
+        since,
+        sourceLimit,
+        0,
+        { mediaIds }
+      );
+
+      // 合并 + 排序
+      const items: ActivityItem[] = [];
+      for (const event of watchEvents) {
+        items.push({
+          type: 'watch',
+          createdAt: event.createdAt,
+          media: { tmdbId: event.tmdbId, mediaType: event.mediaType },
+          completed: event.completed,
+          durationSeconds: event.durationSeconds,
+          seasonNumber: event.seasonNumber,
+          episodeNumber: event.episodeNumber,
+        });
+      }
+      for (const request of requestEvents) {
+        items.push({
+          type: 'request',
+          createdAt: request.createdAt,
+          media: {
+            tmdbId: request.media?.tmdbId ?? 0,
+            mediaType: request.media?.mediaType ?? 'movie',
+          },
+          requestStatus: request.status,
+        });
+      }
+      for (const item of updateItems) {
+        items.push({
+          type: 'update',
+          createdAt: item.latestEventAt,
+          media: item.media,
+          episodeCount: item.episodeCount,
+        });
+      }
+
+      items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      const slice = items.slice(skip, skip + take);
+
+      return res.status(200).json({
+        pageInfo: {
+          pages: Math.ceil(items.length / take),
+          pageSize: take,
+          results: items.length,
+          page: Math.floor(skip / take) + 1,
+        },
+        results: slice,
+      });
+    } catch (e) {
+      next({ status: 500, message: e.message });
+    }
+  }
+);
 
 export default router;

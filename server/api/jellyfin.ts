@@ -841,6 +841,158 @@ class JellyfinAPI extends ExternalAPI {
   }
 
   /**
+   * 查询指定用户的「全部」播放明细（模块：用户已看 grid / 年度报告）
+   *
+   * 返回该用户所有播放过的媒体条目（不按 ItemId 过滤），每条含播放次数与累计时长。
+   * 调用方通过 ItemId 与本地 Media.jellyfinMediaId / Episode.jellyfinEpisodeId 映射回 tmdbId。
+   */
+  public async getAllUserPlaybackActivity(
+    userId: string,
+    itemType?: 'Movie' | 'Episode' | 'Series'
+  ): Promise<JellyfinUserPlaybackItem[]> {
+    try {
+      const conditions: string[] = ["UserId = '" + userId + "'"];
+      if (itemType) {
+        conditions.push(`ItemType = '${itemType}'`);
+      }
+
+      const query = [
+        'SELECT ItemId, ItemName, ItemType, COUNT(1) AS PlayCount,',
+        'SUM(PlayDuration - PauseDuration) AS PlayDurationSeconds',
+        'FROM PlaybackActivity',
+        'WHERE ' + conditions.join(' AND '),
+        'GROUP BY ItemId',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      logger.info('Executing all user playback activity query', {
+        label: 'Jellyfin API',
+        userId,
+        query,
+      });
+
+      const response = await this.post<{
+        colums: string[];
+        results: unknown[][];
+        message: string;
+      }>('/user_usage_stats/submit_custom_query', {
+        CustomQueryString: query,
+        ReplaceUserId: false,
+      });
+
+      if (!response?.colums || !response?.results) {
+        logger.warn('All user playback activity returned unexpected format', {
+          label: 'Jellyfin API',
+          responseKeys: response ? Object.keys(response) : 'null',
+          responseType: typeof response,
+        });
+        return [];
+      }
+
+      const colIdx: Record<string, number> = {};
+      response.colums.forEach((col, i) => {
+        colIdx[col] = i;
+      });
+
+      return response.results.map((row) => ({
+        ItemId: String(row[colIdx['ItemId']] ?? ''),
+        ItemName: String(row[colIdx['ItemName']] ?? ''),
+        ItemType: String(row[colIdx['ItemType']] ?? ''),
+        PlayCount: Number(row[colIdx['PlayCount']] ?? 0),
+        PlayDurationSeconds: Number(row[colIdx['PlayDurationSeconds']] ?? 0),
+      }));
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting all user playback activity from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return [];
+    }
+  }
+
+  /**
+   * 查询指定用户在一个时间段内的播放明细（模块：年度报告）
+   *
+   * 返回每条播放记录的 ItemId / ItemType / 净时长 / 日期，不按 ItemId 聚合，
+   * 供调用方按「年 / 月」做下钻统计。
+   */
+  public async getUserPlaybackEvents(
+    userId: string,
+    since?: Date,
+    until?: Date
+  ): Promise<
+    {
+      ItemId: string;
+      ItemType: string;
+      PlayDurationSeconds: number;
+      DateCreated: string;
+    }[]
+  > {
+    try {
+      const conditions: string[] = ["UserId = '" + userId + "'"];
+      if (since) {
+        conditions.push(`DateCreated >= '${since.toISOString()}'`);
+      }
+      if (until) {
+        conditions.push(`DateCreated < '${until.toISOString()}'`);
+      }
+
+      const query = [
+        'SELECT ItemId, ItemType,',
+        '(PlayDuration - PauseDuration) AS PlayDurationSeconds,',
+        'DateCreated',
+        'FROM PlaybackActivity',
+        'WHERE ' + conditions.join(' AND '),
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      logger.info('Executing user playback events query', {
+        label: 'Jellyfin API',
+        userId,
+        query,
+      });
+
+      const response = await this.post<{
+        colums: string[];
+        results: unknown[][];
+        message: string;
+      }>('/user_usage_stats/submit_custom_query', {
+        CustomQueryString: query,
+        ReplaceUserId: false,
+      });
+
+      if (!response?.colums || !response?.results) {
+        logger.warn('User playback events returned unexpected format', {
+          label: 'Jellyfin API',
+          responseKeys: response ? Object.keys(response) : 'null',
+          responseType: typeof response,
+        });
+        return [];
+      }
+
+      const colIdx: Record<string, number> = {};
+      response.colums.forEach((col, i) => {
+        colIdx[col] = i;
+      });
+
+      return response.results.map((row) => ({
+        ItemId: String(row[colIdx['ItemId']] ?? ''),
+        ItemType: String(row[colIdx['ItemType']] ?? ''),
+        PlayDurationSeconds: Number(row[colIdx['PlayDurationSeconds']] ?? 0),
+        DateCreated: String(row[colIdx['DateCreated']] ?? ''),
+      }));
+    } catch (e) {
+      logger.error(
+        `Something went wrong while getting user playback events from the Jellyfin/Emby server: ${e.message}`,
+        { label: 'Jellyfin API', error: e.response?.status }
+      );
+      return [];
+    }
+  }
+
+  /**
    * 按季聚合的剧集播放进度（模块 3）
    *
    * 调用 Playback Reporting 插件的 series_progress 聚合接口，一次返回每季
