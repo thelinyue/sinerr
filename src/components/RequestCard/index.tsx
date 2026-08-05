@@ -11,6 +11,7 @@ import useToasts from '@app/hooks/useToasts';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
 import { revalidateRequests } from '@app/utils/revalidateRequests';
 import { withProperties } from '@app/utils/typeHelpers';
@@ -52,10 +53,6 @@ const messages = defineMessages('components.RequestCard', {
   voted: 'Remove My Support',
   votesupport: 'Show support for this request',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 const RequestCardPlaceholder = () => {
   return (

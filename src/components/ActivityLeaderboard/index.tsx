@@ -1,13 +1,14 @@
 import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
-import UserAvatar from '@app/components/Common/UserAvatar';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { Transition } from '@headlessui/react';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { useIntl } from 'react-intl';
+import { useInView } from 'react-intersection-observer';
+import { useIntl, type MessageDescriptor } from 'react-intl';
 import useSWR from 'swr';
 
 const messages = defineMessages('components.ActivityLeaderboard', {
@@ -24,7 +25,6 @@ const messages = defineMessages('components.ActivityLeaderboard', {
   rank2: '🥈 第二名',
   rank3: '🥉 第三名',
   close: '关闭',
-  moreWatched: '等 {count} 人看过',
 });
 
 interface WatchedUser {
@@ -44,16 +44,22 @@ interface WatchedItem {
 
 type Filter = 'all' | 'movie' | 'tv';
 
-/** 单个领奖台卡片：横版背景图 + 名次 + 名称 + 观看者头像簇 */
-const PodiumCard = ({ rank, item }: { rank: 1 | 2 | 3; item: WatchedItem }) => {
+/** 单个领奖台卡片：横版背景图 + 名次 + 名称 + 相对人气条（颜色表名次、条长表热度） */
+const PodiumCard = ({
+  rank,
+  item,
+  maxCount,
+}: {
+  rank: 1 | 2 | 3;
+  item: WatchedItem;
+  maxCount: number;
+}) => {
   const intl = useIntl();
   const url =
     item.mediaType === 'movie'
       ? `/api/v1/movie/${item.tmdbId}`
       : `/api/v1/tv/${item.tmdbId}`;
   const { data: title } = useSWR<MovieDetails | TvDetails>(url);
-  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
-    (m as MovieDetails).title !== undefined;
   const name = title ? (isMovie(title) ? title.title : title.name) : null;
   const backdrop = title?.backdropPath
     ? `https://image.tmdb.org/t/p/w780${title.backdropPath}`
@@ -67,6 +73,9 @@ const PodiumCard = ({ rank, item }: { rank: 1 | 2 | 3; item: WatchedItem }) => {
       : rank === 2
         ? intl.formatMessage(messages.rank2)
         : intl.formatMessage(messages.rank3);
+
+  // 人气条相对 Top1 的比例（至少 8% 保证可见）
+  const pct = Math.max(8, Math.round((item.watchCount / maxCount) * 100));
 
   return (
     <a
@@ -119,82 +128,59 @@ const PodiumCard = ({ rank, item }: { rank: 1 | 2 | 3; item: WatchedItem }) => {
           watchers: item.watchers,
         })}
       </div>
-      <div className="mt-1.5 flex justify-center">
-        <AvatarCluster users={item.users} size="sm" />
-      </div>
+      {/* 相对人气条：颜色表名次（金/银/铜），条长表热度（相对 Top1） */}
       <div
-        className={`mx-auto mt-2 h-1.5 w-full rounded-t ${
+        className={`mx-auto mt-2 rounded-t ${
           rank === 1
             ? 'h-2.5 bg-gradient-to-r from-amber-400 to-amber-500'
             : rank === 2
-              ? 'bg-gradient-to-r from-slate-300 to-slate-400'
-              : 'bg-gradient-to-r from-amber-600 to-amber-700'
+              ? 'h-1.5 bg-gradient-to-r from-slate-300 to-slate-400'
+              : 'h-1.5 bg-gradient-to-r from-amber-600 to-amber-700'
         }`}
+        style={{ width: `${pct}%` }}
       />
     </a>
   );
 };
 
-/** 观看者头像簇：悬停显示用户名 */
-const AvatarCluster = ({
-  users,
-  size = 'sm',
+/** 4-8 名列表行（含完整榜单弹窗行，懒加载媒体详情；背景填充表相对人气） */
+const ListRow = ({
+  rank,
+  item,
+  maxCount,
 }: {
-  users: WatchedUser[];
-  size?: 'sm' | 'md';
+  rank: number;
+  item: WatchedItem;
+  maxCount: number;
 }) => {
-  const intl = useIntl();
-  const show = users.slice(0, 4);
-  const more = users.length - show.length;
-
-  return (
-    <div className="flex items-center">
-      {show.map((u) => (
-        <span
-          key={u.id}
-          className="-ml-2 cursor-pointer transition-transform first:ml-0 hover:-translate-y-0.5"
-          style={{ zIndex: 10 }}
-        >
-          <UserAvatar user={u} size={size} className="ring-2 ring-gray-900" />
-          <span className="sr-only">{u.displayName}</span>
-        </span>
-      ))}
-      {more > 0 && (
-        <span
-          className="-ml-2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-700 text-[10px] font-bold text-gray-300 ring-2 ring-gray-900"
-          title={intl.formatMessage(messages.moreWatched, {
-            count: users.length,
-          })}
-        >
-          +{more}
-        </span>
-      )}
-    </div>
-  );
-};
-
-/** 4-8 名列表行 */
-const ListRow = ({ rank, item }: { rank: number; item: WatchedItem }) => {
+  const { ref, inView } = useInView({ triggerOnce: true });
   const url =
     item.mediaType === 'movie'
       ? `/api/v1/movie/${item.tmdbId}`
       : `/api/v1/tv/${item.tmdbId}`;
-  const { data: title } = useSWR<MovieDetails | TvDetails>(url);
-  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
-    (m as MovieDetails).title !== undefined;
+  // 行进入视口才拉取详情，避免弹窗/长列表一次性并发请求
+  const { data: title } = useSWR<MovieDetails | TvDetails>(inView ? url : null);
   const name = title ? (isMovie(title) ? title.title : title.name) : null;
   const backdrop = title?.backdropPath
     ? `https://image.tmdb.org/t/p/w300${title.backdropPath}`
     : null;
   const href =
     item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
+  // 背景填充相对 Top1 的比例
+  const pct = Math.max(5, Math.round((item.watchCount / maxCount) * 100));
 
   return (
     <a
+      ref={ref}
       href={href}
-      className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-gray-700/50"
+      className="relative flex items-center gap-3 overflow-hidden rounded-lg px-2 py-1.5 transition hover:bg-gray-700/50"
     >
-      <span className="w-5 flex-shrink-0 text-center text-sm font-bold text-gray-500">
+      {/* 相对人气背景填充（经典排行榜样式） */}
+      <div
+        className="absolute inset-y-0 left-0 bg-indigo-500/15"
+        style={{ width: `${pct}%` }}
+      />
+      <span className="relative w-5 flex-shrink-0 text-center text-sm font-bold text-gray-500">
         {rank}
       </span>
       <div className="relative h-[30px] w-[52px] flex-shrink-0 overflow-hidden rounded">
@@ -210,11 +196,10 @@ const ListRow = ({ rank, item }: { rank: number; item: WatchedItem }) => {
           <div className="h-full w-full bg-gray-800" />
         )}
       </div>
-      <span className="min-w-0 flex-1 truncate text-sm text-gray-200">
+      <span className="relative min-w-0 flex-1 truncate text-sm text-gray-200">
         {name ?? '\u00A0'}
       </span>
-      <AvatarCluster users={item.users} size="sm" />
-      <span className="flex-shrink-0 text-xs text-gray-400">
+      <span className="relative flex-shrink-0 text-xs text-gray-400">
         {item.watchCount}次
       </span>
     </a>
@@ -248,8 +233,13 @@ const BackdropLayer = ({
         active ? 'opacity-100' : 'opacity-0'
       }`}
     >
+      {/* 仅激活层播放 Ken Burns 缩放，离屏/非激活层不占 GPU */}
       <div
-        className="h-full w-full animate-[leaderboard-kenburns_12s_ease-in-out_infinite_alternate] bg-cover bg-center"
+        className={`h-full w-full bg-cover bg-center ${
+          active
+            ? 'animate-[leaderboard-kenburns_12s_ease-in-out_infinite_alternate]'
+            : ''
+        }`}
         style={{ backgroundImage: `url('${backdrop}')` }}
       />
     </div>
@@ -260,9 +250,11 @@ const BackdropLayer = ({
 const LeaderboardBackground = ({
   items,
   paused,
+  inView,
 }: {
   items: WatchedItem[];
   paused: boolean;
+  inView: boolean;
 }) => {
   const top = items.slice(0, 3);
   // 以内容标识为依赖：筛选变化导致榜单变化时回到第一张
@@ -274,10 +266,11 @@ const LeaderboardBackground = ({
   }, [topKey]);
 
   useEffect(() => {
-    if (paused || top.length < 2) return;
+    // 离屏（inView=false）或暂停时不轮播，避免无谓的状态更新
+    if (paused || !inView || top.length < 2) return;
     const t = setInterval(() => setIdx((i) => (i + 1) % top.length), 8000);
     return () => clearInterval(t);
-  }, [paused, topKey, top.length]);
+  }, [paused, inView, topKey, top.length]);
 
   if (top.length === 0) {
     return null;
@@ -336,6 +329,8 @@ const ActivityLeaderboard = () => {
   const items = data?.results ?? [];
   const top = items.slice(0, 3);
   const rest = items.slice(3);
+  // 人气条基准：Top1 观看次数（相对比例）
+  const maxCount = top[0]?.watchCount ?? 1;
   const allItems = allData?.results ?? [];
 
   return (
@@ -351,7 +346,7 @@ const ActivityLeaderboard = () => {
           inView ? 'animate-[leaderboard-bg-fadein_0.8s_ease-out]' : 'opacity-0'
         }`}
       >
-        <LeaderboardBackground items={top} paused={paused} />
+        <LeaderboardBackground items={top} paused={paused} inView={inView} />
       </div>
       <div className="relative z-10 p-4">
         <div className="flex items-center justify-between">
@@ -365,7 +360,7 @@ const ActivityLeaderboard = () => {
                 ['all', messages.tabAll],
                 ['movie', messages.tabMovie],
                 ['tv', messages.tabTv],
-              ] as [Filter, { id: string }][]
+              ] as [Filter, MessageDescriptor][]
             ).map(([key, label]) => (
               <button
                 key={key}
@@ -380,7 +375,7 @@ const ActivityLeaderboard = () => {
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                {intl.formatMessage(label as never)}
+                {intl.formatMessage(label)}
               </button>
             ))}
           </div>
@@ -416,6 +411,7 @@ const ActivityLeaderboard = () => {
                   key={`${item.mediaType}-${item.tmdbId}`}
                   rank={rank}
                   item={item}
+                  maxCount={maxCount}
                 />
               ))}
           </div>
@@ -428,6 +424,7 @@ const ActivityLeaderboard = () => {
                 key={`${item.mediaType}-${item.tmdbId}`}
                 rank={i + 4}
                 item={item}
+                maxCount={maxCount}
               />
             ))}
           </div>
@@ -487,6 +484,7 @@ const ActivityLeaderboard = () => {
                       key={`${item.mediaType}-${item.tmdbId}`}
                       rank={i + 1}
                       item={item}
+                      maxCount={allItems[0]?.watchCount ?? 1}
                     />
                   ))}
                 </div>

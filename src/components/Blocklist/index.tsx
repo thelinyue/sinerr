@@ -14,6 +14,7 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -55,10 +56,6 @@ enum Filter {
   MANUAL = 'manual',
   BLOCKLISTEDTAGS = 'blocklistedTags',
 }
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 const Blocklist = () => {
   const [currentPageSize, setCurrentPageSize] = useState<number>(10);

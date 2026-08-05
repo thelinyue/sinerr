@@ -8,6 +8,7 @@ import { notifyActivityRead } from '@app/hooks/useActivityUnreadCount';
 import type { User } from '@app/hooks/useUser';
 import { useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import {
   ExclamationTriangleIcon,
   HeartIcon,
@@ -65,10 +66,6 @@ const messages = defineMessages('components.ActivityList', {
   watchedFor: 'watched {duration}',
   minutes: '{count} min',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 interface ActivityFeedItemProps {
   item: ActivityItem;

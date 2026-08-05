@@ -15,6 +15,7 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { Transition } from '@headlessui/react';
 import {
   ChatBubbleOvalLeftEllipsisIcon,
@@ -71,10 +72,6 @@ const messages = defineMessages('components.IssueDetails', {
   unknownissuetype: 'Unknown',
   commentplaceholder: 'Add a comment…',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 const IssueDetails = () => {
   const { addToast } = useToasts();

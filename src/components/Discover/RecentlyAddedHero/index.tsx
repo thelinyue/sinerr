@@ -2,6 +2,7 @@ import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
@@ -12,8 +13,9 @@ import { useIntl } from 'react-intl';
 import useSWR from 'swr';
 
 const messages = defineMessages('components.Discover.RecentlyAddedHero', {
-  updatedTo: '已更新至 第{season}季 第{episode}集',
+  updatedTo: '已更新至 第{episode}集',
   finished: '已完结 · 全{seasons}季 · {episodes}集',
+  updatedSeason: '第{season}季',
   newEpisodes: '＋{count} 集',
   noResults: '暂无最近添加',
   viewAll: '查看全部',
@@ -33,9 +35,6 @@ interface RecentlyAddedItem {
   latestEventAt: string;
   voteCount: number;
 }
-
-const isMovie = (title: MovieDetails | TvDetails): title is MovieDetails =>
-  (title as MovieDetails).title !== undefined;
 
 /** 最新更新点：季最大优先，其次集最大（四处共用，决策 32） */
 const computeLatestPoint = (newEpisodes: NewEpisodeRef[]) => {
@@ -95,8 +94,8 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
       : `/tv/${item.media.tmdbId}`;
 
   let stateLine: React.ReactNode = null;
-  if (item.media.mediaType === 'tv' && title) {
-    if (isEnded && !isMovie(title)) {
+  if (item.media.mediaType === 'tv' && title && !isMovie(title)) {
+    if (isEnded) {
       stateLine = (
         <div className="mt-3 flex items-center gap-2 sm:mt-4">
           <svg
@@ -132,7 +131,6 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
           </svg>
           <span className="text-xs text-white/80 sm:text-sm">
             {intl.formatMessage(messages.updatedTo, {
-              season: latestPoint.season,
               episode: latestPoint.episode,
             })}
           </span>
@@ -154,6 +152,7 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
               src={`https://image.tmdb.org/t/p/w1280${title.backdropPath}`}
               alt=""
               fill
+              priority={active}
               className="object-cover"
               onError={() => setImgError(true)}
             />
@@ -173,10 +172,20 @@ const HeroSlide = ({ item, active }: HeroSlideProps) => {
 
         {/* 左下内容区：预留圆点位，避免与圆点碰撞 */}
         <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end p-4 pb-10 sm:p-6 sm:pb-12 lg:p-7">
-          {/* 剧名 + 徽标一行：剧名可截断，徽标（新增集在前、声援在后）紧随其后 */}
+          {/* 剧名 + 季号一行：季号与剧名同排内联（同字号，略降透明度区分），剧名可截断、季号不收缩
+              季号统一显示「最新更新季」：连载剧/已完结剧均为最近更新的那一季 */}
           <div className="flex items-center gap-2">
-            <div className="min-w-0 truncate text-lg font-bold leading-snug text-white drop-shadow sm:text-3xl">
-              {mediaName ?? '\u00A0'}
+            <div className="flex min-w-0 items-baseline gap-x-1.5">
+              <span className="truncate text-lg font-bold leading-snug text-white drop-shadow sm:text-3xl">
+                {mediaName ?? '\u00A0'}
+              </span>
+              {item.media.mediaType === 'tv' && title && latestPoint && (
+                <span className="flex-shrink-0 text-lg font-bold leading-snug text-white/75 drop-shadow sm:text-3xl">
+                  {intl.formatMessage(messages.updatedSeason, {
+                    season: latestPoint.season,
+                  })}
+                </span>
+              )}
             </div>
             {!isEnded && totalNew > 0 && (
               <span className="flex-shrink-0 rounded-full border border-emerald-400/40 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 backdrop-blur sm:text-xs">
@@ -241,6 +250,20 @@ const RecentlyAddedHero = () => {
 
   const items = data?.results ?? [];
 
+  // 离屏门控：进入视口才自动轮播，滚出即停（省电 + 避免回来时 slide 漂移）
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(true);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
   const stop = useCallback(() => {
     if (timer.current) {
       clearInterval(timer.current);
@@ -256,11 +279,11 @@ const RecentlyAddedHero = () => {
   }, [items.length, stop]);
 
   useEffect(() => {
-    if (items.length > 1 && !paused) {
+    if (items.length > 1 && !paused && inView) {
       start();
     }
     return stop;
-  }, [items.length, paused, start, stop]);
+  }, [items.length, paused, inView, start, stop]);
 
   if (!hasPermission(Permission.RECENT_VIEW)) {
     return null;
@@ -285,6 +308,7 @@ const RecentlyAddedHero = () => {
 
   return (
     <div
+      ref={containerRef}
       className="relative mb-6 overflow-hidden rounded-2xl ring-1 ring-gray-700/60"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}

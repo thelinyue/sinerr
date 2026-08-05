@@ -10,6 +10,7 @@ import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
 import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import type {
   QuotaResponse,
@@ -66,8 +67,6 @@ const RecentlyWatchedCard = ({ item }: { item: RecentlyWatchedItem }) => {
   const { data } = useSWR<MovieDetails | TvDetails>(url);
   const href =
     item.mediaType === 'movie' ? `/movie/${item.tmdbId}` : `/tv/${item.tmdbId}`;
-  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
-    (m as MovieDetails).title !== undefined;
   const title = data ? (isMovie(data) ? data.title : data.name) : null;
 
   return (
@@ -127,8 +126,6 @@ const FollowingUpdateRow = ({
     item.media.mediaType === 'movie'
       ? `/movie/${item.media.tmdbId}`
       : `/tv/${item.media.tmdbId}`;
-  const isMovie = (m: MovieDetails | TvDetails): m is MovieDetails =>
-    (m as MovieDetails).title !== undefined;
   const title = data ? (isMovie(data) ? data.title : data.name) : null;
 
   const latest = item.newEpisodes.reduce(

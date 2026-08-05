@@ -7,6 +7,7 @@ import { issueOptions } from '@app/components/IssueModal/constants';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { EyeIcon } from '@heroicons/react/24/solid';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaType } from '@server/constants/media';
@@ -31,10 +32,6 @@ const messages = defineMessages('components.IssueList.IssueItem', {
   unknownissuetype: 'Unknown',
   descriptionpreview: 'Issue Description',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 interface IssueItemProps {
   issue: Issue;

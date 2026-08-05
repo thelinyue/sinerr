@@ -1,4 +1,3 @@
-import ConnectionGuide from '@app/components/Discover/ConnectionGuide';
 import useSearchInput from '@app/hooks/useSearchInput';
 import defineMessages from '@app/utils/defineMessages';
 import { XCircleIcon } from '@heroicons/react/24/outline';
@@ -11,10 +10,9 @@ const messages = defineMessages('components.Layout.SearchInput', {
 
 const SearchInput = () => {
   const intl = useIntl();
-  const { searchValue, searchOpen, setSearchValue, setIsOpen, clear } =
-    useSearchInput();
+  const { searchValue, setSearchValue, setIsOpen, clear } = useSearchInput();
   return (
-    <div className="relative flex flex-1">
+    <div className="flex flex-1">
       <div className="flex w-full">
         <label htmlFor="search_field" className="sr-only">
           Search
@@ -55,23 +53,6 @@ const SearchInput = () => {
           )}
         </div>
       </div>
-      {searchOpen && searchValue === '' && (
-        <>
-          {/* 聚焦遮罩：压暗页面突出观影指南，点击关闭 */}
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- 遮罩用 div 覆盖全屏，点击即关闭 */}
-          <div
-            className="fixed inset-0 z-40 bg-black/40"
-            onClick={() => setIsOpen(false)}
-          />
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- 防止点击引导卡片触发输入框 blur 先行卸载 */}
-          <div
-            className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-y-auto rounded-xl bg-gray-900/95 shadow-2xl ring-1 ring-gray-700 sm:absolute sm:inset-x-0 sm:top-full sm:mt-2 sm:max-w-lg"
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            <ConnectionGuide embedded />
-          </div>
-        </>
-      )}
     </div>
   );
 };

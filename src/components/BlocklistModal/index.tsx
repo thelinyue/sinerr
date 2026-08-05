@@ -1,6 +1,7 @@
 import Modal from '@app/components/Common/Modal';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { Transition } from '@headlessui/react';
 
 import type { Collection } from '@server/models/Collection';
@@ -31,13 +32,6 @@ const isCollection = (
     data !== undefined &&
     (data as Collection).parts !== undefined
   );
-};
-
-const isMovie = (
-  movie: MovieDetails | TvDetails | Collection | null
-): movie is MovieDetails => {
-  if (!movie) return false;
-  return (movie as MovieDetails).title !== undefined;
 };
 
 const BlocklistModal = ({

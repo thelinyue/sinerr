@@ -3,6 +3,7 @@ import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import { Permission, useUser } from '@app/hooks/useUser';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
@@ -32,9 +33,6 @@ interface RecentItem {
 }
 
 const PAGE_SIZE = 20;
-
-const isMovie = (title: MovieDetails | TvDetails): title is MovieDetails =>
-  (title as MovieDetails).title !== undefined;
 
 /** 横版卡片：懒加载详情 + 状态行 */
 const RecentCard = ({ item }: { item: RecentItem }) => {

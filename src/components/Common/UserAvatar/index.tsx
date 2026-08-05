@@ -1,5 +1,5 @@
 import CachedImage from '@app/components/Common/CachedImage';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface UserAvatarProps {
   /** 用户信息；无头像（默认剪影）时回退渐变首字母 */
@@ -56,6 +56,11 @@ const SIZES: Record<string, { box: string; font: string; px: number }> = {
  */
 const UserAvatar = ({ user, size = 'md', className = '' }: UserAvatarProps) => {
   const [imgError, setImgError] = useState(false);
+
+  // 用户身份变化时重置图片错误态，避免复用实例时残留回退
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.avatar]);
 
   const letter = useMemo(() => {
     const raw =

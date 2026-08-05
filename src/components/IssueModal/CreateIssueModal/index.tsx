@@ -4,6 +4,7 @@ import { issueOptions } from '@app/components/IssueModal/constants';
 import useToasts from '@app/hooks/useToasts';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { RadioGroup } from '@headlessui/react';
 import { ArrowRightCircleIcon } from '@heroicons/react/24/solid';
 import { MediaStatus } from '@server/constants/media';
@@ -36,10 +37,6 @@ const messages = defineMessages('components.IssueModal.CreateIssueModal', {
   reportissue: 'Report an Issue',
   submitissue: 'Submit Issue',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 const classNames = (...classes: string[]) => {
   return classes.filter(Boolean).join(' ');

@@ -11,6 +11,7 @@ import useToasts from '@app/hooks/useToasts';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import defineMessages from '@app/utils/defineMessages';
+import { isMovie } from '@app/utils/media';
 import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
 import { revalidateRequests } from '@app/utils/revalidateRequests';
 import {
@@ -53,10 +54,6 @@ const messages = defineMessages('components.RequestList.RequestItem', {
   removemediaerror: 'Something went wrong while removing the media.',
   profileName: 'Profile',
 });
-
-const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
-  return (movie as MovieDetails).title !== undefined;
-};
 
 interface RequestItemErrorProps {
   requestData?: NonFunctionProperties<MediaRequest>;

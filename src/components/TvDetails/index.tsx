@@ -438,9 +438,6 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
             {data.mediaInfo?.tmdbId && (
               <MoviePilotStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />
             )}
-            {data.mediaInfo?.tmdbId && (
-              <MoviePilotStatus tmdbId={data.mediaInfo.tmdbId} mediaType="tv" />
-            )}
           </div>
           <h1 data-testid="media-title">
             {data.name}{' '}
