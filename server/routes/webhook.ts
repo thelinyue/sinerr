@@ -12,6 +12,23 @@ import { Router } from 'express';
 const webhookRoutes = Router();
 
 /**
+ * 从 Webhook 载荷提取播放设备名（多格式兼容）：
+ * - Jellyfin 扁平字段：DeviceName / Device（字符串）
+ * - Emby 嵌套：Device.Name / Session.DeviceName
+ * 取不到返回 undefined。
+ */
+function extractDeviceName(b: PlaybackBody): string | undefined {
+  const raw =
+    b.DeviceName ??
+    (typeof b.Device === 'string' ? b.Device : b.Device?.Name) ??
+    b.Session?.DeviceName;
+  if (typeof raw === 'string' && raw.trim()) {
+    return raw.trim();
+  }
+  return undefined;
+}
+
+/**
  * Emby/Jellyfin Webhook 载荷中的媒体信息
  *
  * 兼容两种格式：
@@ -45,6 +62,10 @@ interface PlaybackBody {
     };
     PositionTicks?: number;
   };
+  // 设备信息（多格式兼容：Jellyfin 扁平 / Emby 嵌套）
+  DeviceName?: string;
+  Device?: { Name?: string } | string;
+  Session?: { DeviceName?: string };
 }
 
 /**
@@ -292,6 +313,7 @@ async function handlePlaybackEvent(
       durationSeconds,
       seasonNumber,
       episodeNumber,
+      deviceName: extractDeviceName(b),
     })
   );
 
@@ -304,6 +326,7 @@ async function handlePlaybackEvent(
     durationSeconds,
     seasonNumber,
     episodeNumber,
+    deviceName: extractDeviceName(b),
     user: user.displayName,
   });
 }

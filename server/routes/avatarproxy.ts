@@ -74,8 +74,7 @@ router.get('/:jellyfinUserId', async (req, res) => {
   const apiKey = settings.jellyfin.apiKey;
 
   if (!apiKey || !hostname) {
-    sendDefaultAvatar(res);
-    return;
+    return res.status(404).send('No avatar');
   }
 
   try {
@@ -95,7 +94,9 @@ router.get('/:jellyfinUserId', async (req, res) => {
       .set('Cache-Control', 'public, max-age=3600')
       .send(Buffer.from(response.data));
   } catch {
-    sendDefaultAvatar(res);
+    // 媒体服务器无该用户真实头像（或不可达）→ 404，
+    // 前端 UserAvatar 的 onError 自动回退渐变首字（有昵称取昵称首字，否则用户名首字）
+    return res.status(404).send('No avatar');
   }
 });
 

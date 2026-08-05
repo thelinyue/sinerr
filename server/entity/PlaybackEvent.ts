@@ -61,6 +61,10 @@ class PlaybackEvent {
   @Column({ type: 'integer', nullable: true })
   public episodeNumber?: number | null;
 
+  /** 播放设备名（来自 Emby/Jellyfin Webhook，取不到为 null） */
+  @Column({ type: 'varchar', nullable: true })
+  public deviceName?: string | null;
+
   @DbAwareColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   public createdAt: Date;
 

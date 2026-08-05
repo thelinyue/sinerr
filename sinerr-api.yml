@@ -1081,6 +1081,10 @@ components:
             episodeNumber:
               type: number
               nullable: true
+            deviceName:
+              type: string
+              nullable: true
+              description: Playback device name (playback records only)
             rating:
               type: number
               description: Star rating 1-5 (review records only)

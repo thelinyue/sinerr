@@ -77,8 +77,13 @@ const UserAvatar = ({ user, size = 'md', className = '' }: UserAvatarProps) => {
     return `linear-gradient(135deg, ${c1}, ${c2})`;
   }, [user?.username, user?.displayName]);
 
+  // 头像仅在「非默认且为可用的图片 URL」时才渲染真实图；
+  // 无效/空值/加载失败一律回退渐变首字（兼容线上脏数据，避免显示破图）
+  const avatarSrc = typeof user?.avatar === 'string' ? user.avatar : '';
+  const isUsableUrl =
+    avatarSrc.startsWith('/') || /^https?:\/\//.test(avatarSrc);
   const hasRealAvatar =
-    !!user?.avatar && user.avatar !== DEFAULT_AVATAR && !imgError;
+    !!avatarSrc && avatarSrc !== DEFAULT_AVATAR && isUsableUrl && !imgError;
   const sizeCfg = SIZES[size] ?? SIZES.md;
 
   if (hasRealAvatar) {

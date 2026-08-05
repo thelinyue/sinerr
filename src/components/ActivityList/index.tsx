@@ -135,6 +135,12 @@ const ActivityFeedItem = ({
           }`
       : null;
 
+  // 播放设备名（播放记录专用，取不到则隐藏）
+  const deviceName =
+    item.type === 'playback' && item.payload.deviceName
+      ? item.payload.deviceName
+      : null;
+
   // 短评星级（1-5）
   const rating =
     item.type === 'review' && item.payload.rating ? item.payload.rating : null;
@@ -223,9 +229,36 @@ const ActivityFeedItem = ({
               {episodeLabel}
             </span>
           )}
-          {playbackDuration && (
-            <span className="text-xs text-gray-400">{playbackDuration}</span>
-          )}
+          <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-gray-400">
+            {(
+              [
+                deviceName && (
+                  <>
+                    <span className="mr-1">📺</span>在{' '}
+                    <span className="font-medium text-emerald-300">
+                      {deviceName}
+                    </span>{' '}
+                    上播放
+                  </>
+                ),
+                playbackDuration,
+                <FormattedRelativeTime
+                  value={Math.floor(
+                    (new Date(item.createdAt).getTime() - Date.now()) / 1000
+                  )}
+                  updateIntervalInSeconds={60}
+                  numeric="auto"
+                />,
+              ] as ReactNode[]
+            )
+              .filter(Boolean)
+              .map((part, i) => (
+                <span key={i} className="whitespace-nowrap">
+                  {i > 0 && <span className="text-gray-500">· </span>}
+                  {part}
+                </span>
+              ))}
+          </span>
         </div>
         {/* 短评内容 + 星级 */}
         {item.type === 'review' && item.payload.message && (
@@ -247,15 +280,6 @@ const ActivityFeedItem = ({
             </span>
           </div>
         )}
-        <div className="mt-1 text-xs text-gray-500 sm:text-sm">
-          <FormattedRelativeTime
-            value={Math.floor(
-              (new Date(item.createdAt).getTime() - Date.now()) / 1000
-            )}
-            updateIntervalInSeconds={60}
-            numeric="auto"
-          />
-        </div>
       </div>
       <div className="flex-shrink-0 text-gray-500">{typeIcon}</div>
     </div>

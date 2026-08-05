@@ -238,6 +238,7 @@ async function collectPlayback(
       durationSeconds: event.durationSeconds,
       seasonNumber: event.seasonNumber,
       episodeNumber: event.episodeNumber,
+      deviceName: event.deviceName,
     },
   }));
 }

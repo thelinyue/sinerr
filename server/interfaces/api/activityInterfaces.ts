@@ -33,6 +33,8 @@ export interface ActivityItem {
     seasonNumber?: number | null;
     /** 播放记录：集号 */
     episodeNumber?: number | null;
+    /** 播放记录：播放设备名 */
+    deviceName?: string | null;
     /** 短评：评分 1-5 */
     rating?: number;
     /** 短评：一句话内容 */
