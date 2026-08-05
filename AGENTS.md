@@ -68,3 +68,27 @@ gh 认证账号：`thelinyue`（`gh auth status`）。
 - `config/settings.json` 被 gitignore（含本地密钥/测试服务器），**不要提交**。
 - 本仓库 `release` 分支是发布分支；`main` 是 CI 的 create-tag 分支。
 - 中文注释与中文提交信息是仓库惯例。
+
+## WSL 本地预览容器维护
+
+两个预览容器（`sinerr-pgapp` :5056 postgres / `sinerr-leaderboard` :5055 sqlite，+ `sinerr-pg` 数据库）运行生产镜像 `sinerr:pgtest`（`node dist/index.js`，构建于 `~/seerr`）。登录：`admin`（sqlite 卷 id 非 1，用 `/api/v1/auth/me` 取真实 id；postgres 卷 id=1）。登录接口字段是 `username` 而非 `email`。
+
+### StatusChecker「请点击下面的按钮，重新加载应用程序」弹窗（阻塞卡死）
+
+**根因**：前端 `next.config.ts` 里 `commitTag: process.env.COMMIT_TAG || 'local'`（默认 `'local'`），后端 `/api/v1/status` 返回容器内 `committag.json` 的 `commitTag`。生产镜像构建时 committag.json 是 `{"commitTag": ""}`（空串），`'' !== 'local'` → `src/components/StatusChecker` 判定「应用已更新」，弹出无法点背景关闭的 Modal，表现为页面一直卡住。
+
+**修复**（两个容器都要执行，各自独立 exec）：
+```bash
+docker exec sinerr-pgapp sh -c 'printf "{ \"commitTag\": \"local\" }" > /app/committag.json'
+docker exec sinerr-leaderboard sh -c 'printf "{ \"commitTag\": \"local\" }" > /app/committag.json'
+docker restart sinerr-pgapp sinerr-leaderboard
+```
+- `committag.json` 必须是合法 JSON（后端 `require()` 解析），`{ commitTag: local }` 会解析失败。
+- 改完后 `/api/v1/status` 应返回 `"commitTag":"local"`。
+- ⚠️ Windows→WSL 传脚本时用 `printf`（sh 的 `echo` 会吞引号），且避免 UTF-8 BOM（`[IO.File]::WriteAllText` 默认无 BOM）。
+
+### 构建缓存陷阱
+
+- `server/tsconfig.json` 有 `incremental: true`，tsc 增量缓存曾导致**编译产物不包含新代码**（旧 dist 残留）。改代码后必须删本机 `dist/` 再 `pnpm build`。
+- Docker 构建上下文被 `.dockerignore` 排除 `dist`/`.next`，改前端/服务端代码后需把 `src`/`server`/`sinerr-api.yml` 同步到 WSL `~/seerr` 再 `docker build`（必要时 `--no-cache`，pnpm 依赖网络不稳时配代理 `--build-arg HTTP_PROXY=http://127.0.0.1:7897`）。
+- 新增 API 路由必须同步补充 `sinerr-api.yml`（express-openapi-validator 校验，缺 spec 会直接 404）。
