@@ -220,6 +220,67 @@ Sinerr 是 PWA，可安装到手机/桌面：
 - 局域网：访问宿主机 IP 即可，如 `http://192.168.11.100:5055`
 - 端口转发 / 反向代理（如 Nginx/Caddy）可对外发布，建议配 HTTPS（`applicationUrl` 指向公网地址）
 
+## 14.1 Docker 环境变量
+
+下表为 Docker 部署支持的全部环境变量（均在 `docker run -e` 或 `compose.yaml` 的 `environment` 中设置）。
+
+### 数据库
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `DB_TYPE` | `sqlite` | 设为 `postgres` 使用 PostgreSQL，否则 SQLite |
+| `DB_HOST` | — | PostgreSQL 主机（`DB_TYPE=postgres` 时必填） |
+| `DB_PORT` | `5432` | PostgreSQL 端口 |
+| `DB_USER` / `DB_PASS` | — | PostgreSQL 用户名 / 密码 |
+| `DB_NAME` | `sinerr` | PostgreSQL 数据库名 |
+| `DB_SOCKET_PATH` | — | 用 Unix Socket 连接（如 Cloud SQL），与 `DB_HOST` 二选一 |
+| `DB_USE_SSL` | `false` | `true` 启用 PostgreSQL SSL |
+| `DB_POOL_SIZE` | — | 连接池大小 |
+| `DB_LOG_QUERIES` | `false` | `true` 输出 SQL 日志 |
+| `CONFIG_DIRECTORY` | 容器内 `/app/config` | 配置目录（settings.json / 数据库 / 日志 / 图片缓存存储位置） |
+
+### 网络与运行
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `PORT` | `5055` | HTTP 监听端口 |
+| `HOST` | 所有接口 | HTTP 监听地址 |
+| `NODE_ENV` | — | `production` 运行生产构建；容器默认已设置，启动时自动执行数据库迁移 |
+| `TZ` | — | 时区（如 `Asia/Shanghai`），影响日志与展示时间 |
+| `LOG_LEVEL` | `debug` | 日志级别（debug / info / warn / error） |
+
+### 第三方 API Key（覆盖内置默认）
+
+| 变量 | 说明 |
+|---|---|
+| `TMDB_API_KEY` | 覆盖内置共享 TMDB key（建议自备） |
+| `TVDB_API_KEY` | 覆盖内置 TVDB key |
+| `ROTTEN_TOMATOES_ALGOLIA_API_KEY` | 覆盖烂番茄评分 key |
+| `API_KEY` | 应用密钥（MCP Bearer / Webhook 鉴权用，覆盖设置页值） |
+| `JELLYFIN_TYPE` | `emby` 表示媒体服务器为 Emby（用于设置迁移），默认 Jellyfin |
+
+### 其他
+
+| 变量 | 说明 |
+|---|---|
+| `GITHUB_TOKEN` | 仅设置页「关于」拉取 GitHub 信息用 |
+
+### 示例（PostgreSQL）
+
+```bash
+docker run -d --name sinerr \
+  -e DB_TYPE=postgres \
+  -e DB_HOST=127.0.0.1 \
+  -e DB_PORT=5432 \
+  -e DB_USER=sinerr \
+  -e DB_PASS=yourpass \
+  -e DB_NAME=sinerr \
+  -e TZ=Asia/Shanghai \
+  -p 5055:5055 \
+  -v sinerr-config:/app/config \
+  thelinyue/sinerr:latest
+```
+
 ## 15. 常见问题
 
 - **更新弹窗「Sinerr 已更新」**：前端构建版本与后端不一致时出现，硬刷新即可；正式版由 CI 传入一致版本号
