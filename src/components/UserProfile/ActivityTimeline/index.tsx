@@ -20,8 +20,9 @@ interface ActivityTimelineProps {
 }
 
 /** 相对时间：1 分钟内「刚刚」，否则分钟/小时/天，超 7 天显示日期 */
-const useRelativeTime = (date: Date): string => {
+const useRelativeTime = (value: Date | string): string => {
   const intl = useIntl();
+  const date = typeof value === 'string' ? new Date(value) : value;
   const diffMs = date.getTime() - Date.now();
   const diffSec = Math.round(diffMs / 1000);
   const absSec = Math.abs(diffSec);
