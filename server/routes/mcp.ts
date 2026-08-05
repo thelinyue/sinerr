@@ -1,5 +1,6 @@
 import { createMcpServer } from '@server/lib/mcp';
 import { getSettings } from '@server/lib/settings';
+import logger from '@server/logger';
 import { Router } from 'express';
 
 const mcpRoutes = Router();
@@ -37,8 +38,9 @@ mcpRoutes.all('/', async (req, res) => {
       transport
     );
     await transport.handleRequest(req, res, req.body);
-  } catch {
+  } catch (e) {
     // 连接已由 transport 接管；此处兜底
+    logger.error('MCP request failed', { message: (e as Error).message });
     if (!res.headersSent) {
       res.status(500).json({ error: 'MCP request failed' });
     }

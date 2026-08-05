@@ -47,6 +47,7 @@ type MediaRequestOptions = {
   'type',
 ])
 @Index('IDX_MEDIA_REQUEST_STATUS_USER', ['status', 'requestedBy'])
+@Index('IDX_MEDIA_REQUEST_CREATED', ['createdAt'])
 export class MediaRequest {
   public static async request(
     requestBody: MediaRequestBody,

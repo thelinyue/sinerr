@@ -22,6 +22,7 @@ import { User } from './User';
 @Index('IDX_MEDIA_REVIEW_MEDIA', ['media'])
 @Index('IDX_MEDIA_REVIEW_USER', ['user'])
 @Index('IDX_MEDIA_REVIEW_TARGET', ['media', 'seasonNumber', 'episodeNumber'])
+@Index('IDX_MEDIA_REVIEW_CREATED', ['createdAt'])
 class MediaReview {
   @PrimaryGeneratedColumn()
   public id: number;

@@ -22,6 +22,13 @@ import { User } from './User';
 @Entity()
 @Index('IDX_PLAYBACK_EVENT_USER', ['user'])
 @Index('IDX_PLAYBACK_EVENT_CREATED', ['createdAt'])
+@Index('IDX_PLAYBACK_DEDUPE', [
+  'user',
+  'tmdbId',
+  'mediaType',
+  'seasonNumber',
+  'episodeNumber',
+])
 class PlaybackEvent {
   @PrimaryGeneratedColumn()
   public id: number;

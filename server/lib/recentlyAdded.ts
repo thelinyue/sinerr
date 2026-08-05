@@ -40,24 +40,54 @@ export async function getRecentlyAdded(
   const mediaRepo = getRepository(Media);
   const episodeRepo = getRepository(Episode);
 
-  // 候选媒体：仅可观看状态（与「最近添加」滑块原语义一致）；可限定 mediaIds（F2 追更中）
-  const mediaQuery = mediaRepo
-    .createQueryBuilder('media')
-    .select([
-      'media.id',
-      'media.tmdbId',
-      'media.mediaType',
-      'media.mediaAddedAt',
-    ])
-    .where('media.status IN (:...statuses)', {
-      statuses: [MediaStatus.AVAILABLE, MediaStatus.PARTIALLY_AVAILABLE],
-    });
-  if (opts?.mediaIds?.length) {
-    mediaQuery.andWhere('media.id IN (:...mediaIds)', {
-      mediaIds: opts.mediaIds,
-    });
+  // 1) 窗口内新增单集（量级小）→ 涉及媒体 id，用于收窄候选集
+  const windowEpisodes = await episodeRepo.find({
+    where: { addedAt: MoreThanOrEqual(since) },
+    relations: { media: true },
+  });
+  const episodeMediaIdSet = new Set<number>();
+  for (const ep of windowEpisodes) {
+    if (ep.media?.id) episodeMediaIdSet.add(ep.media.id);
   }
-  const mediaRows = await mediaQuery.getRawMany();
+
+  // 2) 候选媒体：仅「窗口内新入库（mediaAddedAt >= since）」∪「窗口有新增集的媒体」
+  //    避免拉全量可用媒体 + 巨型 IN（老库场景性能热点），跨库通用
+  const statuses = [MediaStatus.AVAILABLE, MediaStatus.PARTIALLY_AVAILABLE];
+  const selectList = [
+    'media.id',
+    'media.tmdbId',
+    'media.mediaType',
+    'media.mediaAddedAt',
+  ];
+  const aRows = await mediaRepo
+    .createQueryBuilder('media')
+    .select(selectList)
+    .where('media.status IN (:...statuses)', { statuses })
+    .andWhere(
+      'media.mediaAddedAt IS NOT NULL AND media.mediaAddedAt >= :since',
+      {
+        since,
+      }
+    )
+    .getRawMany();
+  const bRows = episodeMediaIdSet.size
+    ? await mediaRepo
+        .createQueryBuilder('media')
+        .select(selectList)
+        .where('media.status IN (:...statuses)', { statuses })
+        .andWhere('media.id IN (:...ids)', { ids: [...episodeMediaIdSet] })
+        .getRawMany()
+    : [];
+
+  const byId = new Map<number, (typeof aRows)[number]>();
+  for (const r of [...aRows, ...bRows]) {
+    if (!byId.has(r.media_id)) byId.set(r.media_id, r);
+  }
+  let mediaRows = [...byId.values()];
+  if (opts?.mediaIds?.length) {
+    const idSet = new Set(opts.mediaIds);
+    mediaRows = mediaRows.filter((r) => idSet.has(r.media_id));
+  }
 
   const mediaList = mediaRows.map((row) => ({
     id: row.media_id as number,
@@ -68,16 +98,10 @@ export async function getRecentlyAdded(
       : null,
   }));
 
-  const mediaIds = mediaList.map((m) => m.id);
-
-  // 时间窗内新增单集（窗口量级小），按 mediaId 分组
-  const episodes = mediaIds.length
-    ? await episodeRepo.find({
-        where: { media: { id: In(mediaIds) }, addedAt: MoreThanOrEqual(since) },
-        relations: { media: true },
-        order: { addedAt: 'DESC' },
-      })
-    : [];
+  const mediaIdSet = new Set(mediaList.map((m) => m.id));
+  const episodes = windowEpisodes.filter(
+    (ep) => ep.media?.id && mediaIdSet.has(ep.media.id)
+  );
 
   const grouped = new Map<number, NewEpisodeRef[]>();
   for (const ep of episodes) {

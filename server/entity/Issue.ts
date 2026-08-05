@@ -16,6 +16,7 @@ import Media from './Media';
 import { User } from './User';
 
 @Entity()
+@Index('IDX_ISSUE_CREATED', ['createdAt'])
 class Issue {
   @PrimaryGeneratedColumn()
   public id: number;

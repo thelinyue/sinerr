@@ -10,6 +10,8 @@ import { User } from '@server/entity/User';
 import type { MediaRequestBody } from '@server/interfaces/api/requestInterfaces';
 import { Permission } from '@server/lib/permissions';
 import { getRecentlyAdded } from '@server/lib/recentlyAdded';
+import { MoreThan } from 'typeorm';
+import { z } from 'zod';
 
 interface McpTool {
   name: string;
@@ -32,9 +34,7 @@ const searchMedia: McpTool = {
   title: '搜索媒体',
   description: '按关键词搜索影视媒体（电影与剧集）',
   inputSchema: {
-    type: 'object',
-    properties: { query: { type: 'string', description: '搜索关键词' } },
-    required: ['query'],
+    query: z.string().describe('搜索关键词'),
   },
   handler: async (args) => {
     const tmdb = new TheMovieDb();
@@ -64,11 +64,8 @@ const listRequests: McpTool = {
   title: '查询请求',
   description: '列出媒体请求（可按状态过滤）',
   inputSchema: {
-    type: 'object',
-    properties: {
-      filter: { type: 'string', description: 'pending/approved/processing 等' },
-      take: { type: 'number', description: '数量，默认 20' },
-    },
+    filter: z.string().optional().describe('pending/approved/processing 等'),
+    take: z.number().optional().describe('数量，默认 20'),
   },
   handler: async (args) => {
     const repo = getRepository(MediaRequest);
@@ -99,9 +96,7 @@ const getRequest: McpTool = {
   title: '查询单个请求',
   description: '按 id 查询单个媒体请求详情',
   inputSchema: {
-    type: 'object',
-    properties: { id: { type: 'number', description: '请求 id' } },
-    required: ['id'],
+    id: z.number().describe('请求 id'),
   },
   handler: async (args) => {
     const request = await getRepository(MediaRequest).findOne({
@@ -127,8 +122,7 @@ const listActivity: McpTool = {
   title: '读取动态',
   description: '读取最近动态（请求/声援/问题/播放/短评）',
   inputSchema: {
-    type: 'object',
-    properties: { take: { type: 'number', description: '数量，默认 20' } },
+    take: z.number().optional().describe('数量，默认 20'),
   },
   handler: async (args) => {
     const take = Number(args.take ?? 20);
@@ -136,7 +130,7 @@ const listActivity: McpTool = {
 
     const [requests, votes, issues, playbacks, reviews] = await Promise.all([
       getRepository(MediaRequest).find({
-        where: { createdAt: { $gt: since } as never },
+        where: { createdAt: MoreThan(since) },
         relations: { requestedBy: true },
         take,
       }),
@@ -195,7 +189,7 @@ const listUsers: McpTool = {
   name: 'list_users',
   title: '用户列表',
   description: '列出全部用户',
-  inputSchema: { type: 'object', properties: {} },
+  inputSchema: {},
   handler: async () => {
     const users = await getRepository(User).find();
     return users.map((u) => ({
@@ -212,9 +206,7 @@ const getUser: McpTool = {
   title: '查询用户',
   description: '按 id 查询单个用户',
   inputSchema: {
-    type: 'object',
-    properties: { id: { type: 'number', description: '用户 id' } },
-    required: ['id'],
+    id: z.number().describe('用户 id'),
   },
   handler: async (args) => {
     const user = await getRepository(User).findOne({
@@ -236,8 +228,7 @@ const listRecentlyAdded: McpTool = {
   title: '最近添加',
   description: '最近添加的影视与剧集更新',
   inputSchema: {
-    type: 'object',
-    properties: { take: { type: 'number', description: '数量，默认 10' } },
+    take: z.number().optional().describe('数量，默认 10'),
   },
   handler: async (args) => {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -267,22 +258,13 @@ const requestMedia: McpTool = {
   title: '发起请求',
   description: '提交影视请求（电影/剧集，可指定季；写操作，需管理员密钥）',
   inputSchema: {
-    type: 'object',
-    properties: {
-      mediaType: {
-        type: 'string',
-        enum: ['movie', 'tv'],
-        description: '媒体类型',
-      },
-      tmdbId: { type: 'number', description: 'TMDB id' },
-      seasons: {
-        type: 'array',
-        items: { type: 'number' },
-        description: '剧集：请求的季号，缺省请求全部季',
-      },
-      userId: { type: 'number', description: '提交人用户 id，缺省为管理员' },
-    },
-    required: ['mediaType', 'tmdbId'],
+    mediaType: z.enum(['movie', 'tv']).describe('媒体类型'),
+    tmdbId: z.number().describe('TMDB id'),
+    seasons: z
+      .array(z.number())
+      .optional()
+      .describe('剧集：请求的季号，缺省请求全部季'),
+    userId: z.number().optional().describe('提交人用户 id，缺省为管理员'),
   },
   handler: async (args) => {
     const mediaType = String(args.mediaType);
@@ -329,17 +311,9 @@ const updateRequestStatus: McpTool = {
   title: '更新请求状态',
   description: '审批/驳回/转待处理请求（需操作人具备 MANAGE_REQUESTS 权限）',
   inputSchema: {
-    type: 'object',
-    properties: {
-      requestId: { type: 'number', description: '请求 id' },
-      status: {
-        type: 'string',
-        enum: ['approve', 'decline', 'pending'],
-        description: '目标状态',
-      },
-      userId: { type: 'number', description: '操作人用户 id，缺省为管理员' },
-    },
-    required: ['requestId', 'status'],
+    requestId: z.number().describe('请求 id'),
+    status: z.enum(['approve', 'decline', 'pending']).describe('目标状态'),
+    userId: z.number().optional().describe('操作人用户 id，缺省为管理员'),
   },
   handler: async (args) => {
     const statusMap = {
@@ -379,12 +353,8 @@ const deleteRequest: McpTool = {
   title: '删除请求',
   description: '删除媒体请求（管理员，或请求人删除自己的待处理请求）',
   inputSchema: {
-    type: 'object',
-    properties: {
-      requestId: { type: 'number', description: '请求 id' },
-      userId: { type: 'number', description: '操作人用户 id，缺省为管理员' },
-    },
-    required: ['requestId'],
+    requestId: z.number().describe('请求 id'),
+    userId: z.number().optional().describe('操作人用户 id，缺省为管理员'),
   },
   handler: async (args) => {
     const actor = await resolveActor(args.userId);

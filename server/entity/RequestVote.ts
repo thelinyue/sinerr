@@ -12,6 +12,7 @@ import { User } from './User';
  */
 @Entity()
 @Index('IDX_REQUEST_VOTE_UNIQUE', ['request', 'user'], { unique: true })
+@Index('IDX_REQUEST_VOTE_CREATED', ['createdAt'])
 class RequestVote {
   @PrimaryGeneratedColumn()
   public id: number;
