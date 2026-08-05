@@ -313,6 +313,37 @@ describe('GET /user/:id/report', () => {
     assert.strictEqual(res.body.totalSeconds, 0);
     assert.strictEqual(res.body.watchedTitles, 0);
   });
+
+  it('falls back to local PlaybackEvent when plugin is unavailable', async () => {
+    const { friend, movie } = await seedUserAndMedia();
+    // 无 jellyfinUserId（跳过插件），但有本地 webhook 播放记录
+    friend.jellyfinUserId = null;
+    await getRepository(User).save(friend);
+    getPlaybackEventsMock.mockImplementation(async () => []);
+
+    const now = new Date();
+    await getRepository(PlaybackEvent).save(
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: movie.tmdbId,
+        mediaType: MediaType.MOVIE,
+        completed: true,
+        durationSeconds: 3600,
+        createdAt: new Date(now.getFullYear(), 0, 15),
+      })
+    );
+
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
+    const res = await agent.get(
+      `/user/${friend.id}/report?year=${now.getFullYear()}`
+    );
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.totalSeconds, 3600);
+    assert.strictEqual(res.body.watchedTitles, 1);
+    assert.strictEqual(res.body.movieTitles, 1);
+    assert.strictEqual(res.body.playCount, 1);
+  });
 });
 
 describe('GET /user/:id/activity', () => {

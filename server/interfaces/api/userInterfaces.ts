@@ -165,6 +165,8 @@ export interface UserReportResponse {
   playCount: number;
   /** 全年去重观看的媒体数 */
   watchedTitles: number;
+  /** 全年看完的媒体数 */
+  completedTitles: number;
   /** 全年观看的电影数 */
   movieTitles: number;
   /** 全年观看的剧集数 */

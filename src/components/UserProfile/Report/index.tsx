@@ -3,6 +3,7 @@ import PageTitle from '@app/components/Common/PageTitle';
 import defineMessages from '@app/utils/defineMessages';
 import { isMovie } from '@app/utils/media';
 import {
+  ArrowDownTrayIcon,
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -27,6 +28,7 @@ const messages = defineMessages('components.UserProfile.Report', {
   totalTime: 'Total Watch Time',
   playCount: 'Play Count',
   watchedTitles: 'Titles',
+  completed: 'Completed',
   series: 'Series',
   movies: 'Movies',
   leaderboard: 'Leaderboard',
@@ -35,6 +37,9 @@ const messages = defineMessages('components.UserProfile.Report', {
   months: 'Months',
   plays: '{count} plays',
   noData: 'No playback data for this year.',
+  export: 'Export as PNG',
+  exportAppTitle: 'Watch Report',
+  exportedAt: 'Generated {date}',
 });
 
 const MONTH_NAMES = [
@@ -58,6 +63,95 @@ const formatDuration = (seconds: number): string => {
   if (hours === 0) return `${mins}m`;
   if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
+};
+
+/** 基于年度数据绘制并下载一张简洁报告卡片（原生 canvas，无外部依赖） */
+const exportReportPng = (
+  year: number,
+  data: UserReportResponse,
+  appTitle: string,
+  generatedLabel: string
+): void => {
+  const W = 800;
+  const H = 520;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // 背景渐变
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#1e1b4b');
+  grad.addColorStop(1, '#4c1d95');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 标题
+  ctx.fillStyle = '#c7d2fe';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`${appTitle} · ${year}`, 48, 64);
+
+  // 总时长
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 64px sans-serif';
+  ctx.fillText(formatDuration(data.totalSeconds), 48, 150);
+  ctx.fillStyle = '#a5b4fc';
+  ctx.font = '18px sans-serif';
+  ctx.fillText(data.totalSeconds > 0 ? generatedLabel : '', 48, 185);
+
+  // 统计
+  const stats: { label: string; value: number }[] = [
+    {
+      label: data.watchedTitles > 0 ? 'Viewed' : '',
+      value: data.watchedTitles,
+    },
+    {
+      label: data.completedTitles > 0 ? 'Completed' : '',
+      value: data.completedTitles,
+    },
+    { label: data.tvTitles > 0 ? 'Series' : '', value: data.tvTitles },
+    { label: data.movieTitles > 0 ? 'Movies' : '', value: data.movieTitles },
+  ];
+  let sx = 48;
+  for (const s of stats) {
+    if (!s.label) continue;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.fillText(String(s.value), sx, 250);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '15px sans-serif';
+    ctx.fillText(s.label, sx, 280);
+    sx += 170;
+  }
+
+  // 金榜
+  if (data.topItems.length > 0) {
+    ctx.fillStyle = '#c7d2fe';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('Leaderboard', 48, 350);
+    data.topItems.forEach((item, i) => {
+      ctx.fillStyle = i === 0 ? '#fbbf24' : i === 1 ? '#cbd5e1' : '#b45309';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText(`${i + 1}.`, 48, 395 + i * 42);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '18px sans-serif';
+      ctx.fillText(`TMDB #${item.tmdbId}`, 90, 395 + i * 42);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '15px sans-serif';
+      ctx.fillText(
+        `${item.playCount} plays · ${formatDuration(item.playDurationSeconds)}`,
+        420,
+        395 + i * 42
+      );
+    });
+  }
+
+  // 下载
+  const link = document.createElement('a');
+  link.download = `watch-report-${year}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 };
 
 /** 金榜/月度条目：懒加载标题 */
@@ -117,6 +211,7 @@ const Report = () => {
   const userId = Number(router.query.userId);
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [activeMonth, setActiveMonth] = useState<number | null>(null);
 
   const { data, error } = useSWR<UserReportResponse>(
     `/api/v1/user/${userId}/report?year=${year}`
@@ -132,6 +227,7 @@ const Report = () => {
     const next = year + delta;
     if (next < currentYear - 5 || next > currentYear) return;
     setYear(next);
+    setActiveMonth(null);
   };
 
   return (
@@ -195,18 +291,18 @@ const Report = () => {
                 <div className="mt-5 flex gap-8">
                   <div>
                     <div className="text-2xl font-bold text-white">
-                      {data.playCount}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {intl.formatMessage(messages.playCount)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-white">
                       {data.watchedTitles}
                     </div>
                     <div className="text-xs text-gray-400">
                       {intl.formatMessage(messages.watchedTitles)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-white">
+                      {data.completedTitles}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {intl.formatMessage(messages.completed)}
                     </div>
                   </div>
                   <div>
@@ -257,14 +353,72 @@ const Report = () => {
               )}
 
               {/* 月份下钻 */}
+              {/* 月份下钻 */}
               <div className="space-y-3">
                 <div className="text-sm font-semibold text-white">
                   {intl.formatMessage(messages.byMonth)}
                 </div>
-                {monthsWithData.map((month) => (
-                  <ReportMonthView key={month.month} month={month} />
-                ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {monthsWithData.map((month) => (
+                    <button
+                      key={month.month}
+                      type="button"
+                      onClick={() => setActiveMonth(month.month)}
+                      className={`rounded-lg px-2 py-2 text-center transition ${
+                        activeMonth === month.month
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">
+                        {intl.formatMessage(messages.monthName, {
+                          month: MONTH_NAMES[month.month - 1],
+                        })}
+                      </div>
+                      <div
+                        className={`text-[10px] ${
+                          activeMonth === month.month
+                            ? 'text-indigo-200'
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        {intl.formatMessage(messages.plays, {
+                          count: month.playCount,
+                        })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {activeMonth != null && (
+                  <ReportMonthView
+                    key={activeMonth}
+                    month={monthsWithData.find((m) => m.month === activeMonth)!}
+                  />
+                )}
               </div>
+
+              {/* 导出 */}
+              <button
+                type="button"
+                onClick={() =>
+                  exportReportPng(
+                    year,
+                    data,
+                    intl.formatMessage(messages.exportAppTitle),
+                    intl.formatMessage(messages.exportedAt, {
+                      date: intl.formatDate(new Date(), {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }),
+                    })
+                  )
+                }
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-500 hover:to-purple-500"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                {intl.formatMessage(messages.export)}
+              </button>
             </div>
           )}
         </>

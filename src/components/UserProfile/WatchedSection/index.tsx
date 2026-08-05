@@ -196,6 +196,10 @@ const WatchedSection = ({ userId }: WatchedSectionProps) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white">
+          {intl.formatMessage(messages.watched)}{' '}
+          <span className="text-gray-400">({data.pageInfo.results})</span>
+        </h3>
         <div className="flex space-x-2">
           {(['all', 'tv', 'movie'] as FilterType[]).map((f) => (
             <button

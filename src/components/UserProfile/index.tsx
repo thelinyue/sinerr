@@ -14,6 +14,7 @@ import type {
   UserActivityResponse,
   UserRequestsResponse,
   UserWatchTimeResponse,
+  UserWatchedResponse,
 } from '@server/interfaces/api/userInterfaces';
 import type { MovieDetails } from '@server/models/Movie';
 import type { TvDetails } from '@server/models/Tv';
@@ -41,8 +42,11 @@ const messages = defineMessages('components.UserProfile', {
   unlimited: 'Unlimited',
   loadMore: 'Load More',
   activityEmpty: 'No recent activity.',
-  recentrequests: 'Recent Requests',
   noRequests: 'No requests yet.',
+  recentrequests: 'Recent Requests',
+  updatedTo: 'Updated to S{season}E{episode}',
+  watchedSeries: 'Watched Series',
+  watchedMovies: 'Watched Movies',
 });
 
 type MediaTitle = MovieDetails | TvDetails;
@@ -111,6 +115,36 @@ const UserProfile = () => {
           { type: 'or' }
         ))
       ? `/api/v1/user/${user.id}/activity?take=10&skip=${activitySkip}`
+      : null
+  );
+  const { data: watchedData } = useSWR<UserWatchedResponse>(
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user.id}/watched?take=500&skip=0`
+      : null
+  );
+  const { data: followingUpdates } = useSWR<{
+    results: {
+      media: { id: number; tmdbId: number; mediaType: 'movie' | 'tv' };
+      episodeCount: number;
+      newEpisodes: {
+        seasonNumber: number;
+        episodeNumber: number;
+        addedAt: string;
+      }[];
+    }[];
+  }>(
+    user &&
+      (user.id === currentUser?.id ||
+        currentHasPermission(
+          [Permission.MANAGE_USERS, Permission.REQUEST_VIEW],
+          { type: 'or' }
+        ))
+      ? `/api/v1/user/${user.id}/following-updates?days=30&take=50`
       : null
   );
 
@@ -188,10 +222,10 @@ const UserProfile = () => {
           <div className="h-10 w-px bg-gray-700" />
           <div className="text-center">
             <div className="text-2xl font-bold text-white">
-              {watchTime ? formatDuration(watchTime.todaySeconds) : '--'}
+              {watchedData ? watchedData.pageInfo.results : '--'}
             </div>
             <div className="mt-0.5 text-xs text-gray-400">
-              {intl.formatMessage(messages.watchtimeToday)}
+              {intl.formatMessage(messages.watched)}
             </div>
           </div>
         </div>
@@ -229,8 +263,42 @@ const UserProfile = () => {
       {/* ===== 总览 ===== */}
       {activeTab === 'overview' && (
         <div className="mt-6 space-y-8">
+          {watchedData && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
+                <dt className="truncate text-xs font-bold text-gray-400">
+                  {intl.formatMessage(messages.watchedSeries)}
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold text-white">
+                  {
+                    watchedData.results.filter((r) => r.mediaType === 'tv')
+                      .length
+                  }
+                </dd>
+              </div>
+              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
+                <dt className="truncate text-xs font-bold text-gray-400">
+                  {intl.formatMessage(messages.watchedMovies)}
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold text-white">
+                  {
+                    watchedData.results.filter((r) => r.mediaType === 'movie')
+                      .length
+                  }
+                </dd>
+              </div>
+              <div className="col-span-2 flex items-center justify-center rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700 sm:col-span-1">
+                <Link
+                  href={`/users/${user.id}/report`}
+                  className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+                >
+                  {intl.formatMessage(messages.viewAll)} →
+                </Link>
+              </div>
+            </div>
+          )}
           {quota && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
                 <dt className="truncate text-xs font-bold text-gray-400">
                   {quota.movie.limit
@@ -305,12 +373,6 @@ const UserProfile = () => {
                   </span>
                 </dd>
               </div>
-              <Link
-                href={`/users/${user.id}/report`}
-                className="flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-sm font-semibold text-white transition hover:from-indigo-500 hover:to-purple-500"
-              >
-                {intl.formatMessage(messages.viewAll)} →
-              </Link>
             </div>
           )}
 
@@ -386,13 +448,41 @@ const UserProfile = () => {
           {requests && !!requests.results.length ? (
             <>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {requests.results.map((request) => (
-                  <RequestCard
-                    key={`request-${request.id}`}
-                    request={request}
-                    onTitleData={updateAvailableTitles}
-                  />
-                ))}
+                {requests.results.map((request) => {
+                  const update = followingUpdates?.results.find(
+                    (u) => u.media.id === request.media?.id
+                  );
+                  return (
+                    <div key={`request-${request.id}`} className="space-y-1.5">
+                      <RequestCard
+                        request={request}
+                        onTitleData={updateAvailableTitles}
+                      />
+                      {update &&
+                        update.episodeCount > 0 &&
+                        update.newEpisodes.length > 0 && (
+                          <p className="px-1 text-xs text-emerald-400">
+                            ↻{' '}
+                            {intl.formatMessage(messages.updatedTo, {
+                              season:
+                                update.newEpisodes[
+                                  update.newEpisodes.length - 1
+                                ].seasonNumber,
+                              episode:
+                                update.newEpisodes[
+                                  update.newEpisodes.length - 1
+                                ].episodeNumber,
+                            })}
+                            {update.episodeCount > 0 && (
+                              <span className="ml-1.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px]">
+                                +{update.episodeCount} 集
+                              </span>
+                            )}
+                          </p>
+                        )}
+                    </div>
+                  );
+                })}
               </div>
               <div className="mt-6 text-center">
                 <Link

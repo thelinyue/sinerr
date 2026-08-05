@@ -12,6 +12,8 @@ const messages = defineMessages('components.UserProfile.ProfileHeader', {
   profile: 'View Profile',
   joindate: 'Joined {joindate}',
   userid: 'User ID: {userid}',
+  adminBadge: 'Admin',
+  userBadge: 'User',
 });
 
 interface ProfileHeaderProps {
@@ -38,7 +40,7 @@ const ProfileHeader = ({ user, isSettingsPage }: ProfileHeaderProps) => {
   }
 
   return (
-    <div className="relative z-40 mb-12 mt-6 lg:flex lg:items-end lg:justify-between lg:space-x-5">
+    <div className="relative z-40 mb-10 mt-6 flex items-start justify-between gap-4">
       <div className="flex items-end justify-items-end space-x-5">
         <div className="flex-shrink-0">
           <div className="relative">
@@ -63,22 +65,33 @@ const ProfileHeader = ({ user, isSettingsPage }: ProfileHeaderProps) => {
             >
               {user.displayName}
             </Link>
-            {user.email && user.displayName.toLowerCase() !== user.email && (
+            {user.username && user.username !== user.displayName && (
               <span className="text-sm text-gray-400 sm:ml-2 sm:text-lg">
-                ({user.email})
+                @{user.username}
               </span>
             )}
           </h1>
-          <p className="text-sm font-medium text-gray-400">
-            {subtextItems.reduce((prev, curr) => (
-              <>
-                {prev} | {curr}
-              </>
-            ))}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {user.permissions & Permission.ADMIN ? (
+              <span className="inline-flex items-center rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
+                {intl.formatMessage(messages.adminBadge)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-gray-700/60 px-2 py-0.5 text-[10px] font-medium text-gray-300">
+                {intl.formatMessage(messages.userBadge)}
+              </span>
+            )}
+            <p className="text-sm font-medium text-gray-400">
+              {subtextItems.reduce((prev, curr) => (
+                <>
+                  {prev} | {curr}
+                </>
+              ))}
+            </p>
+          </div>
         </div>
       </div>
-      <div className="mt-6 flex flex-col-reverse justify-stretch space-y-4 space-y-reverse lg:flex-row lg:justify-end lg:space-x-3 lg:space-y-0 lg:space-x-reverse">
+      <div className="flex flex-shrink-0 items-start space-x-3">
         {(loggedInUser?.id === user.id ||
           (user.id !== 1 && hasPermission(Permission.MANAGE_USERS))) &&
         !isSettingsPage ? (

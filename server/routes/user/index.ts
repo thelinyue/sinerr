@@ -1788,19 +1788,6 @@ router.get<{ id: string }, UserReportResponse>(
         where: { id: userId },
       });
 
-      if (!targetUser.jellyfinUserId) {
-        return res.status(200).json({
-          year: 0,
-          totalSeconds: 0,
-          playCount: 0,
-          watchedTitles: 0,
-          movieTitles: 0,
-          tvTitles: 0,
-          topItems: [],
-          months: [],
-        });
-      }
-
       const year = req.query.year
         ? Number(req.query.year)
         : new Date().getFullYear();
@@ -1816,21 +1803,144 @@ router.get<{ id: string }, UserReportResponse>(
         settings.main.mediaServerType
       );
 
-      const events = await jellyfinClient.getUserPlaybackEvents(
-        targetUser.jellyfinUserId,
-        since,
-        until
-      );
+      const events = targetUser.jellyfinUserId
+        ? await jellyfinClient.getUserPlaybackEvents(
+            targetUser.jellyfinUserId,
+            since,
+            until
+          )
+        : [];
+
+      // 本地回退：插件未安装/无数据时，用 webhook 写入的 PlaybackEvent 聚合，
+      // 保证报告在未装 Playback Reporting 插件的部署下也有内容（与 watched 回退一致）。
       if (events.length === 0) {
+        const localEvents = await getRepository(PlaybackEvent)
+          .createQueryBuilder('event')
+          .leftJoinAndSelect('event.user', 'user')
+          .where('user.id = :userId', { userId })
+          .andWhere('event.createdAt >= :since', { since })
+          .andWhere('event.createdAt < :until', { until })
+          .getMany();
+
+        if (localEvents.length === 0) {
+          return res.status(200).json({
+            year,
+            totalSeconds: 0,
+            playCount: 0,
+            watchedTitles: 0,
+            completedTitles: 0,
+            movieTitles: 0,
+            tvTitles: 0,
+            topItems: [],
+            months: [],
+          });
+        }
+
+        const localParsed = localEvents.map((event) => ({
+          tmdbId: event.tmdbId,
+          mediaType: event.mediaType,
+          seconds: event.durationSeconds,
+          month: event.createdAt ? event.createdAt.getMonth() + 1 : 0,
+        }));
+
+        const localTotal = localParsed.reduce((sum, e) => sum + e.seconds, 0);
+        const localUnique = new Set(localParsed.map((e) => e.tmdbId));
+        const localMovies = new Set(
+          localParsed
+            .filter((e) => e.mediaType === 'movie')
+            .map((e) => e.tmdbId)
+        );
+        const localTv = new Set(
+          localParsed.filter((e) => e.mediaType === 'tv').map((e) => e.tmdbId)
+        );
+        const localAgg = new Map<
+          number,
+          { mediaType: 'movie' | 'tv'; playCount: number; seconds: number }
+        >();
+        for (const event of localParsed) {
+          const cur = localAgg.get(event.tmdbId) ?? {
+            mediaType: event.mediaType,
+            playCount: 0,
+            seconds: 0,
+          };
+          cur.playCount += 1;
+          cur.seconds += event.seconds;
+          localAgg.set(event.tmdbId, cur);
+        }
+        const localTop = [...localAgg.entries()]
+          .sort((a, b) => b[1].seconds - a[1].seconds)
+          .slice(0, 3)
+          .map(([tmdbId, v]) => ({
+            tmdbId,
+            mediaType: v.mediaType,
+            playCount: v.playCount,
+            playDurationSeconds: v.seconds,
+          }));
+
+        const localMonthsMap = new Map<number, ReportMonth>();
+        for (let m = 1; m <= 12; m++) {
+          localMonthsMap.set(m, {
+            month: m,
+            playCount: 0,
+            playDurationSeconds: 0,
+            titleCount: 0,
+            items: [],
+          });
+        }
+        const localPerMonth = new Map<
+          string,
+          { playCount: number; seconds: number }
+        >();
+        for (const event of localParsed) {
+          if (event.month === 0) continue;
+          const monthInfo = localMonthsMap.get(event.month);
+          if (monthInfo) {
+            monthInfo.playCount += 1;
+            monthInfo.playDurationSeconds += event.seconds;
+          }
+          const key = `${event.month}-${event.tmdbId}`;
+          const cur = localPerMonth.get(key) ?? { playCount: 0, seconds: 0 };
+          cur.playCount += 1;
+          cur.seconds += event.seconds;
+          localPerMonth.set(key, cur);
+        }
+        for (const [key, v] of localPerMonth.entries()) {
+          const [mStr, tStr] = key.split('-');
+          const month = Number(mStr);
+          const monthInfo = localMonthsMap.get(month);
+          if (monthInfo) {
+            const sample = localParsed.find(
+              (e) => e.month === month && e.tmdbId === Number(tStr)
+            );
+            monthInfo.items.push({
+              tmdbId: Number(tStr),
+              mediaType: sample?.mediaType ?? 'tv',
+              playCount: v.playCount,
+              playDurationSeconds: v.seconds,
+            });
+            monthInfo.titleCount = new Set(
+              localParsed.filter((e) => e.month === month).map((e) => e.tmdbId)
+            ).size;
+          }
+        }
+        for (const monthInfo of localMonthsMap.values()) {
+          monthInfo.items.sort(
+            (a, b) => b.playDurationSeconds - a.playDurationSeconds
+          );
+        }
+
         return res.status(200).json({
           year,
-          totalSeconds: 0,
-          playCount: 0,
-          watchedTitles: 0,
-          movieTitles: 0,
-          tvTitles: 0,
-          topItems: [],
-          months: [],
+          totalSeconds: localTotal,
+          playCount: localParsed.length,
+          watchedTitles: localUnique.size,
+          completedTitles: new Set(
+            localEvents.filter((e) => e.completed).map((e) => e.tmdbId)
+          ).size,
+          movieTitles: localMovies.size,
+          tvTitles: localTv.size,
+          topItems: localTop,
+          months: [...localMonthsMap.values()].filter((m) => m.playCount > 0),
         });
       }
 
@@ -1994,11 +2104,24 @@ router.get<{ id: string }, UserReportResponse>(
       // 剔除整月无数据的月份
       const months = [...monthsMap.values()].filter((m) => m.playCount > 0);
 
+      // 看完统计：插件无 completed 标记，用本地 webhook PlaybackEvent 补充
+      const completedEvents = await getRepository(PlaybackEvent)
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.user', 'user')
+        .where('user.id = :userId', { userId })
+        .andWhere('event.completed = :completed', { completed: true })
+        .andWhere('event.createdAt >= :since', { since })
+        .andWhere('event.createdAt < :until', { until })
+        .getMany();
+      const completedTitles = new Set(completedEvents.map((e) => e.tmdbId))
+        .size;
+
       return res.status(200).json({
         year,
         totalSeconds,
         playCount: parsed.length,
         watchedTitles: uniqueTitles.size,
+        completedTitles,
         movieTitles: movieTitles.size,
         tvTitles: tvTitles.size,
         topItems,
