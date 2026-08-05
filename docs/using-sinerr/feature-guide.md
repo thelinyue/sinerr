@@ -98,6 +98,64 @@ Sinerr 支持两种登录方式（可在「设置 → 常规」中启用/关闭�
 - 用户详情可查看播放统计（次数 / 时长，来自 Playback Reporting 插件聚合）
 - 隐私：用户可关闭「播放记录可见」，管理员始终可见
 
+## 9.1 Emby / Jellyfin Webhook 配置
+
+在 Emby/Jellyfin 的 **Webhook 插件**中，向 Sinerr 推送以下事件：
+
+- **端点**：`POST /api/v1/webhook/emby?api_key=<应用密钥>`
+- **鉴权**：`api_key` 参数 = 「设置 → 常规 → 应用密钥」
+- **需订阅事件**：`playback.start` / `playback.stop`（播放记录）；`library.new` / `item.updated`（媒体库刷新）
+
+### 载荷格式（两种兼容）
+
+**Jellyfin Webhook 插件（扁平字段）**：
+```json
+{
+  "Event": "playback.stop",
+  "UserId": "媒体服务器用户ID",
+  "Provider_tmdb": "5545",
+  "ProviderIds": { "Tmdb": "5545" },
+  "ItemType": "Movie",
+  "SeasonNumber": 1,
+  "EpisodeNumber": 3,
+  "PlayedToCompletion": true,
+  "DeviceName": "iPhone"
+}
+```
+
+**Emby 官方 Webhooks（嵌套对象）**：
+```json
+{
+  "Event": "playback.stop",
+  "User": { "Id": "媒体服务器用户ID" },
+  "Item": {
+    "Id": "媒体项ID",
+    "Type": "Episode",
+    "IndexNumber": 3,
+    "ParentIndexNumber": 1,
+    "ProviderIds": { "Tmdb": "5545" }
+  },
+  "PlaybackInfo": {
+    "PositionTicks": 2500000000,
+    "MediaSource": { "RunTimeTicks": 2700000000 }
+  },
+  "Device": { "Name": "Chrome (Windows)" },
+  "Session": { "DeviceName": "Apple TV" }
+}
+```
+
+### 字段说明
+
+| 字段 | 说明 |
+|---|---|
+| `Event` | 事件名，仅处理 `playback.start` / `playback.stop` |
+| `UserId` / `User.Id` | 媒体服务器用户 ID（用于关联 Sinerr 用户） |
+| `Provider_tmdb` / `ProviderIds.Tmdb` | TMDB ID（取不到时用 `Item.Id` 反查媒体服务器） |
+| `ItemType` / `Item.Type` | `Movie` / `Episode`（决定电影还是剧集） |
+| `PlaybackInfo.PositionTicks` | 播放位置（1 秒 = 10,000,000 ticks），计算净时长 |
+| `PlayedToCompletion` | 是否看完（决定 `completed`） |
+| 设备名 | 优先级：`DeviceName` → `Device.Name`/`Device`（字符串）→ `Session.DeviceName`；取不到则动态不显示设备 |
+
 ## 10. 用户管理
 
 「设置 → 用户」：
