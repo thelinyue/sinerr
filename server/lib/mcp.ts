@@ -8,6 +8,7 @@ import PlaybackEvent from '@server/entity/PlaybackEvent';
 import RequestVote from '@server/entity/RequestVote';
 import { User } from '@server/entity/User';
 import type { MediaRequestBody } from '@server/interfaces/api/requestInterfaces';
+import { getSubscriptionFeedCache } from '@server/job/refreshSubscriptionFeedCache';
 import { Permission } from '@server/lib/permissions';
 import { getRecentlyAdded } from '@server/lib/recentlyAdded';
 import { MoreThan } from 'typeorm';
@@ -19,6 +20,28 @@ interface McpTool {
   description: string;
   inputSchema: Record<string, unknown>;
   handler: (args: Record<string, unknown>) => Promise<unknown>;
+}
+
+/** 按 tmdbId + 媒体类型查 TMDB 标题（失败返回 null） */
+async function fetchMediaTitle(
+  tmdbId: number | null | undefined,
+  mediaType: string | null | undefined
+): Promise<string | null> {
+  if (!tmdbId) return null;
+  try {
+    const tmdb = new TheMovieDb();
+    if (mediaType === 'tv') {
+      const tv = await tmdb.getTvShow({ tvId: tmdbId });
+      return tv.name ?? null;
+    }
+    if (mediaType === 'movie') {
+      const movie = await tmdb.getMovie({ movieId: tmdbId });
+      return movie.title ?? null;
+    }
+  } catch {
+    // TMDB 查询失败不阻断请求查询
+  }
+  return null;
 }
 
 /**
@@ -80,14 +103,17 @@ const listRequests: McpTool = {
       order: { createdAt: 'DESC' },
       take,
     });
-    return requests.map((r) => ({
-      id: r.id,
-      type: r.type,
-      status: r.status,
-      tmdbId: r.media?.tmdbId,
-      requestedBy: r.requestedBy?.displayName,
-      createdAt: r.createdAt,
-    }));
+    return Promise.all(
+      requests.map(async (r) => ({
+        id: r.id,
+        type: r.type,
+        status: r.status,
+        tmdbId: r.media?.tmdbId,
+        title: await fetchMediaTitle(r.media?.tmdbId, r.media?.mediaType),
+        requestedBy: r.requestedBy?.displayName,
+        createdAt: r.createdAt,
+      }))
+    );
   },
 };
 
@@ -110,6 +136,10 @@ const getRequest: McpTool = {
       type: request.type,
       status: request.status,
       tmdbId: request.media?.tmdbId,
+      title: await fetchMediaTitle(
+        request.media?.tmdbId,
+        request.media?.mediaType
+      ),
       mediaType: request.media?.mediaType,
       requestedBy: request.requestedBy?.displayName,
       createdAt: request.createdAt,
@@ -379,10 +409,111 @@ const deleteRequest: McpTool = {
   },
 };
 
+/** 追剧日历：MoviePilot 订阅中影片未来 7 天的更新（读定时缓存） */
+const getSubscriptionFeed: McpTool = {
+  name: 'get_subscription_feed',
+  title: '追剧日历',
+  description:
+    '返回订阅中影片未来 7 天的更新（MoviePilot 订阅 + TMDB air_date 定时缓存）',
+  inputSchema: {},
+  handler: async () => {
+    const feed = getSubscriptionFeedCache();
+    return feed ?? { generatedAt: 0, entries: [] };
+  },
+};
+
+/** 已看：按用户聚合本地播放记录（PlaybackEvent） */
+const getWatched: McpTool = {
+  name: 'get_watched',
+  title: '查询已看',
+  description: '返回指定用户已看的影片（本地播放记录聚合）',
+  inputSchema: {
+    userId: z.number().describe('用户 id'),
+  },
+  handler: async (args) => {
+    const userId = Number(args.userId);
+    const events = await getRepository(PlaybackEvent)
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.user', 'user')
+      .where('user.id = :userId', { userId })
+      .orderBy('event.createdAt', 'DESC')
+      .getMany();
+    const byTmdb = new Map<
+      number,
+      {
+        mediaType: string;
+        completed: boolean;
+        durationSeconds: number;
+        lastWatchedAt: Date;
+      }
+    >();
+    for (const event of events) {
+      const existing = byTmdb.get(event.tmdbId);
+      if (!existing) {
+        byTmdb.set(event.tmdbId, {
+          mediaType: event.mediaType,
+          completed: event.completed,
+          durationSeconds: event.durationSeconds,
+          lastWatchedAt: event.createdAt,
+        });
+      } else {
+        existing.completed = existing.completed || event.completed;
+        existing.durationSeconds += event.durationSeconds;
+      }
+    }
+    return [...byTmdb.entries()].map(([tmdbId, v]) => ({
+      tmdbId,
+      mediaType: v.mediaType,
+      completed: v.completed,
+      durationSeconds: v.durationSeconds,
+      lastWatchedAt: v.lastWatchedAt,
+    }));
+  },
+};
+
+/** 年度报告：按年聚合本地播放记录 */
+const getReport: McpTool = {
+  name: 'get_report',
+  title: '年度报告',
+  description: '返回指定用户某年的播放统计（总时长/播放次数/看完数等）',
+  inputSchema: {
+    userId: z.number().describe('用户 id'),
+    year: z.number().optional().describe('年份，默认当前年'),
+  },
+  handler: async (args) => {
+    const userId = Number(args.userId);
+    const year = Number(args.year ?? new Date().getFullYear());
+    const since = new Date(year, 0, 1);
+    const until = new Date(year + 1, 0, 1);
+    const events = await getRepository(PlaybackEvent)
+      .createQueryBuilder('event')
+      .leftJoinAndSelect('event.user', 'user')
+      .where('user.id = :userId', { userId })
+      .andWhere('event.createdAt >= :since', { since })
+      .andWhere('event.createdAt < :until', { until })
+      .getMany();
+    const totalSeconds = events.reduce((sum, e) => sum + e.durationSeconds, 0);
+    const uniqueTitles = new Set(events.map((e) => e.tmdbId));
+    const completed = new Set(
+      events.filter((e) => e.completed).map((e) => e.tmdbId)
+    );
+    return {
+      year,
+      totalSeconds,
+      playCount: events.length,
+      watchedTitles: uniqueTitles.size,
+      completedTitles: completed.size,
+    };
+  },
+};
+
 export const mcpTools: McpTool[] = [
   searchMedia,
   listRequests,
   getRequest,
+  getSubscriptionFeed,
+  getWatched,
+  getReport,
   listActivity,
   listUsers,
   getUser,

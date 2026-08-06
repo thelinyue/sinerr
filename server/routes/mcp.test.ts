@@ -72,6 +72,13 @@ describe('MCP endpoint (module 9)', () => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(getSettings().main.mcpEnabled, true);
   });
+
+  it('registers the new read tools', async () => {
+    const names = mcpTools.map((t) => t.name);
+    for (const tool of ['get_subscription_feed', 'get_watched', 'get_report']) {
+      assert.ok(names.includes(tool), `missing tool: ${tool}`);
+    }
+  });
 });
 
 describe('MCP write tools (module 9)', () => {

@@ -186,8 +186,11 @@ Sinerr 提供 **MCP（Model Context Protocol）** 端点，供 AI 助手调用�
 | 工具 | 说明 |
 |---|---|
 | `search_media` | 关键词搜索影视 |
-| `list_requests` | 列出请求（可按状态过滤） |
-| `get_request` | 查询单个请求详情 |
+| `list_requests` | 列出请求（含媒体名称，可按状态过滤） |
+| `get_request` | 查询单个请求详情（含媒体名称） |
+| `get_subscription_feed` | 追剧日历：订阅中影片未来 7 天更新（定时缓存） |
+| `get_watched` | 查询用户已看（本地播放记录聚合） |
+| `get_report` | 用户年度报告（总时长/播放次数/看完数） |
 | `list_activity` | 读取最近动态 |
 | `list_users` | 用户列表 |
 | `get_user` | 查询单个用户 |
