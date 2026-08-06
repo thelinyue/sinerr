@@ -253,7 +253,8 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
         return {
           tmdbId,
           mediaType: (sub.type === 'tv' ? 'tv' : 'movie') as 'tv' | 'movie',
-          name: tvSeason?.name ?? String(tmdbId),
+          // 剧名优先用 MP 订阅名（TMDB seasonInfo.name 是季名如 "Season 2"）
+          name: sub.name ?? tvSeason?.name ?? String(tmdbId),
           updates,
           posterPath: tvSeason?.posterPath ?? null,
         };

@@ -75,6 +75,7 @@ export interface MoviePilotSubscription {
   season?: number | null;
   type?: string | null;
   state?: string | null;
+  name?: string | null;
 }
 
 class MoviePilotAPI extends ExternalAPI {
