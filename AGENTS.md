@@ -92,3 +92,12 @@ docker restart sinerr-pgapp sinerr-leaderboard
 - `server/tsconfig.json` 有 `incremental: true`，tsc 增量缓存曾导致**编译产物不包含新代码**（旧 dist 残留）。改代码后必须删本机 `dist/` 再 `pnpm build`。
 - Docker 构建上下文被 `.dockerignore` 排除 `dist`/`.next`，改前端/服务端代码后需把 `src`/`server`/`sinerr-api.yml` 同步到 WSL `~/seerr` 再 `docker build`（必要时 `--no-cache`，pnpm 依赖网络不稳时配代理 `--build-arg HTTP_PROXY=http://127.0.0.1:7897`）。
 - 新增 API 路由必须同步补充 `sinerr-api.yml`（express-openapi-validator 校验，缺 spec 会直接 404）。
+
+### 生产环境配置（192.168.10.150:5055，WSL 测试可复用）
+
+- 登录：`linyue` / `lzj3621754`（`username` 字段，非 email）。
+- **MoviePilot**：`192.168.10.150:3400`，apiKey `XYwntJ-hgX_CRN7CvG0m4g`，externalUrl `https://mp.linyue.vip`，syncEnabled true。
+  - ⚠️ MP 订阅 `type` 返回**中文**（`电视剧`/`电影`），非 `tv`/`movie`——`refreshSubscriptionFeedCache` 里必须做中文→英文映射，否则追剧日历永远 0 条。
+  - MP 订阅 `state`：`R`=订阅中，`P`=暂停，`S`=完成。
+- **Emby**：用户 jellyfinUserId `99651f42c42a4c78be9e2b2d523abab3`（日志可见）。
+- 生产环境用**独立部署**（非本机 WSL 预览容器），改代码需构建镜像后部署到该服务器。
