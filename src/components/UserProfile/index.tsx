@@ -15,7 +15,6 @@ import type {
   UserWatchTimeResponse,
   UserWatchedResponse,
 } from '@server/interfaces/api/userInterfaces';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -44,6 +43,7 @@ const messages = defineMessages('components.UserProfile', {
   updatedTo: 'Updated to S{season}E{episode}',
   watchedSeries: 'Watched Series',
   watchedMovies: 'Watched Movies',
+  monthRequests: 'This Month Requests',
 });
 
 /** 把秒数格式化为小时（保留一位小数），不足 0.1 小时显示为 0.1h */
@@ -257,35 +257,33 @@ const UserProfile = () => {
                   }
                 </dd>
               </div>
-              <div className="col-span-2 flex items-center justify-center rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700 sm:col-span-1">
-                <Link
-                  href={`/users/${user.id}/report`}
-                  className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-                >
-                  {intl.formatMessage(messages.viewAll)} →
-                </Link>
-              </div>
-            </div>
-          )}
-          {quota && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
+              <div
+                className={`col-span-2 rounded-xl px-4 py-4 ring-1 sm:col-span-1 ${
+                  quota?.movie.restricted || quota?.tv.restricted
+                    ? 'bg-gradient-to-t from-red-900/40 to-transparent ring-red-500/60'
+                    : 'bg-gray-800/50 ring-gray-700'
+                }`}
+              >
                 <dt className="truncate text-xs font-bold text-gray-400">
-                  {quota.movie.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.movierequests),
-                        days: quota.movie.days,
-                      })
-                    : intl.formatMessage(messages.movierequests)}
+                  {intl.formatMessage(messages.monthRequests)}
                 </dt>
                 <dd className="mt-1 flex items-center gap-3">
                   <ProgressCircle
                     progress={
-                      quota.movie.limit
+                      quota?.movie.limit || quota?.tv.limit
                         ? Math.round(
-                            ((quota.movie.remaining ?? 0) /
-                              (quota.movie.limit ?? 1)) *
-                              100
+                            Math.max(
+                              quota?.movie.limit
+                                ? ((quota.movie.remaining ?? 0) /
+                                    (quota.movie.limit ?? 1)) *
+                                    100
+                                : 100,
+                              quota?.tv.limit
+                                ? ((quota.tv.remaining ?? 0) /
+                                    (quota.tv.limit ?? 1)) *
+                                    100
+                                : 100
+                            )
                           )
                         : 100
                     }
@@ -294,59 +292,19 @@ const UserProfile = () => {
                   />
                   <span
                     className={`text-lg font-semibold ${
-                      quota.movie.restricted ? 'text-red-500' : 'text-white'
+                      quota?.movie.restricted || quota?.tv.restricted
+                        ? 'text-red-500'
+                        : 'text-white'
                     }`}
                   >
-                    {quota.movie.limit
-                      ? intl.formatMessage(messages.limit, {
-                          remaining: quota.movie.remaining,
-                          limit: quota.movie.limit,
-                        })
-                      : intl.formatMessage(messages.unlimited)}
-                  </span>
-                </dd>
-              </div>
-              <div className="rounded-xl bg-gray-800/50 px-4 py-4 ring-1 ring-gray-700">
-                <dt className="truncate text-xs font-bold text-gray-400">
-                  {quota.tv.limit
-                    ? intl.formatMessage(messages.pastdays, {
-                        type: intl.formatMessage(messages.seriesrequest),
-                        days: quota.tv.days,
-                      })
-                    : intl.formatMessage(messages.seriesrequest)}
-                </dt>
-                <dd className="mt-1 flex items-center gap-3">
-                  <ProgressCircle
-                    progress={
-                      quota.tv.limit
-                        ? Math.round(
-                            ((quota.tv.remaining ?? 0) /
-                              (quota.tv.limit ?? 1)) *
-                              100
-                          )
-                        : 100
-                    }
-                    useHeatLevel
-                    className="h-8 w-8"
-                  />
-                  <span
-                    className={`text-lg font-semibold ${
-                      quota.tv.restricted ? 'text-red-500' : 'text-white'
-                    }`}
-                  >
-                    {quota.tv.limit
-                      ? intl.formatMessage(messages.limit, {
-                          remaining: quota.tv.remaining,
-                          limit: quota.tv.limit,
-                        })
-                      : intl.formatMessage(messages.unlimited)}
+                    {intl.formatMessage(messages.unlimited)}
                   </span>
                 </dd>
               </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6">
             {/* 动态时间线 */}
             <section>
               <div className="mb-3 flex items-center justify-between">
@@ -375,37 +333,6 @@ const UserProfile = () => {
                 </>
               )}
             </section>
-
-            {/* 最近请求 */}
-            {canViewRequests && requests && !!requests.results.length && (
-              <section>
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white">
-                    {intl.formatMessage(messages.recentrequests)}
-                  </h2>
-                  <Link
-                    href={`/users/${user.id}/requests`}
-                    className="text-xs text-indigo-400 hover:text-indigo-300"
-                  >
-                    {intl.formatMessage(messages.viewAll)} →
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {requests.results.map((request) => {
-                    const update = followingUpdates?.results.find(
-                      (u) => u.media.id === request.media?.id
-                    );
-                    return (
-                      <RequestCompactRow
-                        key={`request-${request.id}`}
-                        request={request}
-                        update={update}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            )}
           </div>
         </div>
       )}

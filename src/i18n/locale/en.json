@@ -1640,6 +1640,7 @@
   "components.UserProfile.ProfileHeader.userBadge": "User",
   "components.UserProfile.watchedSeries": "Watched Series",
   "components.UserProfile.watchedMovies": "Watched Movies",
+  "components.UserProfile.monthRequests": "This Month Requests",
   "components.UserProfile.updatedTo": "Updated to S{season}E{episode}",
   "components.UserProfile.RequestCompactRow.updatedTo": "↻ Updated to S{season}E{episode}",
   "components.UserProfile.RequestCompactRow.newEpisodes": "+{count}",

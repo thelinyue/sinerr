@@ -633,6 +633,7 @@
   "components.UserProfile.ProfileHeader.userBadge": "一般使用者",
   "components.UserProfile.watchedSeries": "已看影集",
   "components.UserProfile.watchedMovies": "已看電影",
+  "components.UserProfile.monthRequests": "本月請求",
   "components.UserProfile.updatedTo": "已更新至 第{season}季 第{episode}集",
   "components.UserProfile.RequestCompactRow.updatedTo": "↻ 已更新至 第{season}季 第{episode}集",
   "components.UserProfile.RequestCompactRow.newEpisodes": "+{count}",
