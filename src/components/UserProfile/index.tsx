@@ -1,10 +1,9 @@
-import ImageFader from '@app/components/Common/ImageFader';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import ProgressCircle from '@app/components/Common/ProgressCircle';
-import RequestCard from '@app/components/RequestCard';
 import ActivityTimeline from '@app/components/UserProfile/ActivityTimeline';
 import ProfileHeader from '@app/components/UserProfile/ProfileHeader';
+import RequestCompactRow from '@app/components/UserProfile/RequestCompactRow';
 import WatchedSection from '@app/components/UserProfile/WatchedSection';
 import { Permission, useUser } from '@app/hooks/useUser';
 import ErrorPage from '@app/pages/_error';
@@ -16,11 +15,9 @@ import type {
   UserWatchTimeResponse,
   UserWatchedResponse,
 } from '@server/interfaces/api/userInterfaces';
-import type { MovieDetails } from '@server/models/Movie';
-import type { TvDetails } from '@server/models/Tv';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import useSWR from 'swr';
 
@@ -49,8 +46,6 @@ const messages = defineMessages('components.UserProfile', {
   watchedMovies: 'Watched Movies',
 });
 
-type MediaTitle = MovieDetails | TvDetails;
-
 /** 把秒数格式化为小时（保留一位小数），不足 0.1 小时显示为 0.1h */
 const formatDuration = (totalSeconds: number): string => {
   const hours = Math.round((totalSeconds / 3600) * 10) / 10;
@@ -70,11 +65,9 @@ const UserProfile = () => {
     id: Number(router.query.userId),
   });
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
-  const [availableTitles, setAvailableTitles] = useState<
-    Record<number, MediaTitle>
-  >({});
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [activitySkip, setActivitySkip] = useState(0);
+  const [requestPage, setRequestPage] = useState(0);
 
   // 请求 Tab：本人 + REQUEST_VIEW 可见
   const canViewRequests =
@@ -85,7 +78,9 @@ const UserProfile = () => {
         { type: 'or' }
       ));
   const { data: requests } = useSWR<UserRequestsResponse>(
-    canViewRequests ? `/api/v1/user/${user?.id}/requests?take=10&skip=0` : null
+    canViewRequests
+      ? `/api/v1/user/${user?.id}/requests?take=10&skip=${requestPage * 10}`
+      : null
   );
   const { data: quota } = useSWR<QuotaResponse>(
     user &&
@@ -148,20 +143,10 @@ const UserProfile = () => {
       : null
   );
 
-  const updateAvailableTitles = useCallback(
-    (requestId: number, mediaTitle: MediaTitle) => {
-      setAvailableTitles((titles) => ({
-        ...titles,
-        [requestId]: mediaTitle,
-      }));
-    },
-    []
-  );
-
   useEffect(() => {
-    setAvailableTitles({});
     setActiveTab('overview');
     setActivitySkip(0);
+    setRequestPage(0);
   }, [user?.id]);
 
   if (!user && !error) {
@@ -182,21 +167,6 @@ const UserProfile = () => {
   return (
     <div className="min-h-screen">
       <PageTitle title={user.displayName} />
-      {Object.keys(availableTitles).length > 0 && (
-        <div className="absolute -top-16 left-0 right-0 z-0 h-96">
-          <ImageFader
-            key={user.id}
-            isDarker
-            backgroundImages={Object.values(availableTitles)
-              .filter((media) => media.backdropPath)
-              .map(
-                (media) =>
-                  `https://image.tmdb.org/t/p/w1920_and_h800_multi_faces/${media.backdropPath}`
-              )
-              .slice(0, 6)}
-          />
-        </div>
-      )}
       <ProfileHeader user={user} />
 
       {/* 关键数据带（Hero band） */}
@@ -421,13 +391,18 @@ const UserProfile = () => {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  {requests.results.map((request) => (
-                    <RequestCard
-                      key={`request-${request.id}`}
-                      request={request}
-                      onTitleData={updateAvailableTitles}
-                    />
-                  ))}
+                  {requests.results.map((request) => {
+                    const update = followingUpdates?.results.find(
+                      (u) => u.media.id === request.media?.id
+                    );
+                    return (
+                      <RequestCompactRow
+                        key={`request-${request.id}`}
+                        request={request}
+                        update={update}
+                      />
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -447,51 +422,47 @@ const UserProfile = () => {
         <div className="mt-6">
           {requests && !!requests.results.length ? (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
                 {requests.results.map((request) => {
                   const update = followingUpdates?.results.find(
                     (u) => u.media.id === request.media?.id
                   );
                   return (
-                    <div key={`request-${request.id}`} className="space-y-1.5">
-                      <RequestCard
-                        request={request}
-                        onTitleData={updateAvailableTitles}
-                      />
-                      {update &&
-                        update.episodeCount > 0 &&
-                        update.newEpisodes.length > 0 && (
-                          <p className="px-1 text-xs text-emerald-400">
-                            ↻{' '}
-                            {intl.formatMessage(messages.updatedTo, {
-                              season:
-                                update.newEpisodes[
-                                  update.newEpisodes.length - 1
-                                ].seasonNumber,
-                              episode:
-                                update.newEpisodes[
-                                  update.newEpisodes.length - 1
-                                ].episodeNumber,
-                            })}
-                            {update.episodeCount > 0 && (
-                              <span className="ml-1.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px]">
-                                +{update.episodeCount} 集
-                              </span>
-                            )}
-                          </p>
-                        )}
-                    </div>
+                    <RequestCompactRow
+                      key={`request-${request.id}`}
+                      request={request}
+                      update={update}
+                    />
                   );
                 })}
               </div>
-              <div className="mt-6 text-center">
-                <Link
-                  href={`/users/${user.id}/requests`}
-                  className="inline-block rounded-lg bg-gray-800 px-5 py-2 text-sm text-gray-300 ring-1 ring-gray-700 transition hover:bg-gray-700"
-                >
-                  {intl.formatMessage(messages.viewAll)} →
-                </Link>
-              </div>
+              {(requests.pageInfo.pages ?? 1) > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-3 text-sm text-gray-400">
+                  <button
+                    type="button"
+                    onClick={() => setRequestPage((p) => Math.max(0, p - 1))}
+                    disabled={requestPage === 0}
+                    className="rounded-lg bg-gray-800 px-3 py-1.5 ring-1 ring-gray-700 transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ‹ 上一页
+                  </button>
+                  <span>
+                    {requestPage + 1}/{requests.pageInfo.pages ?? 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRequestPage((p) =>
+                        Math.min((requests.pageInfo.pages ?? 1) - 1, p + 1)
+                      )
+                    }
+                    disabled={requestPage >= (requests.pageInfo.pages ?? 1) - 1}
+                    className="rounded-lg bg-gray-800 px-3 py-1.5 ring-1 ring-gray-700 transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    下一页 ›
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="py-12 text-center text-sm text-gray-400">
