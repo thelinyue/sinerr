@@ -4522,6 +4522,12 @@ paths:
           required: false
           schema:
             type: number
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [watch, update, request]
       responses:
         '200':
           description: Activity timeline

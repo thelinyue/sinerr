@@ -2163,6 +2163,9 @@ router.get<{ id: string }, UserActivityResponse>(
 
       const take = req.query.take ? Number(req.query.take) : 10;
       const skip = req.query.skip ? Number(req.query.skip) : 0;
+      const typeFilter = req.query.type
+        ? (req.query.type as string)
+        : undefined;
 
       // 三源各自取「可能进入本页窗口」的记录（保守取 50）
       const sourceLimit = Math.min(50, skip + take);
@@ -2249,13 +2252,19 @@ router.get<{ id: string }, UserActivityResponse>(
 
       items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      const slice = items.slice(skip, skip + take);
+      // 类型过滤（watch/update/request），在排序后、分页前执行
+      const filteredItems =
+        typeFilter && ['watch', 'update', 'request'].includes(typeFilter)
+          ? items.filter((item) => item.type === typeFilter)
+          : items;
+
+      const slice = filteredItems.slice(skip, skip + take);
 
       return res.status(200).json({
         pageInfo: {
-          pages: Math.ceil(items.length / take),
+          pages: Math.ceil(filteredItems.length / take),
           pageSize: take,
-          results: items.length,
+          results: filteredItems.length,
           page: Math.floor(skip / take) + 1,
         },
         results: slice,

@@ -387,6 +387,42 @@ describe('GET /user/:id/activity', () => {
     }
   });
 
+  it('filters timeline by type', async () => {
+    const { friend, movie } = await seedUserAndMedia();
+
+    const playbackRepo = getRepository(PlaybackEvent);
+    await playbackRepo.save(
+      new PlaybackEvent({
+        user: friend,
+        tmdbId: movie.tmdbId,
+        mediaType: MediaType.MOVIE,
+        completed: true,
+        durationSeconds: 5400,
+      })
+    );
+
+    const requestRepo = getRepository(MediaRequest);
+    await requestRepo.save(
+      new MediaRequest({
+        type: MediaType.MOVIE,
+        status: MediaRequestStatus.PENDING,
+        media: movie,
+        requestedBy: friend,
+      })
+    );
+
+    const agent = await loginAs(app, 'friend@sinerr.dev', 'test1234');
+    const res = await agent.get(
+      `/user/${friend.id}/activity?take=10&type=watch`
+    );
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body.results.length > 0);
+    for (const item of res.body.results) {
+      assert.strictEqual(item.type, 'watch');
+    }
+  });
+
   it('enforces permission', async () => {
     await seedUserAndMedia();
     const admin = await getRepository(User).findOneOrFail({
