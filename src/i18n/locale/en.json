@@ -137,7 +137,7 @@
   "components.ActivityLeaderboard.close": "Close",
   "components.ActivityLeaderboard.SubscriptionFeed.title": "Watch Calendar",
   "components.ActivityLeaderboard.SubscriptionFeed.badge": "Subscribed",
-  "components.ActivityLeaderboard.SubscriptionFeed.count": "Today {today} · Tomorrow {tomorrow}",
+  "components.ActivityLeaderboard.SubscriptionFeed.count": "Next 7 days · {count} updates",
   "components.ActivityLeaderboard.SubscriptionFeed.collapse": "Collapse",
   "components.ActivityLeaderboard.SubscriptionFeed.expand": "Expand",
   "components.ActivityLeaderboard.SubscriptionFeed.empty": "No updates",

@@ -1555,7 +1555,7 @@
   "components.ActivityLeaderboard.close": "关闭",
   "components.ActivityLeaderboard.SubscriptionFeed.title": "追剧日历",
   "components.ActivityLeaderboard.SubscriptionFeed.badge": "订阅中",
-  "components.ActivityLeaderboard.SubscriptionFeed.count": "今日 {today} · 明日 {tomorrow}",
+  "components.ActivityLeaderboard.SubscriptionFeed.count": "未来 7 天 · {count} 次更新",
   "components.ActivityLeaderboard.SubscriptionFeed.collapse": "收起",
   "components.ActivityLeaderboard.SubscriptionFeed.expand": "展开",
   "components.ActivityLeaderboard.SubscriptionFeed.empty": "暂无更新",

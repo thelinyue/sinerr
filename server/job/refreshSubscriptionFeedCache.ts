@@ -11,8 +11,8 @@ import path from 'path';
 /**
  * 追剧日历缓存（本周热播「追剧日历」）
  *
- * 每天定时拉取一次 MoviePilot「订阅中」的影片，聚合今日 + 明日有更新的集：
- * - 剧集订阅：TMDB getTvSeason 拿整季 air_date，筛出今天/明天要更新的集
+ * 每天定时拉取一次 MoviePilot「订阅中」的影片，聚合未来 7 天有更新的集：
+ * - 剧集订阅：TMDB getTvSeason 拿整季 air_date，筛出未来 7 天要更新的集
  *
  * 与 mostplayed 缓存同模式：内存缓存 + 落盘 JSON + 定时刷新，前端读静态缓存。
  */
@@ -32,10 +32,8 @@ export interface SubscriptionFeedEntry {
   mediaType: 'movie' | 'tv';
   /** 订阅名称 */
   name: string;
-  /** 今天要更新的集（按集号升序） */
-  todayUpdates: CalendarEpisodeUpdate[];
-  /** 明天要更新的集（按集号升序） */
-  tomorrowUpdates: CalendarEpisodeUpdate[];
+  /** 未来 7 天要更新的集（含 date，按集号升序） */
+  updates: CalendarEpisodeUpdate[];
   /** 海报路径 */
   posterPath?: string | null;
 }
@@ -142,14 +140,14 @@ async function fetchTvSeasonUpdates(
   }[] = [];
   const provider = await getMetadataProvider('tv');
 
-  // 今天 + 明天的 ISO 日期
+  // 未来 7 天（含今天）的 ISO 日期
   const todayISO = new Date();
   todayISO.setHours(0, 0, 0, 0);
-  const tomorrowISO = new Date(todayISO.getTime() + 24 * 60 * 60 * 1000);
-  const targetDates = new Set([
-    todayISO.toISOString().slice(0, 10),
-    tomorrowISO.toISOString().slice(0, 10),
-  ]);
+  const targetDates = new Set<string>();
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(todayISO.getTime() + i * 24 * 60 * 60 * 1000);
+    targetDates.add(day.toISOString().slice(0, 10));
+  }
 
   let idx = 0;
   const workers = Array.from({ length: concurrency }, async () => {
@@ -237,13 +235,6 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
     const seasonUpdates = await fetchTvSeasonUpdates(tvTargets);
     const seasonByTmdb = new Map(seasonUpdates.map((d) => [d.tmdbId, d]));
 
-    // 今天 + 明天 ISO 日期
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const todayISO = now.toISOString().slice(0, 10);
-    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
-
     const entries: SubscriptionFeedEntry[] = [...activeByTmdb.entries()]
       .map(([tmdbId, sub]) => {
         const tvSeason = sub.type === 'tv' ? seasonByTmdb.get(tmdbId) : null;
@@ -252,26 +243,25 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
           tmdbId,
           mediaType: (sub.type === 'tv' ? 'tv' : 'movie') as 'tv' | 'movie',
           name: tvSeason?.name ?? String(tmdbId),
-          todayUpdates: updates.filter((u) => u.date === todayISO),
-          tomorrowUpdates: updates.filter((u) => u.date === tomorrowISO),
+          updates,
           posterPath: tvSeason?.posterPath ?? null,
         };
       })
-      // 仅保留今天或明天有更新的条目
-      .filter((e) => e.todayUpdates.length > 0 || e.tomorrowUpdates.length > 0);
+      // 仅保留未来 7 天内有更新的条目
+      .filter((e) => e.updates.length > 0);
 
-    // 排序：有今日更新的优先，其次按明天集号
+    // 排序：最早更新日期在前的优先
     entries.sort((a, b) => {
-      const aToday = a.todayUpdates.length > 0 ? 1 : 0;
-      const bToday = b.todayUpdates.length > 0 ? 1 : 0;
-      if (aToday !== bToday) return bToday - aToday;
+      const aDate = a.updates[0]?.date ?? '';
+      const bDate = b.updates[0]?.date ?? '';
+      if (aDate !== bDate) return aDate < bDate ? -1 : 1;
       return 0;
     });
 
     feedCache = { generatedAt: Date.now(), entries };
     saveCacheToDisk();
     logger.info(
-      `Subscription feed cache refreshed: ${entries.length} active subscriptions with today/tomorrow updates`,
+      `Subscription feed cache refreshed: ${entries.length} active subscriptions with updates in next 7 days`,
       { label: 'Jobs' }
     );
   } catch (e) {
