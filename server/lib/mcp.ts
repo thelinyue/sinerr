@@ -301,15 +301,21 @@ const requestMedia: McpTool = {
     if (mediaType !== 'movie' && mediaType !== 'tv') {
       return { success: false, error: 'mediaType 必须是 movie 或 tv' };
     }
-    const actor = await resolveActor(args.userId);
+    // 执行人 = 管理员（id=1，持有 MCP 管理员密钥，具备 MANAGE_REQUESTS）
+    const actor = await resolveActor(1);
     if (!actor) {
-      return { success: false, error: `操作人用户不存在` };
+      return { success: false, error: '管理员用户不存在' };
+    }
+    // 提交人 = userId 指定的用户（缺省为管理员）
+    const requester = await resolveActor(args.userId ?? 1);
+    if (!requester) {
+      return { success: false, error: '提交人用户不存在' };
     }
 
     const body: MediaRequestBody = {
       mediaType: mediaType as MediaType,
       mediaId: Number(args.tmdbId),
-      userId: actor.id,
+      userId: requester.id,
       seasons:
         mediaType === 'tv'
           ? Array.isArray(args.seasons) && args.seasons.length > 0
@@ -343,7 +349,6 @@ const updateRequestStatus: McpTool = {
   inputSchema: {
     requestId: z.number().describe('请求 id'),
     status: z.enum(['approve', 'decline', 'pending']).describe('目标状态'),
-    userId: z.number().optional().describe('操作人用户 id，缺省为管理员'),
   },
   handler: async (args) => {
     const statusMap = {
@@ -355,12 +360,13 @@ const updateRequestStatus: McpTool = {
     if (!newStatus) {
       return { success: false, error: 'status 必须是 approve/decline/pending' };
     }
-    const actor = await resolveActor(args.userId);
+    // 执行人 = 管理员（id=1，持有 MCP 管理员密钥）
+    const actor = await resolveActor(1);
     if (!actor) {
-      return { success: false, error: `操作人用户不存在` };
+      return { success: false, error: `管理员用户不存在` };
     }
     if (!actor.hasPermission(Permission.MANAGE_REQUESTS)) {
-      return { success: false, error: '操作人缺少 MANAGE_REQUESTS 权限' };
+      return { success: false, error: '管理员缺少 MANAGE_REQUESTS 权限' };
     }
 
     const request = await getRepository(MediaRequest).findOne({
@@ -384,12 +390,12 @@ const deleteRequest: McpTool = {
   description: '删除媒体请求（管理员，或请求人删除自己的待处理请求）',
   inputSchema: {
     requestId: z.number().describe('请求 id'),
-    userId: z.number().optional().describe('操作人用户 id，缺省为管理员'),
   },
   handler: async (args) => {
-    const actor = await resolveActor(args.userId);
+    // 执行人 = 管理员（id=1，持有 MCP 管理员密钥）
+    const actor = await resolveActor(1);
     if (!actor) {
-      return { success: false, error: `操作人用户不存在` };
+      return { success: false, error: `管理员用户不存在` };
     }
     const request = await getRepository(MediaRequest).findOne({
       where: { id: Number(args.requestId) },

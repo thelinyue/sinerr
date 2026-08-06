@@ -115,6 +115,36 @@ describe('MCP write tools (module 9)', () => {
     }
   });
 
+  it('request_media lets admin submit on behalf of another user', async () => {
+    const requestMock = mock.method(MediaRequest, 'request', async () => ({
+      id: 8,
+      status: MediaRequestStatus.PENDING,
+      media: { tmdbId: 998877, mediaType: 'movie' },
+    }));
+    try {
+      const friend = await getRepository(User).findOneOrFail({
+        where: { email: 'friend@sinerr.dev' },
+      });
+      const tool = mcpTools.find((t) => t.name === 'request_media');
+      assert.ok(tool);
+      const result = (await tool.handler({
+        mediaType: 'movie',
+        tmdbId: 998877,
+        userId: friend.id,
+      })) as { success: boolean; requestId: number };
+
+      assert.strictEqual(result.success, true);
+      assert.strictEqual(result.requestId, 8);
+
+      const call = requestMock.mock.calls[0];
+      const body = call.arguments[0] as { userId: number };
+      // 提交人为指定的 friend，执行人为管理员（id=1）
+      assert.strictEqual(body.userId, friend.id);
+    } finally {
+      requestMock.mock.restore();
+    }
+  });
+
   it('request_media rejects an invalid media type', async () => {
     const tool = mcpTools.find((t) => t.name === 'request_media');
     assert.ok(tool);
