@@ -177,8 +177,10 @@ Sinerr 支持两种登录方式（可在「设置 → 常规」中启用/关闭�
 
 Sinerr 提供 **MCP（Model Context Protocol）** 端点，供 AI 助手调用：
 
-- **端点**：`GET/POST /api/v1/mcp`
+- **端点**：`GET/POST /api/v1/mcp`（Streamable HTTP 传输）
+- **协议**：MCP 2024-11-05
 - **鉴权**：Bearer 令牌 = 「应用程序密钥」（设置 → 常规 → 应用密钥），需开启「启用 MCP」
+- **连接前验证**：开启后可用 `curl` 或 HTTP 客户端做一次 `initialize` 握手，返回 `serverInfo: Sinerr` 即正常
 - **工具**：
 
 | 工具 | 说明 |
@@ -194,7 +196,8 @@ Sinerr 提供 **MCP（Model Context Protocol）** 端点，供 AI 助手调用�
 | `update_request_status` | 审批/驳回/转待处理（写操作） |
 | `delete_request` | 删除请求（写操作） |
 
-示例（Claude / 自定义客户端配置）：
+### 12.1 标准客户端配置（Claude / 通用 MCP 客户端）
+
 ```json
 {
   "mcpServers": {
@@ -205,6 +208,42 @@ Sinerr 提供 **MCP（Model Context Protocol）** 端点，供 AI 助手调用�
   }
 }
 ```
+
+### 12.2 openclaw 连接
+
+openclaw 支持通过 `--mcp` 参数注册 Streamable HTTP 端点：
+
+```bash
+openclaw --mcp "sinerr=https://你的域名/api/v1/mcp"
+```
+
+或配置文件方式（`~/.openclaw/`）：
+```json
+{
+  "mcpServers": {
+    "sinerr": {
+      "url": "https://你的域名/api/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer 应用密钥"
+      }
+    }
+  }
+}
+```
+
+### 12.3 连接校验
+
+配置后可发起 MCP `initialize` 请求验证：
+```bash
+curl -X POST https://你的域名/api/v1/mcp \
+  -H "Authorization: Bearer 应用密钥" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}'
+```
+正常响应包含 `serverInfo: {"name":"Sinerr"}`，随后可调用 `tools/list` 查看全部工具、`tools/call` 执行搜索/查询。
+
+> ⚠️ 路径注意：端点完整路径为 `/api/v1/mcp`（含 `/api/v1` 前缀），反代时需正确转发，勿只代理 `/mcp`。
 
 ## 13. PWA（移动端安装）
 
