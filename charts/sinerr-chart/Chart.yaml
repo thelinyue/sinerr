@@ -4,7 +4,7 @@ name: sinerr-chart
 description: Sinerr helm chart for Kubernetes
 type: application
 version: 3.8.0
-# renovate: image=ghcr.io/thelinyue/sinerr
+# renovate: image=linyuedoc/sinerr
 appVersion: 'v1.0.0'
 maintainers:
   - name: Sinerr Team

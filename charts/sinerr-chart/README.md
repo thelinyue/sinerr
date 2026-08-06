@@ -57,8 +57,8 @@ If `replicaCount` value was used - remove it. Helm update should work fine after
 | extraEnvFrom | list | `[]` | Environment variables from secrets or configmaps to add to the sinerr pods |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` |  |
-| image.registry | string | `"ghcr.io"` |  |
-| image.repository | string | `"thelinyue/sinerr"` |  |
+| image.registry | string | `"docker.io"` |  |
+| image.repository | string | `"linyuedoc/sinerr"` |  |
 | image.sha | string | `""` |  |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[]` |  |

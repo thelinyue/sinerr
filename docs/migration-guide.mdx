@@ -72,7 +72,7 @@ Summary of changes :
   ---
   services:
     sinerr:
-      image: ghcr.io/thelinyue/sinerr:latest
+      image: linyuedoc/sinerr:latest
       init: true
       container_name: sinerr
       environment:
@@ -103,7 +103,7 @@ Summary of changes :
     -p 5055:5055 \
     -v /path/to/appdata/config:/app/config \
     --restart unless-stopped \
-    ghcr.io/thelinyue/sinerr:latest
+    linyuedoc/sinerr:latest
   ```
   </TabItem>
 </Tabs>
@@ -117,7 +117,7 @@ Summary of changes :
   ---
   services:
     sinerr:
-      image: ghcr.io/thelinyue/sinerr:latest
+      image: linyuedoc/sinerr:latest
       init: true
       container_name: sinerr
       environment:
@@ -151,7 +151,7 @@ Summary of changes :
     -p 5055:5055 `
     -v sinerr-data:/app/config `
     --restart unless-stopped `
-    ghcr.io/thelinyue/sinerr:latest
+    linyuedoc/sinerr:latest
   ```
   </TabItem>
 
@@ -166,7 +166,7 @@ Summary of changes :
     -p 5055:5055 ^
     -v sinerr-data:/app/config ^
     --restart unless-stopped ^
-    ghcr.io/thelinyue/sinerr:latest
+    linyuedoc/sinerr:latest
   ```
   </TabItem>
 </Tabs>
@@ -265,7 +265,7 @@ For detailed community-maintained TrueNAS SCALE walkthroughs, see the [Host Path
           /mnt/storage/sinerr
           ```
     3. Copy ixVolume Data
-          Open System Settings â†?Shell, or SSH into your TrueNAS server as root and run :
+          Open System Settings ï¿½?Shell, or SSH into your TrueNAS server as root and run :
           ```bash
           rsync -av --chown=568:568 /mnt/.ix-apps/app_mounts/jellysinerr/ /mnt/storage/sinerr/
           ```
@@ -294,7 +294,7 @@ cp -a /mnt/user/appdata/overseerr /mnt/user/appdata/sinerr
 *(For Jellysinerr users, replace `overseerr` with `jellysinerr` in the paths).*
 
 **3. Set permissions and install sinerr**
-Follow the [Unraid Installation Guide](/getting-started/third-parties/unraid#2-set-folder-permissions), **starting from step 2** â€?this covers setting the correct folder permissions and adding the Docker container. The guide offers two permission methods (**Sinerr Default** and **Unraid Default**), each with trade-offs â€?read the descriptions before choosing.
+Follow the [Unraid Installation Guide](/getting-started/third-parties/unraid#2-set-folder-permissions), **starting from step 2** ï¿½?this covers setting the correct folder permissions and adding the Docker container. The guide offers two permission methods (**Sinerr Default** and **Unraid Default**), each with trade-offs ï¿½?read the descriptions before choosing.
 
 **4. Start the new Sinerr app**
 Start the newly created Sinerr container. Check the container logs to confirm the automatic migration completed successfully.

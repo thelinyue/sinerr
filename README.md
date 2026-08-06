@@ -17,7 +17,7 @@
 ```yaml
 services:
   sinerr:
-    image: ghcr.io/thelinyue/sinerr:latest
+    image: linyuedoc/sinerr:latest
     container_name: sinerr
     restart: unless-stopped
     ports:
@@ -43,7 +43,7 @@ docker compose up -d
 ```yaml
 services:
   sinerr:
-    image: ghcr.io/thelinyue/sinerr:latest
+    image: linyuedoc/sinerr:latest
     container_name: sinerr
     restart: unless-stopped
     ports:

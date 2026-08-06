@@ -3,7 +3,7 @@
 This runbook is for maintainers publishing a formal Sinerr release. The release
 is triggered by pushing a `v*` git tag, which runs the **Sinerr Release**
 GitHub Actions workflow (changelog generation, Docker image build/push to
-`ghcr.io/thelinyue/sinerr`, cosign signing + SBOM, and GitHub Release
+`linyuedoc/sinerr` on Docker Hub, cosign signing + SBOM, and GitHub Release
 publishing).
 
 ## Prerequisites
@@ -98,7 +98,7 @@ gh repo view --json nameWithOwner -q .nameWithOwner
    ```
 
    Expected final state: `gh release view v1.7.5` shows `isDraft=false` and the
-   Docker tags `ghcr.io/thelinyue/sinerr:v1.7.5`, `v1.7`, and `:latest` are
+   Docker tags `linyuedoc/sinerr:v1.7.5`, `v1.7`, and `:latest` are
    updated.
 
 > Always pass `--repo thelinyue/sinerr` to `gh` if you skipped the pin step;

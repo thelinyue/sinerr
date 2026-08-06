@@ -60,8 +60,8 @@ gh 认证账号：`thelinyue`（`gh auth status`）。
 ### CI / Release 工作流行为
 
 - **create-tag.yml**：仅 `main` 分支 workflow_dispatch，用 git-cliff 计算下个版本并打 tag（本仓库手动发布不用它）。
-- **release.yml**（推送 `v*` tag 触发）：`Generate changelog`（git-cliff 读 `.github/cliff.toml` 生成 CHANGELOG.md）→ `Create draft release` → `Build`（Docker amd64）→ `Publish multi-arch manifests`（`ghcr.io/thelinyue/sinerr:vX.Y.Z`、`v1.7`、`:latest`）→ `Sign images and create SBOM`（cosign + trivy）→ `Verify` → `Publish release`（draft→正式）。
-- 关键要点：镜像标签 `ghcr.io/thelinyue/sinerr`；发布流程约 7 分钟；最终以 `gh release view` 确认 `isDraft=false`。
+- **release.yml**（推送 `v*` tag 触发）：`Generate changelog`（git-cliff 读 `.github/cliff.toml` 生成 CHANGELOG.md）→ `Create draft release` → `Build`（Docker amd64）→ `Publish multi-arch manifests`（`linyuedoc/sinerr:vX.Y.Z`、`v1.7`、`:latest`，Docker Hub）→ `Sign images and create SBOM`（cosign + trivy）→ `Verify` → `Publish release`（draft→正式）。
+- 关键要点：镜像标签 `linyuedoc/sinerr`（仅 Docker Hub，不再发 ghcr）；发布流程约 7 分钟；最终以 `gh release view` 确认 `isDraft=false`。
 
 ### 其他注意
 

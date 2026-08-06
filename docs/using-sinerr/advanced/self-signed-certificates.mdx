@@ -31,7 +31,7 @@ docker run -d \
   -e NODE_EXTRA_CA_CERTS=/certs/my-ca.pem \
   -v /path/to/my-ca.pem:/certs/my-ca.pem:ro \
   -p 5055:5055 \
-  ghcr.io/thelinyue/sinerr:latest
+  linyuedoc/sinerr:latest
 ```
 
 </TabItem>
@@ -40,7 +40,7 @@ docker run -d \
 ```yaml
 services:
   sinerr:
-    image: ghcr.io/thelinyue/sinerr:latest
+    image: linyuedoc/sinerr:latest
     environment:
       - NODE_EXTRA_CA_CERTS=/certs/my-ca.pem
     volumes:
@@ -55,7 +55,7 @@ services:
 Replace `/path/to/my-ca.pem` with the actual path to your CA certificate on the host. The path after the colon (`/certs/my-ca.pem`) is where it will be available inside the container.
 
 :::tip
-The certificate must be in PEM format. Open it in a text editor â€?if it starts with `-----BEGIN CERTIFICATE-----`, it is PEM. If it contains binary data, convert it with `openssl x509 -inform DER -in cert.cer -out cert.pem`.
+The certificate must be in PEM format. Open it in a text editor ï¿½?if it starts with `-----BEGIN CERTIFICATE-----`, it is PEM. If it contains binary data, convert it with `openssl x509 -inform DER -in cert.cer -out cert.pem`.
 :::
 
 For more details, see the [Node.js documentation on adding CA certificates](https://nodejs.org/en/learn/http/enterprise-network-configuration#adding-additional-ca-certificates).
