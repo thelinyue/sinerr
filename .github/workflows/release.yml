@@ -39,7 +39,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
       - name: Upload changelog artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           name: changelog
           path: CHANGELOG.md
@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
 
       - name: Download changelog
-        uses: actions/download-artifact@c850b930e6ba138125429b15e413c2c5c04f0d3d # v4.1.0
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4.2.0
         with:
           name: changelog
 
@@ -224,7 +224,7 @@ jobs:
             "${{ secrets.DOCKERHUB_USERNAME }}/sinerr@${{ needs.publish.outputs.image_digest }}"
 
       - name: Upload SBOMs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           name: sboms-${{ env.VERSION }}
           path: '*.sbom'
