@@ -1,6 +1,7 @@
 import { MediaServerType } from '@server/constants/server';
 import blocklistedTagsProcessor from '@server/job/blocklistedTagsProcessor';
 import { refreshMostPlayedCache } from '@server/job/refreshMostPlayedCache';
+import { refreshSubscriptionFeedCache } from '@server/job/refreshSubscriptionFeedCache';
 import availabilitySync from '@server/lib/availabilitySync';
 import ImageProxy from '@server/lib/imageproxy';
 import { runMoviePilotSync } from '@server/lib/moviePilotSync';
@@ -186,6 +187,31 @@ export const startJobs = (): void => {
         });
       }
     }),
+  });
+
+  // Refresh subscription update feed cache daily (configurable cron)
+  scheduledJobs.push({
+    id: 'subscription-feed-refresh',
+    name: 'Subscription Feed Refresh',
+    type: 'process',
+    interval: 'days',
+    cronSchedule: jobs['subscription-feed-refresh'].schedule,
+    job: schedule.scheduleJob(
+      jobs['subscription-feed-refresh'].schedule,
+      async () => {
+        logger.info('Starting scheduled job: Subscription Feed Refresh', {
+          label: 'Jobs',
+        });
+        try {
+          await refreshSubscriptionFeedCache();
+        } catch (e) {
+          logger.error('Error during Subscription Feed Refresh', {
+            label: 'Jobs',
+            message: e instanceof Error ? e.message : 'Unknown error',
+          });
+        }
+      }
+    ),
   });
 
   // Run image cache cleanup every 24 hours

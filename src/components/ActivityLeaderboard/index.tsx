@@ -1,3 +1,4 @@
+import SubscriptionFeed from '@app/components/ActivityLeaderboard/SubscriptionFeed';
 import CachedImage from '@app/components/Common/CachedImage';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import Modal from '@app/components/Common/Modal';
@@ -451,6 +452,9 @@ const ActivityLeaderboard = () => {
             {intl.formatMessage(messages.viewAll)}
           </button>
         )}
+
+        {/* 更新速递：MoviePilot 订阅中影片的更新动态（仅本人可见） */}
+        <SubscriptionFeed />
 
         {showAll && (
           <Transition

@@ -351,7 +351,8 @@ export type JobId =
   | 'availability-sync'
   | 'process-blocklisted-tags'
   | 'mostplayed-cache-refresh'
-  | 'moviepilot-sync';
+  | 'moviepilot-sync'
+  | 'subscription-feed-refresh';
 
 export interface AllSettings {
   clientId: string;
@@ -577,6 +578,9 @@ class Settings {
         },
         'mostplayed-cache-refresh': {
           schedule: '0 0 8 * * *',
+        },
+        'subscription-feed-refresh': {
+          schedule: '0 0 7 * * *',
         },
       },
       network: {

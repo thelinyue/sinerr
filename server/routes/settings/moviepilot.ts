@@ -1,4 +1,8 @@
 import MoviePilotAPI from '@server/api/moviepilot';
+import {
+  getSubscriptionFeedCache,
+  refreshSubscriptionFeedCache,
+} from '@server/job/refreshSubscriptionFeedCache';
 import type { MoviePilotServerSettings } from '@server/lib/settings';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
@@ -95,6 +99,27 @@ moviepilotRoutes.delete<{ id: string }>('/:id', async (req, res, next) => {
   await settings.save();
 
   return res.status(200).json(removed[0]);
+});
+
+/**
+ * 订阅更新速递（本周热播「更新速递」折叠条数据源）
+ *
+ * GET：返回定时任务缓存的订阅中影片更新动态（即将更新 / 最近更新）。
+ * POST：手动触发一次缓存刷新（管理员可点击刷新）。
+ */
+moviepilotRoutes.get('/feed', (_req, res) => {
+  const feed = getSubscriptionFeedCache();
+  res.status(200).json(feed ?? { generatedAt: 0, entries: [] });
+});
+
+moviepilotRoutes.post('/feed/refresh', async (_req, res, next) => {
+  try {
+    await refreshSubscriptionFeedCache();
+    const feed = getSubscriptionFeedCache();
+    res.status(200).json(feed ?? { generatedAt: 0, entries: [] });
+  } catch (e) {
+    next({ status: 500, message: e.message });
+  }
 });
 
 export default moviepilotRoutes;

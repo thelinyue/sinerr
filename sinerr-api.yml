@@ -611,6 +611,50 @@ components:
         initialized:
           type: boolean
           example: false
+    SubscriptionFeedEntry:
+      type: object
+      properties:
+        tmdbId:
+          type: number
+        mediaType:
+          type: string
+          enum: [movie, tv]
+        season:
+          type: number
+          nullable: true
+        name:
+          type: string
+        year:
+          type: string
+          nullable: true
+        nextSeason:
+          type: number
+          nullable: true
+        nextEpisode:
+          type: number
+          nullable: true
+        nextAirDate:
+          type: string
+          format: date
+          nullable: true
+        lastAddedAt:
+          type: string
+          format: date-time
+          nullable: true
+        episodeCount:
+          type: number
+        posterPath:
+          type: string
+          nullable: true
+    SubscriptionFeed:
+      type: object
+      properties:
+        generatedAt:
+          type: number
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionFeedEntry'
     MoviePilotSettings:
       type: object
       properties:
@@ -2550,6 +2594,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MoviePilotSettings'
+  /settings/moviepilot/feed:
+    get:
+      summary: Get subscription update feed
+      description: |
+        Returns the cached "update feed" for active (R) MoviePilot subscriptions,
+        aggregated daily by the subscription-feed-refresh scheduled job. Each entry
+        may carry upcoming episode info (TMDB next_episode_to_air) and recent local
+        episode additions.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Subscription update feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionFeed'
+  /settings/moviepilot/feed/refresh:
+    post:
+      summary: Refresh subscription update feed
+      description: Manually triggers a refresh of the subscription update feed cache.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Refreshed subscription update feed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionFeed'
   /settings/moviepilot/test:
     post:
       summary: Test MoviePilot configuration
