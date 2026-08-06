@@ -15,6 +15,7 @@ import type {
   UserWatchTimeResponse,
   UserWatchedResponse,
 } from '@server/interfaces/api/userInterfaces';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -36,7 +37,7 @@ const messages = defineMessages('components.UserProfile', {
   requestsperdays: '{limit} remaining',
   limit: '{remaining} of {limit}',
   unlimited: 'Unlimited',
-  loadMore: 'Load More',
+  viewAllActivity: 'View All Activity',
   activityEmpty: 'No recent activity.',
   noRequests: 'No requests yet.',
   recentrequests: 'Recent Requests',
@@ -66,7 +67,6 @@ const UserProfile = () => {
   });
   const { user: currentUser, hasPermission: currentHasPermission } = useUser();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [activitySkip, setActivitySkip] = useState(0);
   const [requestPage, setRequestPage] = useState(0);
 
   // 请求 Tab：本人 + REQUEST_VIEW 可见
@@ -109,7 +109,7 @@ const UserProfile = () => {
           [Permission.MANAGE_USERS, Permission.MANAGE_REQUESTS],
           { type: 'or' }
         ))
-      ? `/api/v1/user/${user.id}/activity?take=10&skip=${activitySkip}`
+      ? `/api/v1/user/${user.id}/activity?take=10&skip=0`
       : null
   );
   const { data: watchedData } = useSWR<UserWatchedResponse>(
@@ -145,7 +145,6 @@ const UserProfile = () => {
 
   useEffect(() => {
     setActiveTab('overview');
-    setActivitySkip(0);
     setRequestPage(0);
   }, [user?.id]);
 
@@ -305,12 +304,18 @@ const UserProfile = () => {
           )}
 
           <div className="grid grid-cols-1 gap-6">
-            {/* 动态时间线 */}
+            {/* 动态时间线（摘要：最近 10 条 + 查看全部） */}
             <section>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white">
                   {intl.formatMessage(messages.activity)}
                 </h2>
+                <Link
+                  href={`/users/${user.id}/activity`}
+                  className="text-xs text-indigo-400 hover:text-indigo-300"
+                >
+                  {intl.formatMessage(messages.viewAllActivity)} →
+                </Link>
               </div>
               {!activity ? (
                 <LoadingSpinner />
@@ -319,18 +324,7 @@ const UserProfile = () => {
                   {intl.formatMessage(messages.activityEmpty)}
                 </div>
               ) : (
-                <>
-                  <ActivityTimeline items={activity.results} />
-                  {activity.results.length >= 10 && (
-                    <button
-                      type="button"
-                      onClick={() => setActivitySkip(activitySkip + 10)}
-                      className="mt-2 w-full rounded-lg bg-gray-800 px-4 py-2 text-xs font-medium text-gray-300 ring-1 ring-gray-700 hover:bg-gray-700"
-                    >
-                      {intl.formatMessage(messages.loadMore)}
-                    </button>
-                  )}
-                </>
+                <ActivityTimeline items={activity.results} />
               )}
             </section>
           </div>
