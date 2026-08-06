@@ -103,7 +103,18 @@ async function fetchActiveSubscriptions(
   try {
     const all = await moviepilot.getSubscriptions();
     // state：R=订阅中，P=暂停，S=完成。仅展示订阅中的剧集/电影。
-    return all.filter((sub) => sub.state === 'R');
+    // type：MP 返回中文（电视剧/电影），统一映射为 tv/movie 供过滤使用。
+    return all
+      .filter((sub) => sub.state === 'R')
+      .map((sub) => ({
+        ...sub,
+        type:
+          sub.type === '电视剧'
+            ? 'tv'
+            : sub.type === '电影'
+              ? 'movie'
+              : sub.type,
+      }));
   } catch (e) {
     logger.warn('MoviePilot feed failed to fetch subscriptions', {
       label: 'Jobs',

@@ -1219,6 +1219,7 @@
   "components.Settings.SettingsJobsCache.misses": "Misses",
   "components.Settings.SettingsJobsCache.mostplayed-cache-refresh": "Most Played Cache Refresh",
   "components.Settings.SettingsJobsCache.moviepilot-sync": "MoviePilot Subscription Sync",
+  "components.Settings.SettingsJobsCache.subscription-feed-refresh": "Watch Calendar Cache Refresh",
   "components.Settings.SettingsJobsCache.nextexecution": "Next Execution",
   "components.Settings.SettingsJobsCache.process": "Process",
   "components.Settings.SettingsJobsCache.process-blocklisted-tags": "Process Blocklisted Tags",

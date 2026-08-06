@@ -1296,6 +1296,7 @@
   "components.Settings.SettingsJobsCache.jellyfin-full-scan": "全库扫描",
   "components.Settings.SettingsJobsCache.mostplayed-cache-refresh": "周排行榜缓存刷新",
   "components.Settings.SettingsJobsCache.moviepilot-sync": "MoviePilot 订阅同步",
+  "components.Settings.SettingsJobsCache.subscription-feed-refresh": "追剧日历缓存刷新",
   "components.Settings.SonarrModal.seriesType": "系列类型",
   "components.Settings.jellyfinSettingsFailure": "保存{mediaServerName}设置时出错。",
   "components.Settings.jellyfinSettingsSuccess": "{mediaServerName}设置保存成功!",
