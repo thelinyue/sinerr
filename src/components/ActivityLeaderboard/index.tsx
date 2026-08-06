@@ -350,8 +350,8 @@ const ActivityLeaderboard = () => {
         <LeaderboardBackground items={top} paused={paused} inView={inView} />
       </div>
       <div className="relative z-10 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white">
+        <div className="flex items-center gap-2">
+          <h2 className="flex-shrink-0 text-sm font-bold text-white">
             <span className="mr-1.5">🏆</span>
             {intl.formatMessage(messages.title)}
           </h2>
@@ -370,7 +370,7 @@ const ActivityLeaderboard = () => {
                   setFilter(key);
                   setExpanded(false);
                 }}
-                className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
                   filter === key
                     ? 'bg-indigo-600 text-white'
                     : 'text-gray-400 hover:text-gray-200'
@@ -380,6 +380,15 @@ const ActivityLeaderboard = () => {
               </button>
             ))}
           </div>
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="ml-auto flex-shrink-0 text-[11px] text-indigo-400 hover:text-indigo-300"
+            >
+              {intl.formatMessage(messages.viewAll)}
+            </button>
+          )}
         </div>
 
         {!data && (
@@ -443,19 +452,6 @@ const ActivityLeaderboard = () => {
           </button>
         )}
 
-        {items.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowAll(true)}
-            className="mt-2 w-full rounded-lg bg-indigo-600/15 px-4 py-2 text-xs font-medium text-indigo-300 ring-1 ring-indigo-500/40 hover:bg-indigo-600/25"
-          >
-            {intl.formatMessage(messages.viewAll)}
-          </button>
-        )}
-
-        {/* 更新速递：MoviePilot 订阅中影片的更新动态（仅本人可见） */}
-        <SubscriptionFeed />
-
         {showAll && (
           <Transition
             as={Fragment}
@@ -496,6 +492,9 @@ const ActivityLeaderboard = () => {
             </Modal>
           </Transition>
         )}
+
+        {/* 更新速递：MoviePilot 订阅中影片的更新动态（仅本人可见） */}
+        <SubscriptionFeed />
       </div>
     </div>
   );

@@ -98,13 +98,13 @@ const FeedCard = ({ entry }: { entry: FeedEntry }) => {
   }
 
   return (
-    <Link href={href} className="w-[104px] flex-shrink-0">
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg">
+    <Link href={href} className="w-[76px] flex-shrink-0">
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg">
         <CachedImage
           type="tmdb"
           src={
             entry.posterPath
-              ? `https://image.tmdb.org/t/p/w342${entry.posterPath}`
+              ? `https://image.tmdb.org/t/p/w154${entry.posterPath}`
               : '/images/sinerr_poster_not_found.png'
           }
           alt=""
