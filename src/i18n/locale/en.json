@@ -147,6 +147,7 @@
   "components.ActivityLeaderboard.SubscriptionFeed.updatedTo": "S{season}E{episode}",
   "components.ActivityLeaderboard.SubscriptionFeed.newEpisodes": "+{count} eps",
   "components.ActivityLeaderboard.SubscriptionFeed.finished": "Ended",
+  "components.ActivityLeaderboard.SubscriptionFeed.available": "Available",
   "components.ActivityLeaderboard.moreWatched": "and {count} more watched",
   "components.ActivityList.loadmore": "Load More",
   "components.ActivityList.noactivity": "No recent activity yet.",

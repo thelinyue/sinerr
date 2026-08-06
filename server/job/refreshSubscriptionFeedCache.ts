@@ -41,6 +41,14 @@ export interface SubscriptionFeedEntry {
   lastAddedAt?: string | null;
   /** 最近更新：窗口内新增集数 */
   episodeCount?: number;
+  /** 最近更新：新增集首集季号 */
+  firstSeason?: number | null;
+  /** 最近更新：新增集首集集号 */
+  firstEpisode?: number | null;
+  /** 最近更新：新增集末集季号 */
+  lastSeason?: number | null;
+  /** 最近更新：新增集末集集号 */
+  lastEpisode?: number | null;
   /** 海报路径 */
   posterPath?: string | null;
 }
@@ -242,6 +250,16 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
       : [];
     const episodeCountByMediaId = new Map<number, number>();
     const latestAddedByMediaId = new Map<number, Date>();
+    // 每部媒体新增集的首末 (season, episode)，用于前端显示集数范围（如 S1E01-E05）
+    const episodeRangeByMediaId = new Map<
+      number,
+      {
+        firstSeason: number;
+        firstEpisode: number;
+        lastSeason: number;
+        lastEpisode: number;
+      }
+    >();
     for (const ep of recentEpisodes) {
       const mediaId = ep.media?.id;
       if (!mediaId) continue;
@@ -252,6 +270,24 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
       const cur = latestAddedByMediaId.get(mediaId);
       if (!cur || ep.addedAt > cur) {
         latestAddedByMediaId.set(mediaId, ep.addedAt);
+      }
+      const range = episodeRangeByMediaId.get(mediaId);
+      if (!range) {
+        episodeRangeByMediaId.set(mediaId, {
+          firstSeason: ep.seasonNumber,
+          firstEpisode: ep.episodeNumber,
+          lastSeason: ep.seasonNumber,
+          lastEpisode: ep.episodeNumber,
+        });
+      } else {
+        range.firstSeason = Math.min(range.firstSeason, ep.seasonNumber);
+        range.lastSeason = Math.max(range.lastSeason, ep.seasonNumber);
+        if (ep.seasonNumber === range.firstSeason) {
+          range.firstEpisode = Math.min(range.firstEpisode, ep.episodeNumber);
+        }
+        if (ep.seasonNumber === range.lastSeason) {
+          range.lastEpisode = Math.max(range.lastEpisode, ep.episodeNumber);
+        }
       }
     }
 
@@ -274,6 +310,18 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
             ? (latestAddedByMediaId.get(media.id)?.toISOString() ?? null)
             : null,
           episodeCount: media ? (episodeCountByMediaId.get(media.id) ?? 0) : 0,
+          firstSeason: media
+            ? (episodeRangeByMediaId.get(media.id)?.firstSeason ?? null)
+            : null,
+          firstEpisode: media
+            ? (episodeRangeByMediaId.get(media.id)?.firstEpisode ?? null)
+            : null,
+          lastSeason: media
+            ? (episodeRangeByMediaId.get(media.id)?.lastSeason ?? null)
+            : null,
+          lastEpisode: media
+            ? (episodeRangeByMediaId.get(media.id)?.lastEpisode ?? null)
+            : null,
           posterPath: tvDetail?.posterPath ?? null,
         };
       }

@@ -21,6 +21,7 @@ const messages = defineMessages(
     updatedTo: '已更新至 S{season}E{episode}',
     newEpisodes: '+{count} 集',
     finished: '已完结',
+    available: '已入库',
   }
 );
 
@@ -35,6 +36,10 @@ interface FeedEntry {
   nextAirDate?: string | null;
   lastAddedAt?: string | null;
   episodeCount?: number;
+  firstSeason?: number | null;
+  firstEpisode?: number | null;
+  lastSeason?: number | null;
+  lastEpisode?: number | null;
   posterPath?: string | null;
 }
 
@@ -68,43 +73,50 @@ const FeedCard = ({ entry }: { entry: FeedEntry }) => {
     gold = true;
     sub = (
       <>
-        {intl.formatMessage(messages.updatedTo, {
-          season: entry.nextSeason ?? '',
-          episode: entry.nextEpisode ?? '',
-        })}
+        S{String(entry.nextSeason ?? '').padStart(1, '0')}E
+        {String(entry.nextEpisode ?? '').padStart(2, '0')}
         <span className="ml-1 text-amber-300/80">· {dayLabel}</span>
       </>
     );
   } else if (entry.lastAddedAt) {
     green = true;
-    sub = (
-      <>
-        {intl.formatMessage(messages.updatedTo, {
-          season: entry.season ?? '',
-          episode: entry.episodeCount ?? '',
-        })}
-        {entry.episodeCount ? (
-          <span className="ml-1 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px]">
-            {intl.formatMessage(messages.newEpisodes, {
-              count: entry.episodeCount,
-            })}
-          </span>
-        ) : null}
-      </>
-    );
+    if (isTv && entry.episodeCount) {
+      // 集数范围：单集 S1E02，多集 S1E01-E05
+      const sameSeason = entry.firstSeason === entry.lastSeason;
+      const first = `S${String(entry.firstSeason ?? '').padStart(1, '0')}E${String(
+        entry.firstEpisode ?? ''
+      ).padStart(2, '0')}`;
+      const last =
+        entry.episodeCount > 1
+          ? sameSeason
+            ? `E${String(entry.lastEpisode ?? '').padStart(2, '0')}`
+            : `S${String(entry.lastSeason ?? '').padStart(1, '0')}E${String(
+                entry.lastEpisode ?? ''
+              ).padStart(2, '0')}`
+          : null;
+      sub = last ? `${first}-${last}` : first;
+    } else if (isTv) {
+      sub = intl.formatMessage(messages.updatedTo, {
+        season: entry.season ?? '',
+        episode: '',
+      });
+    } else {
+      // 电影订阅已入库：不显示剧集式 SxEx
+      sub = intl.formatMessage(messages.available);
+    }
   } else {
     green = true;
     sub = intl.formatMessage(messages.finished);
   }
 
   return (
-    <Link href={href} className="w-[76px] flex-shrink-0">
+    <Link href={href} className="w-[104px] flex-shrink-0">
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg">
         <CachedImage
           type="tmdb"
           src={
             entry.posterPath
-              ? `https://image.tmdb.org/t/p/w154${entry.posterPath}`
+              ? `https://image.tmdb.org/t/p/w342${entry.posterPath}`
               : '/images/sinerr_poster_not_found.png'
           }
           alt=""
@@ -112,11 +124,11 @@ const FeedCard = ({ entry }: { entry: FeedEntry }) => {
           className="object-cover"
         />
       </div>
-      <div className="mt-1 truncate text-[11px] font-medium text-gray-200">
+      <div className="mt-1.5 truncate text-[12px] font-medium text-gray-200">
         {entry.name}
       </div>
       <div
-        className={`mt-0.5 truncate text-[10px] ${
+        className={`mt-0.5 truncate text-[11px] ${
           gold ? 'text-amber-400' : green ? 'text-emerald-400' : 'text-gray-500'
         }`}
       >

@@ -1565,6 +1565,7 @@
   "components.ActivityLeaderboard.SubscriptionFeed.updatedTo": "S{season}E{episode}",
   "components.ActivityLeaderboard.SubscriptionFeed.newEpisodes": "+{count} 集",
   "components.ActivityLeaderboard.SubscriptionFeed.finished": "已完结",
+  "components.ActivityLeaderboard.SubscriptionFeed.available": "已入库",
   "components.ActivityLeaderboard.moreWatched": "等 {count} 人看过",
   "components.ActivityList.loadmore": "加载更多",
   "components.ActivityList.noactivity": "暂无最新动态。",
