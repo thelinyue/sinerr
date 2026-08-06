@@ -128,12 +128,19 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6
         with:
           images: |
             ghcr.io/${{ github.repository }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/sinerr
           tags: |
             type=semver,pattern={{raw}}
             type=semver,pattern=v{{major}}.{{minor}}
@@ -172,6 +179,9 @@ jobs:
           docker buildx imagetools create \
             -t ghcr.io/${{ github.repository }}:latest \
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          docker buildx imagetools create \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/sinerr:latest \
+            ${{ secrets.DOCKERHUB_USERNAME }}/sinerr:${{ env.VERSION }}
 
   sign:
     name: Sign images and create SBOM attestations
