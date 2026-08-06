@@ -2,9 +2,6 @@ import { getMetadataProvider } from '@server/api/metadata';
 import MoviePilotAPI, {
   type MoviePilotSubscription,
 } from '@server/api/moviepilot';
-import { getRepository } from '@server/datasource';
-import Episode from '@server/entity/Episode';
-import Media from '@server/entity/Media';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { appDataPath } from '@server/utils/appDataVolume';
@@ -12,43 +9,33 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * 订阅更新速递缓存（Sinerr 2.0 模块：本周热播「更新速递」）
+ * 追剧日历缓存（本周热播「追剧日历」）
  *
- * 每天定时拉取一次 MoviePilot「订阅中」的影片，聚合它们的更新动态：
- * - 即将更新（预告）：剧集订阅的 TMDB nextEpisodeToAir（下一集播出时间）
- * - 最近更新（回顾）：本地 recentlyAdded 匹配到的已入库新集
+ * 每天定时拉取一次 MoviePilot「订阅中」的影片，聚合今日 + 明日有更新的集：
+ * - 剧集订阅：TMDB getTvSeason 拿整季 air_date，筛出今天/明天要更新的集
  *
  * 与 mostplayed 缓存同模式：内存缓存 + 落盘 JSON + 定时刷新，前端读静态缓存。
  */
+export interface CalendarEpisodeUpdate {
+  /** 播出日期（YYYY-MM-DD） */
+  date: string;
+  /** 季号 */
+  season: number;
+  /** 集号 */
+  episode: number;
+}
+
 export interface SubscriptionFeedEntry {
   /** 订阅 tmdbId */
   tmdbId: number;
   /** 媒体类型 */
   mediaType: 'movie' | 'tv';
-  /** 剧集订阅的季号 */
-  season?: number | null;
   /** 订阅名称 */
   name: string;
-  /** 订阅年份 */
-  year?: string | null;
-  /** 即将更新：下一集季号 */
-  nextSeason?: number | null;
-  /** 即将更新：下一集集号 */
-  nextEpisode?: number | null;
-  /** 即将更新：播出日期（ISO） */
-  nextAirDate?: string | null;
-  /** 最近更新：最新集入库时间（ISO） */
-  lastAddedAt?: string | null;
-  /** 最近更新：窗口内新增集数 */
-  episodeCount?: number;
-  /** 最近更新：新增集首集季号 */
-  firstSeason?: number | null;
-  /** 最近更新：新增集首集集号 */
-  firstEpisode?: number | null;
-  /** 最近更新：新增集末集季号 */
-  lastSeason?: number | null;
-  /** 最近更新：新增集末集集号 */
-  lastEpisode?: number | null;
+  /** 今天要更新的集（按集号升序） */
+  todayUpdates: CalendarEpisodeUpdate[];
+  /** 明天要更新的集（按集号升序） */
+  tomorrowUpdates: CalendarEpisodeUpdate[];
   /** 海报路径 */
   posterPath?: string | null;
 }
@@ -128,60 +115,80 @@ async function fetchActiveSubscriptions(
   }
 }
 
-/** 批量查询剧集 TMDB 详情（限并发，避免打爆 TMDB 限流） */
-async function fetchTvDetails(
-  tmdbIds: number[],
+/** 单集更新点 */
+export interface CalendarEpisodeUpdate {
+  date: string;
+  season: number;
+  episode: number;
+}
+
+/** 批量查询剧集 TMDB 季集（限并发），筛出今天/明天有更新的集 */
+async function fetchTvSeasonUpdates(
+  targets: { tmdbId: number; season: number }[],
   concurrency = 5
 ): Promise<
   {
     tmdbId: number;
     name: string | null;
-    nextSeason: number | null;
-    nextEpisode: number | null;
-    nextAirDate: string | null;
     posterPath: string | null;
+    updates: CalendarEpisodeUpdate[];
   }[]
 > {
   const results: {
     tmdbId: number;
     name: string | null;
-    nextSeason: number | null;
-    nextEpisode: number | null;
-    nextAirDate: string | null;
     posterPath: string | null;
+    updates: CalendarEpisodeUpdate[];
   }[] = [];
   const provider = await getMetadataProvider('tv');
 
+  // 今天 + 明天的 ISO 日期
+  const todayISO = new Date();
+  todayISO.setHours(0, 0, 0, 0);
+  const tomorrowISO = new Date(todayISO.getTime() + 24 * 60 * 60 * 1000);
+  const targetDates = new Set([
+    todayISO.toISOString().slice(0, 10),
+    tomorrowISO.toISOString().slice(0, 10),
+  ]);
+
   let idx = 0;
   const workers = Array.from({ length: concurrency }, async () => {
-    while (idx < tmdbIds.length) {
+    while (idx < targets.length) {
       const current = idx++;
-      const tmdbId = tmdbIds[current];
+      const { tmdbId, season } = targets[current];
+      const fallback: {
+        tmdbId: number;
+        name: string | null;
+        posterPath: string | null;
+        updates: CalendarEpisodeUpdate[];
+      } = { tmdbId, name: null, posterPath: null, updates: [] };
       try {
-        const show = await provider.getTvShow({ tvId: tmdbId });
-        const next = show.next_episode_to_air;
+        const seasonInfo = await provider.getTvSeason({
+          tvId: tmdbId,
+          seasonNumber: season,
+        });
+        const updates = (seasonInfo.episodes ?? [])
+          .filter((ep) => ep.air_date && targetDates.has(ep.air_date))
+          .map((ep) => ({
+            date: ep.air_date as string,
+            season,
+            episode: ep.episode_number,
+          }))
+          .sort((a, b) => a.episode - b.episode);
         results.push({
           tmdbId,
-          name: show.name ?? null,
-          nextSeason: next?.season_number ?? null,
-          nextEpisode: next?.episode_number ?? null,
-          nextAirDate: next?.air_date ?? null,
-          posterPath: show.poster_path ?? null,
+          name: seasonInfo.name ?? null,
+          posterPath: seasonInfo.poster_path ?? null,
+          updates,
         });
       } catch (e) {
-        logger.warn('MoviePilot feed failed to fetch tv details', {
+        logger.warn('MoviePilot feed failed to fetch tv season', {
           label: 'Jobs',
           tmdbId,
+          season,
           errorMessage: e.message,
         });
-        results.push({
-          tmdbId,
-          name: null,
-          nextSeason: null,
-          nextEpisode: null,
-          nextAirDate: null,
-          posterPath: null,
-        });
+        results.push(fallback);
       }
     }
   });
@@ -222,115 +229,49 @@ export async function refreshSubscriptionFeedCache(): Promise<void> {
       }
     }
 
-    const tvIds = [...activeByTmdb.entries()]
-      .filter(([, sub]) => sub.type === 'tv')
-      .map(([tmdbId]) => tmdbId);
+    // 剧集订阅：查 TMDB 整季 air_date，筛今天/明天更新的集
+    const tvTargets = [...activeByTmdb.entries()]
+      .filter(([, sub]) => sub.type === 'tv' && sub.season != null)
+      .map(([tmdbId, sub]) => ({ tmdbId, season: sub.season as number }));
 
-    const [tvDetails, mediaRows] = await Promise.all([
-      fetchTvDetails(tvIds),
-      // 匹配本地 Media（拿海报 + 最近新增集）
-      tvIds.length
-        ? getRepository(Media)
-            .createQueryBuilder('media')
-            .where('media.tmdbId IN (:...ids)', { ids: tvIds })
-            .getMany()
-        : [],
-    ]);
+    const seasonUpdates = await fetchTvSeasonUpdates(tvTargets);
+    const seasonByTmdb = new Map(seasonUpdates.map((d) => [d.tmdbId, d]));
 
-    const mediaByTmdb = new Map(mediaRows.map((m) => [m.tmdbId, m]));
+    // 今天 + 明天 ISO 日期
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const todayISO = now.toISOString().slice(0, 10);
+    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
 
-    // 本地最近入库新集（近 30 天，仅覆盖已入库媒体）
-    const recentWindow = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentEpisodes = mediaRows.length
-      ? await getRepository(Episode)
-          .createQueryBuilder('episode')
-          .leftJoinAndSelect('episode.media', 'media')
-          .where('episode.addedAt >= :since', { since: recentWindow })
-          .getMany()
-      : [];
-    const episodeCountByMediaId = new Map<number, number>();
-    const latestAddedByMediaId = new Map<number, Date>();
-    // 每部媒体新增集的首末 (season, episode)，用于前端显示集数范围（如 S1E01-E05）
-    const episodeRangeByMediaId = new Map<
-      number,
-      {
-        firstSeason: number;
-        firstEpisode: number;
-        lastSeason: number;
-        lastEpisode: number;
-      }
-    >();
-    for (const ep of recentEpisodes) {
-      const mediaId = ep.media?.id;
-      if (!mediaId) continue;
-      episodeCountByMediaId.set(
-        mediaId,
-        (episodeCountByMediaId.get(mediaId) ?? 0) + 1
-      );
-      const cur = latestAddedByMediaId.get(mediaId);
-      if (!cur || ep.addedAt > cur) {
-        latestAddedByMediaId.set(mediaId, ep.addedAt);
-      }
-      const range = episodeRangeByMediaId.get(mediaId);
-      if (!range) {
-        episodeRangeByMediaId.set(mediaId, {
-          firstSeason: ep.seasonNumber,
-          firstEpisode: ep.episodeNumber,
-          lastSeason: ep.seasonNumber,
-          lastEpisode: ep.episodeNumber,
-        });
-      } else {
-        range.firstSeason = Math.min(range.firstSeason, ep.seasonNumber);
-        range.lastSeason = Math.max(range.lastSeason, ep.seasonNumber);
-        if (ep.seasonNumber === range.firstSeason) {
-          range.firstEpisode = Math.min(range.firstEpisode, ep.episodeNumber);
-        }
-        if (ep.seasonNumber === range.lastSeason) {
-          range.lastEpisode = Math.max(range.lastEpisode, ep.episodeNumber);
-        }
-      }
-    }
-
-    const detailsByTmdb = new Map(tvDetails.map((d) => [d.tmdbId, d]));
-
-    const entries: SubscriptionFeedEntry[] = [...activeByTmdb.entries()].map(
-      ([tmdbId, sub]) => {
-        const media = mediaByTmdb.get(tmdbId);
-        const tvDetail = sub.type === 'tv' ? detailsByTmdb.get(tmdbId) : null;
+    const entries: SubscriptionFeedEntry[] = [...activeByTmdb.entries()]
+      .map(([tmdbId, sub]) => {
+        const tvSeason = sub.type === 'tv' ? seasonByTmdb.get(tmdbId) : null;
+        const updates = tvSeason?.updates ?? [];
         return {
           tmdbId,
-          mediaType: sub.type === 'tv' ? 'tv' : 'movie',
-          season: sub.season ?? null,
-          name: tvDetail?.name ?? String(tmdbId),
-          year: null,
-          nextSeason: tvDetail?.nextSeason ?? null,
-          nextEpisode: tvDetail?.nextEpisode ?? null,
-          nextAirDate: tvDetail?.nextAirDate ?? null,
-          lastAddedAt: media
-            ? (latestAddedByMediaId.get(media.id)?.toISOString() ?? null)
-            : null,
-          episodeCount: media ? (episodeCountByMediaId.get(media.id) ?? 0) : 0,
-          firstSeason: media
-            ? (episodeRangeByMediaId.get(media.id)?.firstSeason ?? null)
-            : null,
-          firstEpisode: media
-            ? (episodeRangeByMediaId.get(media.id)?.firstEpisode ?? null)
-            : null,
-          lastSeason: media
-            ? (episodeRangeByMediaId.get(media.id)?.lastSeason ?? null)
-            : null,
-          lastEpisode: media
-            ? (episodeRangeByMediaId.get(media.id)?.lastEpisode ?? null)
-            : null,
-          posterPath: tvDetail?.posterPath ?? null,
+          mediaType: (sub.type === 'tv' ? 'tv' : 'movie') as 'tv' | 'movie',
+          name: tvSeason?.name ?? String(tmdbId),
+          todayUpdates: updates.filter((u) => u.date === todayISO),
+          tomorrowUpdates: updates.filter((u) => u.date === tomorrowISO),
+          posterPath: tvSeason?.posterPath ?? null,
         };
-      }
-    );
+      })
+      // 仅保留今天或明天有更新的条目
+      .filter((e) => e.todayUpdates.length > 0 || e.tomorrowUpdates.length > 0);
+
+    // 排序：有今日更新的优先，其次按明天集号
+    entries.sort((a, b) => {
+      const aToday = a.todayUpdates.length > 0 ? 1 : 0;
+      const bToday = b.todayUpdates.length > 0 ? 1 : 0;
+      if (aToday !== bToday) return bToday - aToday;
+      return 0;
+    });
 
     feedCache = { generatedAt: Date.now(), entries };
     saveCacheToDisk();
     logger.info(
-      `Subscription feed cache refreshed: ${entries.length} active subscriptions`,
+      `Subscription feed cache refreshed: ${entries.length} active subscriptions with today/tomorrow updates`,
       { label: 'Jobs' }
     );
   } catch (e) {
