@@ -86,6 +86,7 @@ const messages: { [messageName: string]: MessageDescriptor } = defineMessages(
     'process-blocklisted-tags': 'Process Blocklisted Tags',
     'mostplayed-cache-refresh': 'Most Played Cache Refresh',
     'moviepilot-sync': 'MoviePilot Subscription Sync',
+    'subscription-feed-refresh': 'Watch Calendar Cache Refresh',
     editJobSchedule: 'Modify Job',
     jobScheduleEditSaved: 'Job edited successfully!',
     jobScheduleEditFailed: 'Something went wrong while saving the job.',
