@@ -156,7 +156,11 @@ const SubscriptionFeed = () => {
     ];
     for (let i = 0; i < 7; i++) {
       const d = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
-      const iso = d.toISOString().slice(0, 10);
+      // 用本地时区格式化（不能用 toISOString()，否则东八区日期偏移一天）
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        '0'
+      )}-${String(d.getDate()).padStart(2, '0')}`;
       const label =
         i === 0
           ? intl.formatMessage(messages.today)

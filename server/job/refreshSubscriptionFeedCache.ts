@@ -151,13 +151,20 @@ async function fetchTvSeasonUpdates(
   }[] = [];
   const provider = await getMetadataProvider('tv');
 
-  // 未来 7 天（含今天）的 ISO 日期
+  // 未来 7 天（含今天）的本地日期（YYYY-MM-DD）
+  // 注意：不能用 toISOString()（UTC），否则在东八区会产生一天偏移
+  const formatLocalDate = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
   const todayISO = new Date();
   todayISO.setHours(0, 0, 0, 0);
   const targetDates = new Set<string>();
   for (let i = 0; i < 7; i++) {
     const day = new Date(todayISO.getTime() + i * 24 * 60 * 60 * 1000);
-    targetDates.add(day.toISOString().slice(0, 10));
+    targetDates.add(formatLocalDate(day));
   }
 
   let idx = 0;
