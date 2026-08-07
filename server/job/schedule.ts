@@ -118,8 +118,6 @@ export const startJobs = (): void => {
       job: schedule.scheduleJob(
         jobs['mostplayed-cache-refresh'].schedule,
         async () => {
-          const autoScan = getSettings().jellyfin.autoScan ?? true;
-          if (!autoScan) return;
           logger.info('Starting scheduled job: Most Played Cache Refresh', {
             label: 'Jobs',
           });

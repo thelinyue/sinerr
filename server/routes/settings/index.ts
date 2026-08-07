@@ -487,11 +487,7 @@ settingsRoutes.get(
 settingsRoutes.get('/jobs', (_req, res) => {
   const settings = getSettings();
   const autoScan = settings.jellyfin?.autoScan ?? true;
-  const jellyfinJobIds = [
-    'jellyfin-recently-added-scan',
-    'jellyfin-full-scan',
-    'mostplayed-cache-refresh',
-  ];
+  const jellyfinJobIds = ['jellyfin-recently-added-scan', 'jellyfin-full-scan'];
 
   return res.status(200).json(
     scheduledJobs
